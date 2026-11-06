@@ -1,0 +1,144 @@
+@page
+@{
+    ViewData["Title"] = "Pricing: R500 a month for five people";
+    ViewData["Description"] = "R500 a month for five people, every computer included, for small support teams. Remote workers: R50 for three computers, or one free. No VAT.";
+    ViewData["Keywords"] = "remote support software price, remote desktop pricing, IT support software South Africa, remote access for remote workers, work from home remote access, R50 remote desktop";
+
+    // One region's figures as Pricing.Money writes them, for the country switch below.
+    string Prices(string code)
+    {
+        var r = Pricing.For(code);
+        return System.Text.Json.JsonSerializer.Serialize(new
+        {
+            pkg = Pricing.Money(r, r.Package), basic = Pricing.Money(r, r.Basic),
+            machine = Pricing.Money(r, r.ExtraMachine), seat = Pricing.Money(r, r.ExtraSeat)
+        }, new System.Text.Json.JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }); // £ and € as themselves; every value is ours
+    }
+}
+@*
+    The commercial model lives in docs/PRICING.md and Services/Pricing.cs; this page must agree with both (and with
+    landing/index.html's PRICES). Five seats; more on request (2026-10-25: we decide, then R300 each), one owner-only login free.
+    These are prices, not conversions - R500 is roughly $28, so the dollar figure is deliberately higher. Do not "correct"
+    them to an exchange rate.
+*@
+<section class="page-head" style="text-align:center">
+    <div class="wrap">
+        <h1>One price, five people, every computer</h1>
+        <p class="lede" style="margin:0 auto">Remote support, ticketing, health checks and the rest in one subscription. No price per computer,
+            no price per session.</p>
+        <div class="toggle" id="cur" style="margin-top:22px">
+            <button type="button" class="on" data-cur="za" onclick="setCur('za')">South Africa</button>
+            <button type="button" data-cur="us" onclick="setCur('us')">US &amp; Canada</button>
+            <button type="button" data-cur="uk" onclick="setCur('uk')">United Kingdom</button>
+            <button type="button" data-cur="eu" onclick="setCur('eu')">Europe</button>
+        </div>
+    </div>
+</section>
+
+<section class="section" style="padding-top:20px">
+    <div class="wrap grid2">
+        <div class="card price-card" id="full">
+            <h2 style="margin-top:0">The full version</h2>
+            <div class="price" id="price">R500 <small>/ month</small></div>
+            <p class="muted" id="note">For five people. Billed monthly in South African rand, by card. No VAT is charged.</p>
+            <ul class="feature-list" style="grid-template-columns:1fr;margin:18px 0">
+                <li>Every computer you look after, every session</li>
+                <li>Your logo and colours on everything</li>
+                <li>Remote support, attended and unattended</li>
+                <li>Ticketing, the workshop and quotes</li>
+                <li>Monthly health checks and a knowledge base</li>
+                <li>Website chat and browser support</li>
+                <li>One owner who only runs the company is free on top</li>
+            </ul>
+            <h3>Five people; more on request</h3>
+            <p class="muted" style="font-size:14px" id="whyFive">@Pricing.WhyFive</p>
+            <div class="next-links"><partial name="_SiteCta" /></div>
+            <p class="muted" style="font-size:13px;margin-top:12px">Fourteen days free. Your card at signup — nothing is charged for 14 days, and you can cancel any time.</p>
+        </div>
+
+        <div class="card" id="free">
+            <h2 style="margin-top:0">@RemoteSupport.Shared.FreePlan.FullName</h2>
+            <div class="price" id="basicPrice">@Pricing.Money(Pricing.For("ZA"), Pricing.For("ZA").Basic) <small>/ month</small></div>
+            <p class="muted">For one person reaching their own computers — the one at the office, or your branches.</p>
+            <ul class="feature-list" style="grid-template-columns:1fr;margin:18px 0">
+                <li>One person, who is the owner and the technician</li>
+                <li>@RemoteSupport.Shared.FreePlan.MaxMachines computers included, and more at <span id="extraMachine">@Pricing.Money(Pricing.For("ZA"), Pricing.For("ZA").ExtraMachine)</span> a month each — up to @RemoteSupport.Shared.FreePlan.MostMachines</li>
+                <li>Unattended, with a password set at install, or attended — the person at the computer allows you in</li>
+                <li>Screen, control, files and printing</li>
+                <li>A bar on the computer says it is being controlled, and by whom</li>
+                <li>No tickets, no customer app, no branding</li>
+                <li>Upgrade to the full version any time, keeping everything</li>
+            </ul>
+            <p class="muted" style="font-size:13px">Fourteen days free. Your card at signup — nothing is charged for 14 days, and you can cancel any time. No VAT.
+                <a href="/remote-workers">More for remote workers</a></p>
+        </div>
+    </div>
+    @* The Free version (back 2026-10-25, §163): one computer, unattended, nothing to pay. *@
+    <div class="wrap" style="margin-top:18px">
+        <div class="card" id="freeVersion">
+            <h2 style="margin-top:0">@RemoteSupport.Shared.FreePlan.FreeFullName <span class="price" style="font-size:22px">nothing to pay</span></h2>
+            <p class="muted">One person reaching <strong>one</strong> computer of their own, unattended with its password — screen, control, files and printing.
+                No card. Upgrade to the Basic version or the full version any time, keeping everything.</p>
+        </div>
+    </div>
+</section>
+
+<section class="section alt">
+    <div class="wrap grid2">
+        <div>
+            <h2>Paying</h2>
+            <p>In South Africa you pay monthly, by credit or debit card through PayFast; we never see your card. Add or remove people whenever you
+                like, up to five — the price stays the same. Cancel any time from Billing: nothing more is
+                charged, and the service carries on to the end of the month you have paid for. No part-month refunds; a payment taken in error is
+                refunded in full. The details are in our <a href="/terms/ZA">terms</a>.</p>
+        </div>
+        <div>
+            <h2>Outside South Africa</h2>
+            <p>We open in South Africa first, then the United States, Canada, the United Kingdom and Europe, at the prices above. Choose your country
+                when you sign up and we will put you on the list and tell you the day it opens.</p>
+        </div>
+    </div>
+</section>
+
+<section class="section">
+    <div class="wrap">
+        <h2>Questions about the price</h2>
+        <div class="facts" style="margin-top:16px">
+            <div class="card fact"><h3>Who counts as a person?</h3><p>Everybody who can sign in — technicians, supervisors and office administrators alike. One person doing several jobs is one person. One owner who only runs the company is free.</p></div>
+            <div class="card fact" id="moreOnRequest"><h3>Why five, and can I have more?</h3><p>@Pricing.WhyFive If you need more, ask us from your Billing page. If we agree, each seat past five is <span id="extraSeat">@Pricing.Money(Pricing.For("ZA"), Pricing.For("ZA").ExtraSeat)</span> a month, and you see the new price, and accept it, before anybody is added.</p></div>
+            <div class="card fact"><h3>Why a waiting list?</h3><p>We let in a few companies at a time, so each one gets our full attention while it sets up. If every place is taken when you sign up, you join the waiting list and we email you the moment one opens.</p></div>
+            <div class="card fact"><h3>Is there VAT?</h3><p>No. We are not registered for VAT; the price is what you pay. If that ever changes we tell you at least 30 days before.</p></div>
+            <div class="card fact"><h3>What if a payment fails?</h3><p>PayFast tries the card again, and we email you with a link to change it. The service is suspended only if it is more than 14 days late — and starts again as soon as it is paid.</p></div>
+        </div>
+    </div>
+</section>
+<script>
+// Four regions, one set of figures at a time - a buyer sees their own currency. Every figure is written here from
+// Services/Pricing.cs (2026-10-27: Basic, extra computers and extra seats had been typed in as South Africa's, so every
+// country showed R50). Only landing/index.html still has its own copy (docs/PRICING.md).
+var PRICES = {
+  za: { r: @Html.Raw(Prices("ZA")), note: 'For five people. Billed monthly in South African rand, by card. No VAT is charged.' },
+  us: { r: @Html.Raw(Prices("US")), note: 'For five people. Billed monthly in US dollars.' },
+  uk: { r: @Html.Raw(Prices("UK")), note: 'For five people. Billed monthly in pounds sterling.' },
+  eu: { r: @Html.Raw(Prices("EU")), note: 'For five people. Billed monthly in euros.' }
+};
+var cur = 'za';
+function setCur(c) {
+  cur = PRICES[c] ? c : 'za';
+  var p = PRICES[cur];
+  document.querySelectorAll('#cur button').forEach(function (b) { b.classList.toggle('on', b.dataset.cur === cur); });
+  document.getElementById('price').innerHTML = p.r.pkg + ' <small>/ month</small>';
+  document.getElementById('basicPrice').innerHTML = p.r.basic + ' <small>/ month</small>';
+  document.getElementById('extraMachine').textContent = p.r.machine;
+  document.getElementById('extraSeat').textContent = p.r.seat;
+  document.getElementById('note').textContent = p.note;
+  try { localStorage.setItem('rsp-region', cur); } catch (e) {}
+}
+// South Africa is always the default: Windows in South Africa often reports en-US, so a locale is not a choice. A choice the
+// visitor made is remembered, in their browser only.
+(function () {
+  var saved = null;
+  try { saved = localStorage.getItem('rsp-region'); } catch (e) {}
+  setCur(saved && PRICES[saved] ? saved : 'za');
+})();
+</script>

@@ -1,0 +1,180 @@
+@page "/get/{slug}"
+@model GetModel
+@{
+    ViewData["Title"] = Model.Tenant == null ? "Not found" : $"{Model.Tenant.CompanyName} support";
+    Layout = null;
+}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="/site.css?v=@RemoteSupport.Platform.Services.BuildStamp.Value">
+    <style>
+        .ways { display: flex; flex-wrap: wrap; gap: 18px; justify-content: center; max-width: 900px; margin: 0 auto; }
+        .way { flex: 1 1 320px; max-width: 440px; text-align: left; display: flex; flex-direction: column; gap: 10px; padding: 22px; }
+        .way h3 { margin: 0; }
+        .way p { margin: 0; }
+        .way .btn { align-self: flex-start; margin-top: auto; }
+        .way .small { font-size: 13px; }
+    </style>
+</head>
+<body>
+@if (Model.Tenant == null)
+{
+    <section class="getpage"><div class="wrap"><h1>Page not found</h1><p class="muted">This support link isn't active.</p></div></section>
+}
+else if (RemoteSupport.Shared.FreePlan.Is(Model.Tenant.Plan))
+{
+    @* The free version (2026-10-06): nobody asks for help here — this is the owner adding one of their own
+       computers. One download, said plainly; the window it opens asks the computer's password. *@
+    var t = Model.Tenant;
+    <section class="getpage" id="freeGet">
+        <div class="wrap" style="max-width:640px">
+            <h1>Add a computer to @t.CompanyName</h1>
+            <p class="muted" style="font-size:18px;margin:0 auto 24px">@(RemoteSupport.Shared.FreePlan.IsBasic(t.Plan)
+                ? "Run this on the computer you want to reach. Choose its password to connect with nobody there — or leave it blank, and whoever is at it is asked to allow you in."
+                : "Run this on the computer you want to reach. It asks you to choose the computer's password, then you can connect to it from your console.")</p>
+            <p><a class="btn btn-accent btn-lg" href="/download/@t.Slug" id="freeGetDownload">Download</a></p>
+            <p class="muted" style="font-size:13px">@(RemoteSupport.Shared.FreePlan.IsBasic(t.Plan)
+                ? $"{RemoteSupport.Shared.FreePlan.MaxMachines} computers on the Basic version, more if you pay for them on Billing. Run it again on a computer to change its password."
+                : "One computer on the Free version. Run it again on the computer to change its password.")</p>
+        </div>
+    </section>
+}
+else
+{
+    var t = Model.Tenant;
+    <section class="getpage">
+        <div class="wrap">
+            <div class="tbanner" style="background:@t.PrimaryColor">
+                @if (Model.HasLogo) { <img src="/logo/@t.Slug" alt="@t.CompanyName"> } else { <span style="font-size:28px;font-weight:800">@t.CompanyName</span> }
+            </div>
+            <h1>@t.CompanyName Remote Support</h1>
+            <p class="muted" style="font-size:18px;max-width:640px;margin:0 auto 24px">@t.WelcomeText</p>
+            @* Two ways in, side by side, each saying what it gives (Clint, 2026-09-30: "Two buttons should
+               appear. One to download the app, and one to get browser support. Each with their
+               explanations"). The browser one only when the company has it switched on; outside its
+               hours it still shows, with the hours, so a customer learns it is there. *@
+            <div class="ways">
+                <div class="way card">
+                    <h3>Download the @t.ProductName app</h3>
+                    <p class="muted">A technician can take control, with your permission, and fix things for you directly — the full service. Windows 10 and 11.</p>
+                    @if (Model.ExeAvailable)
+                    {
+                        @* The one .exe (2026-09-30). Opening it asks "get help now, or install?". *@
+                        <a class="btn btn-lg" style="background:@t.AccentColor;border-color:@t.AccentColor;color:#fff" href="/download/@t.Slug">Download the app</a>
+                        <p class="muted small">Free for @t.CompanyName customers. Open it when it has downloaded, and choose <strong>Get help now</strong> or <strong>Install</strong>.</p>
+                    }
+                    else if (Model.Available)
+                    {
+                        <a class="btn btn-lg" style="background:@t.AccentColor;border-color:@t.AccentColor;color:#fff" href="/downloads/@t.Slug/client.zip">Download the app</a>
+                        <p class="muted small">Free for @t.CompanyName customers. How to run it is below.</p>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warn">The download isn't available yet. Please contact @t.CompanyName.</div>
+                    }
+                </div>
+                @if (Model.WebSupportOffered)
+                {
+                    <div class="way card">
+                        <h3>Get help in your browser</h3>
+                        <p class="muted">Nothing to install. Tell us what is wrong and a technician answers straight away; share your screen and they can see it and guide you — but not take control.</p>
+                        <a class="btn btn-lg" style="background:@t.AccentColor;border-color:@t.AccentColor;color:#fff" href="/help/@t.Slug">Get help in your browser</a>
+                        @if (Model.WebSupportOpen)
+                        {
+                            <p class="muted small">Available now. Good if the app will not install on your PC, or to try us first.</p>
+                        }
+                        else
+                        {
+                            <p class="muted small">Available @string.Join("; ", Model.BrowserHours).</p>
+                        }
+                    </div>
+                }
+            </div>
+            @* The zip's own instructions, only while the zip is THE download. *@
+            @if (Model.HasInstaller && !Model.ExeAvailable)
+            {
+                @* One zip, two ways to use it. Until 2026-09-11 the page silently offered only the
+                   portable route, so nothing was ever installed and there was nowhere for the monthly
+                   health check to live. Both files are in the same download; the choice is which one
+                   the customer double-clicks, so it is presented that way rather than as two buttons
+                   pointing at the same file. *@
+                <div class="steps card">
+                    @* The ten seconds that stop Windows warning about us.
+                       Windows marks everything downloaded from the internet, and the shell then
+                       says "The publisher could not be verified" when the installer is started.
+                       Unblocking the ZIP clears that mark from every file inside it, so the
+                       warning never appears. It goes for good when the apps are code-signed
+                       (roadmap stage 5); until then this is the only thing that removes it, and
+                       a customer who is not told about it meets a scary dialog instead. *@
+                    <div style="border-left:4px solid @t.AccentColor;padding:10px 14px;margin-bottom:14px;text-align:left;background:#f7f7fb;border-radius:6px">
+                        <div style="font-weight:800;font-size:15px">First: right-click the downloaded file &rarr; Properties &rarr; tick <em>Unblock</em> &rarr; OK</div>
+                        <p class="muted" style="margin:6px 0 0;font-size:13px">
+                            Windows marks files downloaded from the internet and warns that the publisher
+                            cannot be verified. Unblocking the zip before you unzip it clears that for
+                            everything inside, and the install runs without the warning.
+                        </p>
+                    </div>
+                    <h3>Unzip the file, then choose one</h3>
+                    <div style="display:flex;flex-wrap:wrap;gap:16px;margin-top:12px;text-align:left">
+                        <div style="flex:1 1 260px;border:2px solid @t.AccentColor;border-radius:8px;padding:14px">
+                            <div style="font-weight:800;font-size:15px">Set up ongoing support <span style="font-weight:600;font-size:12px;color:@t.AccentColor">&mdash; recommended</span></div>
+                            <p class="muted" style="margin:8px 0 10px;font-size:13px">
+                                Double-click <strong>Install-Client-Unattended.bat</strong> and approve the Windows prompt.
+                            </p>
+                            <p class="muted" style="margin:0;font-size:13px">
+                                Installs properly and starts with Windows, so @t.CompanyName can help even when
+                                you are away from the machine, and can look after it for you in the background.
+                                You will still be asked before anyone connects while you are working.
+                            </p>
+                        </div>
+                        <div style="flex:1 1 260px;border:1px solid #d8d8e0;border-radius:8px;padding:14px">
+                            <div style="font-weight:800;font-size:15px">Just this once</div>
+                            <p class="muted" style="margin:8px 0 10px;font-size:13px">
+                                Double-click <strong>RemoteSupport.Client.exe</strong>. Nothing is installed.
+                            </p>
+                            <p class="muted" style="margin:0;font-size:13px">
+                                Best for a one-off problem. Close it when you are finished and it leaves
+                                nothing behind. You can delete the folder afterwards.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            }
+            <div class="steps card">
+                <h3>How the app works</h3>
+                <ol style="padding-left:18px;line-height:1.9">
+                    @if (Model.ExeAvailable)
+                    {
+                        <li>Download the app and open it. Choose <strong>Get help now</strong>, or <strong>Install</strong> so we can help any time.</li>
+                    }
+                    else if (Model.HasInstaller)
+                    {
+                        <li>Download and unzip, then run whichever of the two files above suits you.</li>
+                    }
+                    else
+                    {
+                        <li>Download and unzip, then run <strong>RemoteSupport.Client.exe</strong>.</li>
+                    }
+                    <li>Click <strong>Request Support</strong> and enter your name.</li>
+                    @* "A @t.CompanyName technician" produced "A Anywhere IT technician". The article
+                       cannot be right for every tenant name, so the name is moved out of that slot. *@
+                    <li>A technician from @t.CompanyName will connect. Click <strong>Allow</strong> when asked.</li>
+                </ol>
+                @if (!string.IsNullOrEmpty(t.SupportPhone) || !string.IsNullOrEmpty(t.SupportEmail))
+                {
+                    <p class="muted" style="margin-top:8px">Need help? @(string.IsNullOrEmpty(t.SupportPhone) ? "" : "Call " + t.SupportPhone + ". ") @(string.IsNullOrEmpty(t.SupportEmail) ? "" : "Email " + t.SupportEmail + ".")</p>
+                }
+                @if (Model.ExeAvailable && Model.HasInstaller)
+                {
+                    @* Kept for IT staff installing it across many PCs by other means (scripts, an RMM). *@
+                    <p class="muted" style="margin-top:8px;font-size:13px">Installing it on many PCs at once? <a href="/downloads/@t.Slug/client.zip">The zip for IT staff</a>.</p>
+                }
+            </div>
+        </div>
+    </section>
+}
+</body>
+</html>

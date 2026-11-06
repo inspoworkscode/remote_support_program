@@ -1,0 +1,54 @@
+@page "/portal/review"
+@model RemoteSupport.Platform.Pages.Portal.ReviewModel
+@using RemoteSupport.Platform.Data
+@{ ViewData["Title"] = "Write a review"; ViewData["Section"] = "portal"; var e = Model.Existing; }
+<section class="portal"><div class="wrap" style="max-width:760px">
+    <h1>Write a review</h1>
+    <p class="muted">A few honest words about The Remote Support Program help other IT companies decide. We check every review before it
+        appears on our website, and we publish your name, your company and a link to your website with it only because you allow it below.</p>
+    @if (!string.IsNullOrEmpty(Model.Message)) { <div class="alert alert-ok" id="reviewMessage">@Model.Message</div> }
+    @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad" id="reviewError">@Model.Error</div> }
+    @if (e != null && string.IsNullOrEmpty(Model.Message))
+    {
+        <div class="alert alert-warn" id="reviewState" data-status="@e.Status">
+            @(e.Status switch
+            {
+                ReviewStatus.Published => "Your review is on our website. Thank you! Writing it again takes it off until we have checked the new one.",
+                ReviewStatus.Declined => "We did not publish your review. You can write it again.",
+                _ => "Your review is waiting for us to check it. Writing it again replaces it.",
+            })
+        </div>
+    }
+    @if (!Model.MayWrite)
+    {
+        <div class="card">The owner writes the company's review.</div>
+    }
+    else
+    {
+        <form method="post" class="form card" id="reviewForm">
+            <fieldset style="border:0;padding:0;margin:0">
+                <legend style="font-weight:700;margin-bottom:6px">Your rating</legend>
+                <div class="stars-pick">
+                    @for (int s = 5; s >= 1; s--)
+                    {
+                        <input type="radio" name="Stars" value="@s" id="star@(s)" checked="@(Model.Stars == s)" required>
+                        <label for="star@(s)" title="@s of 5">★</label>
+                    }
+                </div>
+            </fieldset>
+            <label for="reviewWords">Your review</label>
+            <textarea name="Words" id="reviewWords" rows="6" maxlength="1000" required placeholder="What has it changed for your company?">@Model.Words</textarea>
+            <label for="reviewName">Your name, as it should appear</label>
+            <input name="ShownName" id="reviewName" value="@Model.ShownName" maxlength="80" required>
+            <label for="reviewBusiness">Your company's name</label>
+            <input name="BusinessName" id="reviewBusiness" value="@Model.BusinessName" maxlength="100" required>
+            <label for="reviewUrl">Your company's website <span class="muted">(optional — we link to it)</span></label>
+            <input name="BusinessUrl" id="reviewUrl" value="@Model.BusinessUrl" maxlength="200" placeholder="https://www.your-company.co.za">
+            <label style="display:flex;gap:8px;align-items:flex-start;margin-top:12px">
+                <input type="checkbox" name="Consent" value="true" style="width:auto;margin-top:4px" required>
+                <span>You may publish this review, my name, my company's name and its website on theremotesupportprogram.com.</span>
+            </label>
+            <button class="btn btn-accent" type="submit" style="margin-top:12px">Send the review</button>
+        </form>
+    }
+</div></section>

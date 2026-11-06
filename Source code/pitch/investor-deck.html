@@ -1,0 +1,596 @@
+<title>The Remote Support Program</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+  :root {
+    --paper:#FBF8FB;
+    --surface:#FFFFFF;
+    --surface-2:#F4EFF5;
+    --ink:#1C1420;
+    --ink-soft:#5E5266;
+    --line:#E4DCE6;
+    --line-soft:#EFE8F0;
+    --plum:#8B4499;
+    --plum-deep:#5E2A68;
+    --plum-wash:#F5EAF7;
+    --cyan:#00B0F0;
+    --cyan-ink:#046B92;
+    --good:#1D7048;
+    --good-bg:#E5F2EB;
+    --wait:#8A5A00;
+    --wait-bg:#FBF0DA;
+    --none:#93899B;
+    --none-bg:#F1EDF2;
+    --shadow:0 1px 2px rgba(28,20,32,.05), 0 8px 24px -12px rgba(28,20,32,.18);
+    --ask-bg:#5E2A68;
+    --ask-ink:#FDF6FE;
+    --ask-line:rgba(255,255,255,.16);
+    --display:'Archivo', 'Helvetica Neue', Arial, sans-serif;
+    --body:'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --mono:'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:#15111A;
+      --surface:#1E1826;
+      --surface-2:#261F2F;
+      --ink:#F3EEF5;
+      --ink-soft:#B2A6BA;
+      --line:#352C3E;
+      --line-soft:#2A2332;
+      --plum:#C880D5;
+      --plum-deep:#E3BCEA;
+      --plum-wash:#2A1D31;
+      --cyan:#4CC9FF;
+      --cyan-ink:#8CDCFF;
+      --good:#6ED6A0;
+      --good-bg:#16301F;
+      --wait:#E0B355;
+      --wait-bg:#332713;
+      --none:#8C8296;
+      --none-bg:#241E2B;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.7);
+      --ask-bg:#2E2038;
+      --ask-ink:#F6EEF8;
+      --ask-line:rgba(255,255,255,.12);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:#15111A;
+    --surface:#1E1826;
+    --surface-2:#261F2F;
+    --ink:#F3EEF5;
+    --ink-soft:#B2A6BA;
+    --line:#352C3E;
+    --line-soft:#2A2332;
+    --plum:#C880D5;
+    --plum-deep:#E3BCEA;
+    --plum-wash:#2A1D31;
+    --cyan:#4CC9FF;
+    --cyan-ink:#8CDCFF;
+    --good:#6ED6A0;
+    --good-bg:#16301F;
+    --wait:#E0B355;
+    --wait-bg:#332713;
+    --none:#8C8296;
+    --none-bg:#241E2B;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.7);
+    --ask-bg:#2E2038;
+    --ask-ink:#F6EEF8;
+    --ask-line:rgba(255,255,255,.12);
+  }
+
+  body {
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--body);
+    font-size:18px;
+    line-height:1.62;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap { max-width:1060px; margin:0 auto; padding:0 28px; }
+  .narrow { max-width:660px; }
+
+  h1, h2, h3, .eyebrow, .num, th, .btn { font-family:var(--display); }
+  h1, h2, h3 { text-wrap:balance; margin:0; letter-spacing:-.018em; }
+  h1 { font-size:clamp(34px, 5.2vw, 57px); line-height:1.04; font-weight:800; }
+  h2 { font-size:clamp(27px, 3.4vw, 38px); line-height:1.12; font-weight:700; }
+  h3 { font-size:20px; line-height:1.3; font-weight:700; }
+  p { margin:0; }
+  strong { font-weight:600; color:var(--ink); }
+  em { font-style:italic; }
+
+  .eyebrow {
+    font-size:12px; font-weight:600; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--plum); margin:0;
+  }
+  .lede { font-size:clamp(19px, 2.1vw, 23px); line-height:1.5; color:var(--ink-soft); }
+  .muted { color:var(--ink-soft); }
+  .small { font-size:15px; line-height:1.55; }
+  .rand { font-family:var(--mono); font-weight:600; font-variant-numeric:tabular-nums; }
+
+  section { padding:64px 0; border-top:1px solid var(--line-soft); }
+  section:first-of-type { border-top:0; }
+  .stack { display:flex; flex-direction:column; gap:20px; }
+  .stack-sm { display:flex; flex-direction:column; gap:10px; }
+  .head { display:flex; flex-direction:column; gap:12px; max-width:720px; margin-bottom:34px; }
+
+  /* ---- hero ---- */
+  .hero { padding:76px 0 56px; }
+  .hero .stack { gap:26px; }
+  .hero h1 { max-width:16ch; }
+  .hero .lede { max-width:56ch; }
+  .kicker {
+    display:inline-flex; align-items:center; gap:10px; align-self:flex-start;
+    font-family:var(--display); font-size:13px; font-weight:600; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--ink-soft);
+    border:1px solid var(--line); border-radius:100px; padding:7px 16px; background:var(--surface);
+  }
+  .dot { width:7px; height:7px; border-radius:50%; background:var(--cyan); }
+
+  /* ---- the ask ---- */
+  .ask {
+    background:var(--ask-bg); color:var(--ask-ink); border-radius:4px;
+    display:grid; grid-template-columns:repeat(3, 1fr); overflow:hidden;
+  }
+  .ask > div { padding:28px 26px; display:flex; flex-direction:column; gap:6px; }
+  .ask > div + div { border-left:1px solid var(--ask-line); }
+  @media (max-width:760px) {
+    .ask > div + div { border-left:0; border-top:1px solid var(--ask-line); }
+  }
+  .ask .k { font-family:var(--display); font-size:12px; letter-spacing:.13em; text-transform:uppercase; opacity:.72; font-weight:600; }
+  .ask .v { font-family:var(--mono); font-size:clamp(23px, 3vw, 31px); font-weight:600; line-height:1.15; }
+  .ask .n { font-size:15px; line-height:1.45; opacity:.8; }
+  @media (max-width:760px) { .ask { grid-template-columns:1fr; } }
+
+  /* ---- generic cards ---- */
+  .grid-2 { display:grid; grid-template-columns:repeat(2, 1fr); gap:18px; }
+  .grid-3 { display:grid; grid-template-columns:repeat(3, 1fr); gap:18px; }
+  @media (max-width:860px) { .grid-2, .grid-3 { grid-template-columns:1fr; } }
+  .card {
+    background:var(--surface); border:1px solid var(--line); border-radius:4px;
+    padding:24px 24px 26px; display:flex; flex-direction:column; gap:10px;
+  }
+  .card h3 { color:var(--plum-deep); }
+
+  /* ---- proof list ---- */
+  .proof { display:flex; flex-direction:column; gap:0; border-top:1px solid var(--line); }
+  .proof > div {
+    display:grid; grid-template-columns:132px 1fr; gap:22px;
+    padding:18px 0; border-bottom:1px solid var(--line); align-items:start;
+  }
+  @media (max-width:700px) { .proof > div { grid-template-columns:1fr; gap:8px; } }
+  .tag {
+    font-family:var(--display); font-size:11px; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; padding:5px 10px; border-radius:3px; white-space:nowrap;
+    justify-self:start;
+  }
+  .t-good { background:var(--good-bg); color:var(--good); }
+  .t-wait { background:var(--wait-bg); color:var(--wait); }
+
+  /* ---- comparison ---- */
+  .scroller { overflow-x:auto; border:1px solid var(--line); border-radius:4px; background:var(--surface); }
+  table { border-collapse:collapse; width:100%; min-width:640px; }
+  th, td { text-align:left; padding:13px 16px; border-bottom:1px solid var(--line-soft); }
+  thead th {
+    font-size:12px; letter-spacing:.1em; text-transform:uppercase; font-weight:700;
+    color:var(--ink-soft); background:var(--surface-2); border-bottom:1px solid var(--line);
+  }
+  thead th:first-child { width:44%; }
+  tbody td:first-child { font-size:16.5px; }
+  tbody tr:last-child td { border-bottom:0; }
+  td.c { text-align:center; font-family:var(--display); font-weight:600; font-size:14px; }
+  .yes { color:var(--good); }
+  .no { color:var(--none); }
+  .part { color:var(--wait); }
+  .mark { font-size:17px; }
+  tr.ours td { background:var(--plum-wash); }
+
+  /* ---- money split ---- */
+  .split { display:flex; flex-direction:column; gap:16px; }
+  .bar { display:flex; height:56px; border-radius:3px; overflow:hidden; border:1px solid var(--line); }
+  .bar span { display:block; }
+  .seg-1 { background:var(--cyan); flex:0 0 10%; }
+  .seg-2 { background:var(--plum); flex:0 0 50%; }
+  .seg-3 { background:var(--plum-deep); flex:0 0 40%; }
+  .legend { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+  @media (max-width:860px) { .legend { grid-template-columns:1fr; } }
+  .leg { display:flex; flex-direction:column; gap:7px; padding-top:14px; border-top:3px solid var(--line); }
+  .leg.a { border-top-color:var(--cyan); }
+  .leg.b { border-top-color:var(--plum); }
+  .leg.c { border-top-color:var(--plum-deep); }
+  .leg .amt { font-family:var(--mono); font-size:24px; font-weight:600; }
+  .leg .who { font-family:var(--display); font-weight:700; font-size:15px; }
+
+  /* ---- timeline ---- */
+  .months { display:flex; flex-direction:column; gap:0; }
+  .month {
+    display:grid; grid-template-columns:96px 1fr; gap:24px; padding:20px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .month:first-child { border-top:1px solid var(--line); }
+  @media (max-width:700px) { .month { grid-template-columns:1fr; gap:6px; } }
+  .month .when {
+    font-family:var(--display); font-weight:700; font-size:14px; letter-spacing:.04em;
+    text-transform:uppercase; color:var(--plum); padding-top:3px;
+  }
+
+  /* ---- scenarios ---- */
+  .note {
+    background:var(--surface-2); border-left:3px solid var(--plum);
+    padding:16px 20px; border-radius:0 3px 3px 0; font-size:16px; line-height:1.55;
+  }
+
+  /* ---- Q&A ---- */
+  .qa { display:flex; flex-direction:column; gap:26px; }
+  .qa .q { font-family:var(--display); font-weight:700; font-size:19px; color:var(--plum-deep); margin-bottom:7px; }
+
+  /* ---- close ---- */
+  .close { background:var(--surface); border:1px solid var(--line); border-radius:4px; padding:40px; box-shadow:var(--shadow); }
+  .sig { display:flex; flex-wrap:wrap; gap:8px 26px; align-items:baseline; font-size:16px; }
+  .sig .name { font-family:var(--display); font-weight:700; font-size:19px; }
+  footer { padding:36px 0 60px; font-size:14px; color:var(--ink-soft); }
+
+  ul.plain { margin:0; padding-left:20px; display:flex; flex-direction:column; gap:8px; }
+  ul.plain li::marker { color:var(--plum); }
+
+  /* ---- print / PDF ----------------------------------------------------------
+     The printed copy is the same document, not a stripped one: a deck that is
+     emailed as a PDF is read by the person who would not click a link, so it
+     keeps its colour. Backgrounds are forced on, and the small repeated units
+     (cards, table rows, timeline months) are kept off page breaks. */
+  @media print {
+    :root {
+      --paper:#FFFFFF; --surface:#FFFFFF; --surface-2:#F4EFF5;
+      --ink:#1C1420; --ink-soft:#544859; --line:#DCD2DF; --line-soft:#EBE3EC;
+      --plum:#8B4499; --plum-deep:#5E2A68; --plum-wash:#F5EAF7;
+      --cyan:#00B0F0; --good:#166139; --good-bg:#E5F2EB;
+      --wait:#7A4F00; --wait-bg:#FBF0DA; --none:#7C7286; --none-bg:#F1EDF2;
+      --ask-bg:#5E2A68; --ask-ink:#FDF6FE; --ask-line:rgba(255,255,255,.22);
+      --shadow:none;
+    }
+    @page { size:A4; margin:13mm 12mm; }
+    body { background:#FFFFFF; font-size:10.8pt; line-height:1.5; }
+    .wrap { max-width:none; padding:0; }
+    section { padding:20px 0; break-inside:auto; }
+    .hero { padding:0 0 20px; }
+    h1 { font-size:30pt; }
+    h2 { font-size:17pt; }
+    h3 { font-size:12pt; }
+    .lede { font-size:11.6pt; }
+    .head { margin-bottom:18px; }
+    .ask, .bar span, .tag, .note, .close, thead th, tr.ours td, .card {
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+    .ask > div { padding:16px 18px; }
+    .ask .v { font-size:17pt; }
+    .scroller { overflow:visible; }
+    table { min-width:0; font-size:9.6pt; }
+    th, td { padding:7px 10px; }
+    .card, .leg, .month, .proof > div, .qa > div, tr, .close { break-inside:avoid; }
+    .head, h1, h2, h3 { break-after:avoid; }
+    .bar { height:34px; }
+    footer { padding:18px 0 0; font-size:8.6pt; break-inside:avoid; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="hero">
+    <div class="stack">
+      <span class="kicker"><span class="dot"></span>Investment proposal · September 2026</span>
+      <h1>We built the tool our own IT company needed. Now we sell it to every other one.</h1>
+      <p class="lede">Every IT support company in the country pays a foreign software firm every month, per technician, just to connect to a customer's computer. Then it pays again for something to track the jobs. <strong>We built one program that does both</strong> — and we own every line of it.</p>
+    </div>
+  </header>
+
+  <section style="padding-top:0;border-top:0">
+    <div class="ask">
+      <div>
+        <span class="k">The investment</span>
+        <span class="v">R500 000</span>
+        <span class="n">One round, to finish the product and take it to market.</span>
+      </div>
+      <div>
+        <span class="k">What you receive</span>
+        <span class="v">10% of turnover</span>
+        <span class="n">Of every rand the product earns, paid out monthly as a dividend.</span>
+      </div>
+      <div>
+        <span class="k">If it is ever sold</span>
+        <span class="v">10% of the sale</span>
+        <span class="n">You share in the exit as well as the income.</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <p class="eyebrow">The problem, in plain English</p>
+      <h2>Small IT companies are paying twice, in dollars, for tools that were never built for them.</h2>
+    </div>
+    <div class="grid-3">
+      <div class="card">
+        <h3>They pay per person</h3>
+        <p>The big remote-control programs charge for each technician. A three-man shop pays three times. Prices are in dollars, so every time the rand slips, the bill goes up.</p>
+      </div>
+      <div class="card">
+        <h3>They pay again for the paperwork</h3>
+        <p>Connecting to a customer's PC is half the job. The other half — who phoned, what was wrong, what was done, what to invoice — needs a second system, bought separately.</p>
+      </div>
+      <div class="card">
+        <h3>Nothing joins up</h3>
+        <p>The remote tool knows nothing about the customer. The job system knows nothing about the machine. The technician retypes everything, twice, on every call.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <p class="eyebrow">What we built</p>
+      <h2>One program. It fixes the computer and runs the business around it.</h2>
+      <p class="lede">A technician clicks a name and is on the customer's screen. Everything that happens is already attached to that customer's record — no retyping, no second program, no second bill.</p>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>It does everything the others do</h3>
+        <p>Take control of the mouse and keyboard. Work on password and permission screens the others often can't reach. Send files and whole folders both ways. Copy and paste between the two machines. Hear what the customer's computer is playing. Chat to the person sitting there.</p>
+      </div>
+      <div class="card">
+        <h3>And then it does the part they don't</h3>
+        <p>Job cards for walk-ins, workshop repairs, call-outs and remote work. Customer records. A list of every machine, with its age, memory and disk space. And a health check that runs itself every month and emails the customer a report with your logo on it.</p>
+      </div>
+    </div>
+    <div style="margin-top:22px" class="note">
+      <strong>The part that sells it:</strong> we charge <span class="rand">R500</span> a month for a whole company of up to five technicians — not per person. The same three-man shop currently pays several times that, in dollars, and still has no job cards.
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <p class="eyebrow">Why this is not a slide deck with a dream attached</p>
+      <h2>It is built, and each piece was tested until it proved itself.</h2>
+      <p class="lede">Software is easy to claim and hard to check. So every feature below was verified by a separate test that had to pass before we accepted it — not by someone looking at a screen and saying it seemed fine.</p>
+    </div>
+    <div class="proof">
+      <div>
+        <span class="tag t-good">Working</span>
+        <p><strong>Controlling the customer's computer.</strong> Mouse, keyboard, several monitors, and the permission prompts that stop most remote tools dead. Proven on real customer machines.</p>
+      </div>
+      <div>
+        <span class="tag t-good">Working</span>
+        <p><strong>Unattended access.</strong> The technician connects to a machine with nobody sitting at it — the after-hours work that keeps a business running.</p>
+      </div>
+      <div>
+        <span class="tag t-good">Working</span>
+        <p><strong>Files and folders, both directions.</strong> Tested by sending a folder, then having the customer's machine independently fingerprint every file that arrived and comparing. Nineteen checks out of nineteen. A folder of files landed in under a third of a second.</p>
+      </div>
+      <div>
+        <span class="tag t-good">Working</span>
+        <p><strong>Hearing the customer's machine.</strong> Built and confirmed over a live connection to a real customer PC. The program also tells the technician <em>why</em> a machine is silent — which speaker it is using, whether it is muted. Neither TeamViewer nor AnyDesk does that.</p>
+      </div>
+      <div>
+        <span class="tag t-good">Working</span>
+        <p><strong>Surviving a dropped connection.</strong> If the technician's internet blinks, the session waits ninety seconds and picks up where it left off instead of collapsing. Ten checks out of ten against a real machine.</p>
+      </div>
+      <div>
+        <span class="tag t-good">Working</span>
+        <p><strong>The monthly health check.</strong> Runs itself on the customer's machine, writes a report in your colours with your logo, and emails it. Already sent for real, with the report attached.</p>
+      </div>
+      <div>
+        <span class="tag t-good">Working</span>
+        <p><strong>The job system and customer portal.</strong> Job cards, customer records, machines grouped by customer, appointments for call-outs, workshop repairs with serial numbers. In daily use.</p>
+      </div>
+      <div>
+        <span class="tag t-wait">Needs the money</span>
+        <p><strong>The digital signature.</strong> Without it, Windows shows a scary warning the first time a customer installs the program. It is a certificate we buy, not something we can code around — and it is the single thing most likely to lose a sale.</p>
+      </div>
+      <div>
+        <span class="tag t-wait">Needs the money</span>
+        <p><strong>Proper hosting and encryption.</strong> Today it runs on our own network for our own testing. Going public means paid servers, a security certificate and monitoring.</p>
+      </div>
+      <div>
+        <span class="tag t-wait">Needs the money</span>
+        <p><strong>Mac, iPhone and Android.</strong> Windows is done. The others are a known, ordinary piece of work — they just need paying for.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <p class="eyebrow">Side by side</p>
+      <h2>Where we win, and where we are still behind.</h2>
+      <p class="lede">An honest table is worth more than a flattering one. Here is the whole picture, including the two rows we lose.</p>
+    </div>
+    <div class="scroller">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">&nbsp;</th>
+            <th scope="col" style="text-align:center">Ours</th>
+            <th scope="col" style="text-align:center">TeamViewer</th>
+            <th scope="col" style="text-align:center">AnyDesk</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Take control of a customer's PC</td><td class="c yes mark">✓</td><td class="c yes mark">✓</td><td class="c yes mark">✓</td></tr>
+          <tr><td>Reach locked and permission screens</td><td class="c yes mark">✓</td><td class="c yes mark">✓</td><td class="c yes mark">✓</td></tr>
+          <tr><td>Connect with nobody at the machine</td><td class="c yes mark">✓</td><td class="c yes mark">✓</td><td class="c yes mark">✓</td></tr>
+          <tr><td>Send files and folders</td><td class="c yes mark">✓</td><td class="c yes mark">✓</td><td class="c yes mark">✓</td></tr>
+          <tr><td>Hear the customer's sound</td><td class="c yes mark">✓</td><td class="c yes mark">✓</td><td class="c yes mark">✓</td></tr>
+          <tr class="ours"><td><strong>Tells you why the sound is broken</strong></td><td class="c yes mark">✓</td><td class="c no mark">—</td><td class="c no mark">—</td></tr>
+          <tr class="ours"><td><strong>Job cards and ticketing built in</strong></td><td class="c yes mark">✓</td><td class="c part">extra product</td><td class="c no mark">—</td></tr>
+          <tr class="ours"><td><strong>Customer records and machine list</strong></td><td class="c yes mark">✓</td><td class="c part">extra product</td><td class="c no mark">—</td></tr>
+          <tr class="ours"><td><strong>Automatic monthly health report</strong></td><td class="c yes mark">✓</td><td class="c no mark">—</td><td class="c no mark">—</td></tr>
+          <tr class="ours"><td><strong>Sell it under your own name and logo</strong></td><td class="c yes mark">✓</td><td class="c part">top tier only</td><td class="c part">top tier only</td></tr>
+          <tr><td>Works on Mac, iPhone, Android</td><td class="c part">month 4</td><td class="c yes mark">✓</td><td class="c yes mark">✓</td></tr>
+          <tr><td>Picture quality on a very slow line</td><td class="c part">good, improving</td><td class="c yes mark">✓</td><td class="c yes mark">✓</td></tr>
+          <tr><td>Price for a five-technician company</td><td class="c yes"><span class="rand">R500</span>/mo</td><td class="c no">per technician</td><td class="c no">per technician</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="small muted" style="margin-top:14px">The two rows we lose are both known work already scheduled, not surprises. Picture quality is good on a normal business line today; the upgrade matters on rural connections.</p>
+  </section>
+
+  <section>
+    <div class="head">
+      <p class="eyebrow">Where the R500 000 goes</p>
+      <h2>Half of it is not software. It is the people who put the software in front of customers.</h2>
+    </div>
+    <div class="split">
+      <div class="bar" role="img" aria-label="Split of the R500 000: half to the support team, forty percent to the product, ten percent to the developer">
+        <span class="seg-2"></span><span class="seg-3"></span><span class="seg-1"></span>
+      </div>
+      <div class="legend">
+        <div class="leg b">
+          <span class="amt">R250 000</span>
+          <span class="who">Anywhere IT — the support team</span>
+          <p class="small muted">Three technicians who onboard every new IT firm personally, answer their technical questions and handle sales, here and abroad, until the system runs itself. A product like this is won or lost in the first week a customer uses it. This is the money that makes that week go well.</p>
+        </div>
+        <div class="leg c">
+          <span class="amt">R200 000</span>
+          <span class="who">The product</span>
+          <p class="small muted">The digital signature certificate, secure hosting in each country we open, and the remaining development — Mac, iPhone and Android, and the picture-quality upgrade — with enough left over for the costs a first year of trading always turns up.</p>
+        </div>
+        <div class="leg a">
+          <span class="amt">R50 000</span>
+          <span class="who">The developer</span>
+          <p class="small muted">Clint, who has written the entire system so far. Ten percent of the raise — the smallest slice of the three.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <p class="eyebrow">The first five months</p>
+      <h2>What your money actually does, month by month.</h2>
+    </div>
+    <div class="months">
+      <div class="month">
+        <span class="when">Month 1</span>
+        <p><strong>Make it safe to sell.</strong> Buy the digital signature so the install is clean. Put proper encryption and hosting in place. Roll it out across Anywhere IT's own 1 000 clients — our own business becomes the first full-scale proof.</p>
+      </div>
+      <div class="month">
+        <span class="when">Months 2–4</span>
+        <p><strong>Two other IT firms run it for real.</strong> A paid pilot with two South African companies, so the product is tested by people who did not build it. At the same time, the Mac and mobile versions are built.</p>
+      </div>
+      <div class="month">
+        <span class="when">Month 5</span>
+        <p><strong>Open to South Africa.</strong> Public sign-up, the pilot firms as the first references.</p>
+      </div>
+      <div class="month">
+        <span class="when">After that</span>
+        <p><strong>United States, Canada, United Kingdom.</strong> Each on its own servers in its own country, so a customer's data never leaves it — which is exactly what those markets ask for first.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <p class="eyebrow">The market</p>
+      <h2>We only need a small slice of a market we already live in.</h2>
+      <p class="lede">Small and medium IT companies — the ones with three to twenty technicians. Our estimate, from thirty-six years in this industry, is <strong>around 1 000 in South Africa</strong> and <strong>at least 10 000</strong> across our four target countries.</p>
+    </div>
+    <div class="scroller">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">If we sign…</th>
+            <th scope="col" style="text-align:right">Monthly</th>
+            <th scope="col" style="text-align:right">Per year</th>
+            <th scope="col" style="text-align:right">Your 10%, per year</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>25 IT companies</td><td class="rand" style="text-align:right">R12 500</td><td class="rand" style="text-align:right">R150 000</td><td class="rand" style="text-align:right">R15 000</td></tr>
+          <tr><td>100 IT companies <span class="muted small">— 10% of South Africa alone</span></td><td class="rand" style="text-align:right">R50 000</td><td class="rand" style="text-align:right">R600 000</td><td class="rand" style="text-align:right">R60 000</td></tr>
+          <tr class="ours"><td><strong>250 IT companies</strong></td><td class="rand" style="text-align:right">R125 000</td><td class="rand" style="text-align:right">R1 500 000</td><td class="rand" style="text-align:right">R150 000</td></tr>
+          <tr><td>500 IT companies</td><td class="rand" style="text-align:right">R250 000</td><td class="rand" style="text-align:right">R3 000 000</td><td class="rand" style="text-align:right">R300 000</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note" style="margin-top:18px">
+      <strong>How to read this honestly.</strong> Every figure above is priced at the South African rate of <span class="rand">R500</span> a month. Overseas customers pay <span class="rand">$49</span> — close to double — so the international rows would in practice be considerably higher. These are illustrations of what given numbers of customers produce, not forecasts of how many we will sign.
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <p class="eyebrow">What you get back</p>
+      <h2>Income from month one of trading, and a share of the business if it is ever sold.</h2>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>A monthly dividend</h3>
+        <p>Ten percent of everything the product turns over, paid to you every month. Not ten percent of profit — of <em>turnover</em>, before any costs are taken out. It starts the first month a customer pays and does not stop.</p>
+      </div>
+      <div class="card">
+        <h3>Ten percent of a sale</h3>
+        <p>Software businesses with monthly subscriptions are bought by larger companies at a multiple of their yearly income. If that day comes, a tenth of the price is yours.</p>
+      </div>
+    </div>
+    <div class="note" style="margin-top:20px">
+      <strong>Put plainly:</strong> at 250 customers your share is <span class="rand">R150 000</span> a year against a <span class="rand">R500 000</span> investment — and it keeps paying every year after that, on top of your share of any sale.
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <p class="eyebrow">Who you are backing</p>
+      <h2>Not a start-up. A working IT company that got tired of paying rent on someone else's software.</h2>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Clint — owner and developer</h3>
+        <p><strong>Thirty-six years</strong> in corporate and small-business IT support, and a user of remote support software for every one of them. He has written this entire system himself. He is not guessing at what technicians need; he has needed it daily since the 1990s.</p>
+      </div>
+      <div class="card">
+        <h3>Anywhere IT — the business behind it</h3>
+        <p>Roughly <strong>R1 million</strong> a year in turnover, <strong>three technicians</strong>, and about <strong>1 000 clients</strong>. It is a real trading business, and it becomes the product's first and largest user on day one.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <p class="eyebrow">Straight answers</p>
+      <h2>The three questions you should be asking.</h2>
+    </div>
+    <div class="qa narrow">
+      <div>
+        <p class="q">What stops TeamViewer from simply adding job cards?</p>
+        <p>Nothing, except twenty years of not doing it. Their business is selling licences per technician to large corporates; the small IT shop's paperwork is not a market they chase. Even if they did, they would be adding it to a product that costs several times ours per person.</p>
+      </div>
+      <div>
+        <p class="q">What if nobody buys it?</p>
+        <p>One company already has. Anywhere IT will run its own 1 000 clients on it in month one, replacing software it currently pays for. The product has a paying-scale user before a single stranger is approached — which is also why the pilot in months 2 to 4 is with two firms who did <em>not</em> build it. If they will not use it, we find that out in month three, not year three.</p>
+      </div>
+      <div>
+        <p class="q">What if something happens to the developer?</p>
+        <p>Nothing in this is licensed or rented from anyone — the code is ours outright, so no supplier can switch it off or put the price up. And it is documented as it is built: every decision, every trap, and the reason behind each one is written down in the project itself, specifically so another developer can pick it up.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="close">
+      <div class="stack">
+        <p class="eyebrow">In one paragraph</p>
+        <h2 style="max-width:22ch">The hard part is already built and paid for.</h2>
+        <p class="lede" style="max-width:60ch">Years of work are done and tested. What is left is a certificate to buy, servers to rent, and three people to put it in front of customers. <span class="rand">R500 000</span> covers all three — and returns a tenth of everything it earns, every month, for as long as it earns.</p>
+        <div class="sig" style="margin-top:16px">
+          <span class="name">Clint</span>
+          <span class="muted">Anywhere IT · clint@anywhereit.co.za</span>
+          <span class="muted">theremotesupportprogram.com</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>Figures for Anywhere IT's turnover, technicians and client base, and the estimates of market size, are the owner's own. Revenue tables are illustrations of given customer numbers at published prices, not forecasts. Product claims describe features built and tested as at September 2026; items marked “needs the money” are not yet complete and are listed as such deliberately.</p>
+  </footer>
+
+</div>

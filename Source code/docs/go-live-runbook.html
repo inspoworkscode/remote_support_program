@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Go-live runbook — The Remote Support Program</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --paper:#FFFFFF;
+    --surface:#FBF8FB;
+    --ink:#1C1420;
+    --ink-soft:#5E5266;
+    --line:#E4DCE6;
+    --plum:#8B4499;
+    --plum-deep:#5E2A68;
+    --plum-wash:#F5EAF7;
+    --cyan:#00B0F0;
+    --cyan-ink:#046B92;
+    --cyan-wash:#E8F7FE;
+    --warn:#8A5A00;
+    --warn-bg:#FBF0DA;
+    --warn-line:#E5C98A;
+    --stop:#96261F;
+    --stop-bg:#FBEAE8;
+    --stop-line:#E7B4AE;
+    --code-bg:#1E1826;
+    --code-ink:#EFE8F0;
+    --display:'Archivo','Helvetica Neue',Arial,sans-serif;
+    --body:'Source Serif 4',Georgia,'Times New Roman',serif;
+    --mono:'IBM Plex Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;
+  }
+
+  * { box-sizing:border-box; }
+  html { background:var(--surface); }
+  body {
+    margin:0 auto; padding:28px 34px 60px; max-width:840px;
+    background:var(--paper); color:var(--ink);
+    font-family:var(--body); font-size:10.6pt; line-height:1.55;
+  }
+
+  /* ---- masthead ---------------------------------------------------------- */
+  .masthead { border-bottom:3px solid var(--plum-deep); padding-bottom:14px; margin-bottom:22px; }
+  .eyebrow {
+    font-family:var(--display); font-size:8.4pt; font-weight:700; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--plum); margin:0 0 6px;
+  }
+  h1 {
+    font-family:var(--display); font-weight:800; font-size:25pt; line-height:1.08;
+    letter-spacing:-.02em; margin:0 0 8px;
+  }
+  .standfirst { margin:0; color:var(--ink-soft); font-size:11pt; max-width:62ch; }
+  .meta {
+    margin-top:12px; font-family:var(--mono); font-size:8.2pt; color:var(--ink-soft);
+    display:flex; gap:22px; flex-wrap:wrap;
+  }
+
+  /* ---- structure --------------------------------------------------------- */
+  h2 {
+    font-family:var(--display); font-weight:700; font-size:14pt; letter-spacing:-.01em;
+    margin:30px 0 10px; padding-bottom:5px; border-bottom:1px solid var(--line);
+  }
+  h3 { font-family:var(--display); font-weight:600; font-size:11pt; margin:20px 0 6px; }
+  p { margin:0 0 10px; }
+  ul, ol { margin:0 0 10px; padding-left:20px; }
+  li { margin-bottom:5px; }
+  strong { font-weight:600; }
+  a { color:var(--cyan-ink); }
+
+  /* A numbered step. The number sits in the margin so the body text of every
+     step lines up down the page. */
+  .step { margin:26px 0 0; padding-left:52px; position:relative; break-inside:avoid; }
+  .step > .n {
+    position:absolute; left:0; top:-2px; width:38px; height:38px; border-radius:50%;
+    background:var(--plum-deep); color:#fff; font-family:var(--display); font-weight:800;
+    font-size:16pt; display:flex; align-items:center; justify-content:center;
+  }
+  .step > h2 {
+    margin:0 0 8px; border:0; padding:0; font-size:15pt;
+    display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;
+  }
+  .step > h2 .where {
+    font-family:var(--mono); font-size:8pt; font-weight:500; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--plum); background:var(--plum-wash);
+    border-radius:999px; padding:3px 9px; white-space:nowrap;
+  }
+
+  /* ---- code -------------------------------------------------------------- */
+  pre {
+    background:var(--code-bg); color:var(--code-ink); border-radius:8px;
+    padding:11px 13px; margin:0 0 10px; overflow-x:auto;
+    font-family:var(--mono); font-size:8.4pt; line-height:1.5;
+    white-space:pre-wrap; word-break:break-word; break-inside:avoid;
+  }
+  code { font-family:var(--mono); font-size:.86em; background:var(--surface);
+         border:1px solid var(--line); border-radius:4px; padding:1px 4px; }
+  pre code { background:none; border:0; padding:0; font-size:1em; color:inherit; }
+
+  /* ---- callouts ---------------------------------------------------------- */
+  .note, .warn, .stop {
+    border-left:4px solid; border-radius:0 7px 7px 0; padding:10px 13px;
+    margin:0 0 12px; break-inside:avoid; font-size:10pt;
+  }
+  .note { border-color:var(--cyan); background:var(--cyan-wash); }
+  .warn { border-color:var(--warn-line); background:var(--warn-bg); }
+  .stop { border-color:var(--stop-line); background:var(--stop-bg); }
+  .note :last-child, .warn :last-child, .stop :last-child { margin-bottom:0; }
+  .label {
+    font-family:var(--display); font-weight:700; font-size:8.2pt; letter-spacing:.12em;
+    text-transform:uppercase; display:block; margin-bottom:4px;
+  }
+  .note .label { color:var(--cyan-ink); }
+  .warn .label { color:var(--warn); }
+  .stop .label { color:var(--stop); }
+
+  /* ---- tables ------------------------------------------------------------ */
+  table { border-collapse:collapse; width:100%; margin:0 0 12px; font-size:9.6pt; break-inside:avoid; }
+  th, td { text-align:left; vertical-align:top; padding:7px 10px; border-bottom:1px solid var(--line); }
+  th {
+    font-family:var(--display); font-weight:700; font-size:8.4pt; letter-spacing:.07em;
+    text-transform:uppercase; color:var(--plum-deep); border-bottom:2px solid var(--plum-deep);
+  }
+  td code { font-size:.9em; }
+
+  /* ---- the diagram ------------------------------------------------------- */
+  figure { margin:0 0 14px; break-inside:avoid; }
+  figcaption { font-size:9pt; color:var(--ink-soft); margin-top:6px; }
+  svg { width:100%; height:auto; display:block; }
+
+  /* ---- checklist --------------------------------------------------------- */
+  .check { list-style:none; padding-left:0; }
+  .check li { padding-left:26px; position:relative; margin-bottom:7px; }
+  .check li::before {
+    content:""; position:absolute; left:0; top:2px; width:13px; height:13px;
+    border:1.5px solid var(--plum); border-radius:3px;
+  }
+
+  .handback { background:var(--plum-wash); border:1px solid var(--line); border-radius:9px;
+              padding:14px 16px; break-inside:avoid; }
+  .handback h2 { margin-top:0; border-bottom-color:var(--plum); }
+
+  footer {
+    margin-top:34px; padding-top:12px; border-top:1px solid var(--line);
+    font-family:var(--mono); font-size:8pt; color:var(--ink-soft);
+  }
+
+  /* ---- print ------------------------------------------------------------- */
+  @page { size:A4; margin:14mm 13mm 15mm; }
+  @media print {
+    :root { --paper:#FFFFFF; }
+    html, body { background:#fff; }
+    body { max-width:none; padding:0; font-size:10pt; }
+    * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    h2, h3 { break-after:avoid; }
+    .page-break { break-before:page; }
+  }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <p class="eyebrow">The Remote Support Program &middot; Deployment runbook</p>
+  <h1>Putting the platform live on theremotesupportprogram.com</h1>
+  <p class="standfirst">Everything needed to take the product from a LAN build to a public,
+  TLS-secured server that customers anywhere can connect to. Written for a technician who has not
+  worked on this codebase. Allow about an hour, most of it waiting for DNS.</p>
+  <div class="meta">
+    <span>Version 1 &middot; 14 September 2026</span>
+    <span>Owner: Clint, Anywhere IT</span>
+    <span>Source: docs/GO-LIVE.md</span>
+  </div>
+</header>
+
+<h2>What you are building</h2>
+
+<p>The whole product &mdash; the public website, the customer portal and the relay that carries
+remote-control sessions &mdash; is <strong>one program</strong>, <code>RemoteSupport.Platform</code>.
+You are installing that one program on a Linux server, with a web server called Caddy in front of it
+holding the TLS certificate.</p>
+
+<figure>
+<svg viewBox="0 0 820 210" xmlns="http://www.w3.org/2000/svg" role="img"
+     aria-label="Customer machines and technicians connect over the internet to port 443 on the server, where Caddy forwards to the platform on localhost port 8090.">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#5E2A68"/>
+    </marker>
+  </defs>
+
+  <!-- left: the world -->
+  <rect x="4" y="36" width="180" height="120" rx="10" fill="#E8F7FE" stroke="#00B0F0" stroke-width="1.5"/>
+  <text x="94" y="66" text-anchor="middle" font-family="Archivo,Arial" font-size="13" font-weight="700" fill="#046B92">Out in the world</text>
+  <text x="94" y="90"  text-anchor="middle" font-family="Archivo,Arial" font-size="11.5" fill="#1C1420">Customer machines</text>
+  <text x="94" y="110" text-anchor="middle" font-family="Archivo,Arial" font-size="11.5" fill="#1C1420">Technician consoles</text>
+  <text x="94" y="130" text-anchor="middle" font-family="Archivo,Arial" font-size="11.5" fill="#1C1420">Anyone on the website</text>
+
+  <!-- arrow in -->
+  <line x1="188" y1="96" x2="268" y2="96" stroke="#5E2A68" stroke-width="2" marker-end="url(#ar)"/>
+  <text x="228" y="86" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#5E2A68">https / wss</text>
+  <text x="228" y="112" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#5E2A68">port 443</text>
+
+  <!-- the server -->
+  <rect x="276" y="14" width="540" height="182" rx="12" fill="#FBF8FB" stroke="#5E2A68" stroke-width="2"/>
+  <text x="296" y="38" font-family="Archivo,Arial" font-size="12" font-weight="800" fill="#5E2A68">THE LINUX SERVER</text>
+  <text x="812" y="38" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#5E5266">public IP</text>
+
+  <rect x="300" y="56" width="216" height="112" rx="9" fill="#FFFFFF" stroke="#8B4499" stroke-width="1.5"/>
+  <text x="408" y="82" text-anchor="middle" font-family="Archivo,Arial" font-size="13" font-weight="700" fill="#8B4499">Caddy</text>
+  <text x="408" y="104" text-anchor="middle" font-family="Archivo,Arial" font-size="11" fill="#1C1420">listens on 80 and 443</text>
+  <text x="408" y="124" text-anchor="middle" font-family="Archivo,Arial" font-size="11" fill="#1C1420">holds the certificate</text>
+  <text x="408" y="146" text-anchor="middle" font-family="Archivo,Arial" font-size="11" fill="#1C1420">renews it by itself</text>
+
+  <line x1="520" y1="112" x2="588" y2="112" stroke="#5E2A68" stroke-width="2" marker-end="url(#ar)"/>
+  <text x="554" y="102" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="#5E2A68">127.0.0.1</text>
+  <text x="554" y="128" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="#5E2A68">:8090</text>
+
+  <rect x="596" y="56" width="200" height="112" rx="9" fill="#FFFFFF" stroke="#8B4499" stroke-width="1.5"/>
+  <text x="696" y="82" text-anchor="middle" font-family="Archivo,Arial" font-size="13" font-weight="700" fill="#8B4499">RemoteSupport.Platform</text>
+  <text x="696" y="104" text-anchor="middle" font-family="Archivo,Arial" font-size="11" fill="#1C1420">website + portal + relay</text>
+  <text x="696" y="124" text-anchor="middle" font-family="Archivo,Arial" font-size="11" fill="#1C1420">systemd service</text>
+  <text x="696" y="146" text-anchor="middle" font-family="Archivo,Arial" font-size="11" fill="#1C1420">database in /opt/rsp/data</text>
+</svg>
+<figcaption>The platform listens only on the server's own loopback address, so nothing on the
+internet can reach it except through Caddy. That is deliberate: it means there is no way to reach
+the portal over unencrypted HTTP, because nothing is listening for it.</figcaption>
+</figure>
+
+<div class="warn">
+  <span class="label">Shared hosting will not work</span>
+  <p>This is not a PHP site. It is a long-running program that must listen on a port and hold
+  thousands of WebSocket connections open. It needs a virtual machine with root access &mdash;
+  xneelo Cloud, an xneelo self-managed server, or any Ubuntu VPS. A cPanel or shared-hosting
+  account cannot run it at all.</p>
+</div>
+
+<h2>Before you start</h2>
+
+<table>
+  <tr><th style="width:34%">You need</th><th>Notes</th></tr>
+  <tr>
+    <td>An account that can create a server</td>
+    <td>xneelo Cloud, or whichever provider Clint has chosen.</td>
+  </tr>
+  <tr>
+    <td>Access to the domain's DNS</td>
+    <td><code>theremotesupportprogram.com</code> is registered at <strong>Afrihost</strong>, but its
+    nameservers point at <strong>Cloudflare</strong> &mdash; the records are edited in the
+    <strong>Cloudflare dashboard</strong>, not in Afrihost ClientZone.</td>
+  </tr>
+  <tr>
+    <td>A Windows PC with the repository</td>
+    <td>The folder <code>Remote Support</code>, plus the <strong>.NET 8 SDK</strong> at
+    <code>C:\Program Files\dotnet</code>. The build must run on Windows &mdash; parts of the suite
+    are WinForms. If Clint hands you a ready-made <code>dist\platform-linux</code> folder instead,
+    add <code>-SkipBuild</code> to the command in step 3 and no SDK is needed.</td>
+  </tr>
+  <tr>
+    <td>An SSH key pair</td>
+    <td>If you do not have one, run <code>ssh-keygen -t ed25519</code> in PowerShell and use the
+    contents of <code>C:\Users\&lt;you&gt;\.ssh\id_ed25519.pub</code>.</td>
+  </tr>
+</table>
+
+<div class="note">
+  <span class="label">The short version</span>
+  <p>Create an Ubuntu server &rarr; point two DNS records at it &rarr; run one command from the
+  Windows PC &rarr; create the first tenant &rarr; hand the owner key back to Clint. Steps 3 to 5 are
+  each a single command.</p>
+</div>
+
+<!-- ====================================================================== -->
+<section class="step">
+  <div class="n">1</div>
+  <h2>Create the server <span class="where">at the hosting provider</span></h2>
+
+  <p>Create a virtual machine:</p>
+  <ul>
+    <li><strong>Ubuntu 24.04 LTS</strong> (22.04 also works).</li>
+    <li><strong>2 vCPU, 4 GB RAM, 40 GB disk</strong> to start. The installed size is about 350&nbsp;MB.</li>
+    <li>Add <strong>your SSH public key</strong> during creation, so you can log in as
+    <code>root</code> without a password.</li>
+    <li>Leave the provider's firewall open on <strong>22, 80 and 443</strong>. The script closes
+    everything else itself.</li>
+  </ul>
+
+  <p>Write down the <strong>public IP address</strong>. Everything below refers to it as
+  <code>&lt;THE-IP&gt;</code>.</p>
+
+  <div class="note">
+    <span class="label">Sizing</span>
+    <p>CPU is not what runs out first &mdash; <strong>bandwidth is</strong>. Every frame of every
+    remote session passes through this machine, roughly 0.5 to 2 Mbit/s per active session. Check
+    the traffic allowance on the plan before the number of technicians grows.</p>
+  </div>
+
+  <p>Check you can log in before going any further:</p>
+<pre><code>ssh root@&lt;THE-IP&gt;</code></pre>
+</section>
+
+<!-- ====================================================================== -->
+<section class="step">
+  <div class="n">2</div>
+  <h2>Point the domain at it <span class="where">in the Cloudflare dashboard</span></h2>
+
+  <p>Open the domain in Cloudflare and go to <strong>DNS &rarr; Records</strong>. Change exactly two
+  records. Both already exist and point at the shared hosting that serves the holding page:</p>
+
+  <table>
+    <tr><th style="width:15%">Type</th><th style="width:22%">Name</th><th style="width:33%">Value</th><th>Proxy status</th></tr>
+    <tr><td>A</td><td><code>@</code></td><td>&lt;THE-IP&gt;</td><td><strong>DNS only</strong> (grey cloud)</td></tr>
+    <tr><td>A</td><td><code>www</code></td><td>&lt;THE-IP&gt;</td><td><strong>DNS only</strong> (grey cloud)</td></tr>
+  </table>
+
+  <div class="stop">
+    <span class="label">Do not touch these</span>
+    <ul>
+      <li><strong>The mail records.</strong> <code>mail</code>, <code>smtp</code> and
+      <code>webmail</code>, and every MX and TXT record, carry the company's email from a different
+      server on purpose. Nothing about this move should change them.</li>
+      <li><strong>The nameservers.</strong> There is no need to move DNS hosting anywhere. Only the
+      two A records above change.</li>
+      <li><strong>The grey cloud.</strong> Leave both records on <em>DNS only</em>. Switching on
+      Cloudflare's orange cloud stops the certificate being issued and breaks the remote-support
+      connection itself.</li>
+    </ul>
+  </div>
+
+  <p>Changes usually appear within minutes but can take up to an hour. Confirm from the Windows PC
+  before moving on &mdash; the certificate in step 3 cannot be issued until this answers with the
+  server's IP:</p>
+<pre><code>nslookup theremotesupportprogram.com</code></pre>
+</section>
+
+<!-- ====================================================================== -->
+<section class="step">
+  <div class="n">3</div>
+  <h2>Deploy <span class="where">on the Windows PC</span></h2>
+
+  <p>Open PowerShell in the repository folder (the one containing <code>build.ps1</code>) and run:</p>
+
+<pre><code>powershell -ExecutionPolicy Bypass -File deploy\Publish-Platform.ps1 -Server &lt;THE-IP&gt;</code></pre>
+
+  <p>That one command builds the Linux payload, packs it, uploads it over SSH, and runs the
+  installer on the server. The installer:</p>
+
+  <ol>
+    <li>installs <strong>Caddy</strong> (the TLS front door) and <strong>Google Chrome</strong>
+    (used server-side to turn health-check reports into PDFs);</li>
+    <li>installs the platform to <code>/opt/rsp</code> and runs it as the systemd service
+    <code>remotesupport-platform</code>, under an unprivileged <code>rsp</code> account, listening
+    only on <code>127.0.0.1:8090</code>;</li>
+    <li>generates the <strong>owner key</strong> once and stores it in
+    <code>/etc/rsp-owner-key</code>;</li>
+    <li>writes the Caddy configuration for the domain and <code>www</code>, and gets the
+    certificate;</li>
+    <li>closes the firewall to <strong>22, 80 and 443</strong> only;</li>
+    <li>tests the site and prints the owner key.</li>
+  </ol>
+
+  <p>Expect it to take a few minutes; most of that is the upload (roughly 150&nbsp;MB compressed).
+  The last thing it prints is a panel containing the owner key. <strong>Keep it.</strong></p>
+
+  <div class="warn">
+    <span class="label">If the final check is not HTTP 200</span>
+    <p>Almost always DNS: Caddy has to be reachable on port 80 at the domain name to be issued a
+    certificate. Re-check step 2, wait, and watch the certificate being issued with
+    <code>ssh root@&lt;THE-IP&gt; "journalctl -u caddy -f"</code>. The platform itself is already
+    running; only the certificate is missing.</p>
+  </div>
+
+  <div class="note">
+    <span class="label">If the server is already showing a holding page</span>
+    <p>That is expected &mdash; the domain went up as a static &ldquo;launching soon&rdquo; page
+    first. This command replaces what the web server serves, in place: same server, same
+    certificate, no DNS change and no gap where the domain is dead. Nothing needs to be removed
+    first.</p>
+  </div>
+
+  <div class="note">
+    <span class="label">Running it again is safe</span>
+    <p>The same command later updates the server to a newer build. The database, the uploaded logos,
+    the encryption key ring and the owner key are all left untouched.</p>
+  </div>
+</section>
+
+<!-- ====================================================================== -->
+<section class="step">
+  <div class="n">4</div>
+  <h2>Create the first tenant <span class="where">one command, over SSH</span></h2>
+
+  <p>A <em>tenant</em> is an IT company using the platform. Anywhere IT is the first one. Public
+  signups are deliberately switched off until the product goes on sale, so the first tenant is
+  created from the command line:</p>
+
+<pre><code>ssh root@&lt;THE-IP&gt; "cd /opt/rsp &amp;&amp; sudo -u rsp ./RemoteSupport.Platform create-tenant 'Anywhere IT' anywhereit 5 &amp;&amp; sudo -u rsp ./RemoteSupport.Platform approve anywhereit"</code></pre>
+
+  <p>Then add Clint as its portal administrator. Replace <code>YOUR-PASSWORD</code> with a strong
+  password:</p>
+
+<pre><code>ssh root@&lt;THE-IP&gt; "cd /opt/rsp &amp;&amp; sudo -u rsp ./RemoteSupport.Platform add-tech anywhereit clint@anywhereit.co.za 'YOUR-PASSWORD' 'Clint' --admin"</code></pre>
+
+  <div class="warn">
+    <span class="label">That password is visible</span>
+    <p>It appears in your shell history and briefly in the server's process list, so treat it as
+    temporary. Tell Clint to change it in the portal at <strong>Technicians</strong> once he has
+    signed in, and clear it from your history.</p>
+  </div>
+</section>
+
+<!-- ====================================================================== -->
+<section class="step">
+  <div class="n">5</div>
+  <h2>Set up the mailbox the product sends from <span class="where">on the server</span></h2>
+
+  <p>Trial-expiry warnings and portal mail go out from one mailbox. An xneelo mailbox on the domain
+  is fine; create it in konsoleH first if it does not exist, and make sure the domain's MX records
+  point wherever its mail is hosted.</p>
+
+  <p>Configure it without the password ever appearing in a command line or in history &mdash;
+  <code>read -s</code> prompts for it silently:</p>
+
+<pre><code>ssh root@&lt;THE-IP&gt;
+cd /opt/rsp
+read -s RSP_SMTP_PASSWORD; export RSP_SMTP_PASSWORD
+sudo -u rsp -E ./RemoteSupport.Platform platform-mail set --host smtp.xneelo.co.za --port 587 --ssl \
+  --user noreply@theremotesupportprogram.com \
+  --from noreply@theremotesupportprogram.com \
+  --from-name "The Remote Support Program" \
+  --copy-to clint@anywhereit.co.za
+sudo -u rsp ./RemoteSupport.Platform platform-mail test clint@anywhereit.co.za</code></pre>
+
+  <p>The last line must print <code>Sent to clint@anywhereit.co.za.</code> &mdash; confirm with Clint
+  that it arrived. The same settings can be entered in the owner portal at <code>/owner/mail</code>
+  if you would rather use a browser.</p>
+</section>
+
+<!-- ====================================================================== -->
+<section class="step page-break">
+  <div class="n">6</div>
+  <h2>Check it, end to end <span class="where">from any PC</span></h2>
+
+  <ul class="check">
+    <li><code>https://theremotesupportprogram.com</code> loads with a valid padlock, and so does the
+    <code>www.</code> version.</li>
+    <li><code>http://theremotesupportprogram.com:8090</code> does <strong>not</strong> answer. It
+    should hang and time out &mdash; that is the firewall doing its job.</li>
+    <li>The owner portal at <code>/owner</code> accepts the key from step 3.</li>
+    <li>The portal at <code>/login</code> accepts <code>clint@anywhereit.co.za</code> and the
+    password from step 4.</li>
+    <li><code>/get/anywhereit</code> shows the branded download page and the client package
+    downloads.</li>
+    <li>That client, installed on a machine <strong>outside the office network</strong>, connects
+    and a session runs. This is the real test: it proves the relay works over the public internet,
+    not just the LAN.</li>
+  </ul>
+
+  <p>Everything downloaded from the portal from now on already carries the tenant key and
+  <code>wss://theremotesupportprogram.com</code>, so there is nothing to configure by hand on a
+  customer's machine.</p>
+</section>
+
+<!-- ====================================================================== -->
+<div class="handback">
+  <h2>Hand back to Clint</h2>
+  <ul>
+    <li>The <strong>owner key</strong> printed in step 3. Send it over something private &mdash; not
+    plain email. It is also readable on the server at <code>/etc/rsp-owner-key</code>.</li>
+    <li>The <strong>server's IP address</strong> and how to log in.</li>
+    <li>The <strong>temporary portal password</strong> from step 4, with a reminder to change it.</li>
+    <li>Confirmation that the <strong>test email arrived</strong>.</li>
+    <li>Anything in the checklist above that did <em>not</em> pass.</li>
+  </ul>
+</div>
+
+<h2>If something goes wrong</h2>
+
+<table>
+  <tr><th style="width:38%">Symptom</th><th>What it usually is</th></tr>
+  <tr>
+    <td>The site shows a certificate warning, or does not load at all</td>
+    <td>DNS is not pointing here yet, or Caddy could not be reached on port 80 to complete the
+    certificate check. Re-check step 2, then
+    <code>journalctl -u caddy -n 50 --no-pager</code>.</td>
+  </tr>
+  <tr>
+    <td>Caddy answers but shows a 502</td>
+    <td>The platform is not running. <code>systemctl status remotesupport-platform</code> and
+    <code>journalctl -u remotesupport-platform -n 100 --no-pager</code>.</td>
+  </tr>
+  <tr>
+    <td>The owner portal says the key is not configured</td>
+    <td>The service did not pick up its settings. <code>systemctl restart
+    remotesupport-platform</code>, then check the key in <code>/etc/rsp-owner-key</code>.</td>
+  </tr>
+  <tr>
+    <td>The deploy command cannot reach the server</td>
+    <td>SSH. Confirm <code>ssh root@&lt;THE-IP&gt;</code> works on its own first; the script needs
+    key-based login, not a password prompt.</td>
+  </tr>
+  <tr>
+    <td>Health-check reports arrive as HTML, not PDF</td>
+    <td>Chrome did not install. Harmless &mdash; the reports still send. Fix with
+    <code>apt install google-chrome-stable</code> and restart the service.</td>
+  </tr>
+</table>
+
+<h3>Useful commands</h3>
+<pre><code>ssh root@&lt;THE-IP&gt; "journalctl -u remotesupport-platform -n 100 --no-pager"
+ssh root@&lt;THE-IP&gt; "journalctl -u caddy -n 50 --no-pager"
+ssh root@&lt;THE-IP&gt; "systemctl restart remotesupport-platform"</code></pre>
+
+<h2>Two things never to do on this server</h2>
+
+<div class="stop">
+  <span class="label">Do not delete or move /opt/rsp/data</span>
+  <p>It holds the database, the uploaded logos and <code>data/keys</code>, the encryption key ring.
+  If <code>data/keys</code> is lost, <strong>every stored customer password becomes unreadable,
+  permanently</strong> &mdash; there is no recovery. Back that folder up off the server before
+  anyone starts relying on it.</p>
+</div>
+
+<div class="stop">
+  <span class="label">Do not run the platform from a different folder</span>
+  <p>It must stay at <code>/opt/rsp</code>, installed by the script. Moving it, or running it as a
+  different user, changes how stored passwords are encrypted and they stop decrypting with a
+  misleading "the payload was invalid" error, while everything looks present and correct.</p>
+</div>
+
+<h2>Known limitations &mdash; tell the customer, do not try to fix</h2>
+
+<ul>
+  <li><strong>Downloads are not code-signed yet.</strong> Windows SmartScreen warns on the client
+  installer. The certificate is on order; this is expected, not a fault of the install.</li>
+  <li><strong>The portal has no two-factor authentication</strong> and no self-service password
+  reset. A forgotten password is fixed with <code>set-password</code> on the server.</li>
+  <li><strong>Nothing monitors the service.</strong> If it stops, no one is told automatically.</li>
+</ul>
+
+<footer>
+  The Remote Support Program &middot; Anywhere IT &middot; clint@anywhereit.co.za<br>
+  Runbook version 1, 14 September 2026. The authoritative copy is <code>docs/GO-LIVE.md</code> in the
+  repository; if the two ever disagree, the repository is right.
+</footer>
+
+</body>
+</html>

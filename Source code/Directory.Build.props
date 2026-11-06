@@ -1,0 +1,47 @@
+<Project>
+
+  <!--
+    Publisher identity, applied to every project in the solution.
+
+    This is who MADE the software, and it is deliberately not the same thing as the branding a
+    customer sees. Two distinct identities live in this repository and confusing them is how a
+    reseller's customer ends up looking at another IT company's name:
+
+      * Publisher  - The Remote Support Program (Pty). Fixed, ours, identical in every build.
+                     It appears in the exe's file properties, in the installer's Publisher field,
+                     in the UAC prompt, and it is the name that will go on the code-signing
+                     certificate (see docs/CODE-SIGNING.md). Every tenant ships these same signed
+                     binaries, so this string must never be tenant-specific.
+
+      * Branding   - branding/brand.json, swapped per tenant by PayloadService. That is what names
+                     the Program Files folder, the shortcut, the tray app and the service display
+                     name. Anywhere IT is one tenant among many and is branded there, not here.
+
+    Before this file existed these fields were simply absent, so every binary reported a blank
+    company in its properties - which is both sloppy and the sort of thing SmartScreen and AV
+    heuristics notice on an unknown executable.
+  -->
+
+  <PropertyGroup>
+    <Company>The Remote Support Program</Company>
+    <Product>The Remote Support Program</Product>
+    <Copyright>Copyright (c) 2026 The Remote Support Program</Copyright>
+
+    <!-- Only for a build made any other way (dotnet run, a harness). build.ps1, ship-build.ps1 and Pack-ClientExe.ps1
+         stamp every app with the moment of the build, 2026.10.16.1432 (tools\BuildVersion.ps1, 2026-10-16); 1.0.0 is
+         "older than any stamped build" (src\RemoteSupport.Shared\AppVersion.cs). Do not raise it by hand. -->
+    <Version>1.0.0</Version>
+    <FileVersion>1.0.0.0</FileVersion>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+  </PropertyGroup>
+
+  <!--
+    WFO1000 (an error from .NET 9 on): every public property of a control must say how the Visual
+    Studio designer should save it. Nothing here uses the designer - every window is built in code,
+    and the *.Designer.cs files are EF migrations - so there is nothing for it to protect.
+  -->
+  <PropertyGroup>
+    <NoWarn>$(NoWarn);WFO1000</NoWarn>
+  </PropertyGroup>
+
+</Project>

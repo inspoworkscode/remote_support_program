@@ -1,0 +1,240 @@
+@page "/portal/devices"
+@model RemoteSupport.Platform.Pages.Portal.DevicesModel
+@{ ViewData["Title"] = "Devices"; ViewData["Section"] = "portal"; }
+<section class="portal"><div class="wrap">
+    <h1>Customer machines</h1>
+    <p class="muted">Every machine that has connected with your branded app, grouped by the customer who owns it. Linking a machine to a client files tickets raised from it under that client automatically.</p>
+    @if (!string.IsNullOrEmpty(Model.Message)) { <div class="alert alert-ok" id="devicesMessage">@Model.Message</div> }
+    @* Set by a refused Link or Confirm, and never shown until 2026-10-07 — a refusal here used to vanish. *@
+    @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad" id="devicesError">@Model.Error</div> }
+
+    @if (Model.TotalMachines == 0)
+    {
+        <div class="card">No devices yet. Share your <a href="/portal/downloads">download link</a> with a customer to get started.</div>
+    }
+    else
+    {
+        <div class="stats" style="grid-template-columns:repeat(3,1fr)">
+            <div class="stat"><div class="n">@Model.TotalMachines</div><div class="l">Machines</div></div>
+            <div class="stat"><div class="n">@Model.TotalOnline</div><div class="l">Online now</div></div>
+            <div class="stat"><div class="n">@Model.UnassignedCount</div><div class="l">Not linked to a client</div></div>
+        </div>
+        @* Auto-update's one update by hand (2026-10-16, stage F): machines installed before automatic updates. *@
+        var byHand = Model.Groups.SelectMany(g => g.Machines).Count(m => DevicesModel.NeedsUpdateByHand(m.Current));
+        @if (byHand > 0)
+        {
+            <div class="alert alert-warn" id="updateByHand"><strong>@byHand machine@(byHand == 1 ? " was" : "s were") installed before automatic updates</strong>
+                and cannot update @(byHand == 1 ? "itself" : "themselves") yet. Once each: connect from the console, then
+                <strong>Tools → Scripts → Update this machine</strong>, and Run. From then on @(byHand == 1 ? "it updates itself" : "they update themselves").</div>
+        }
+
+        @foreach (var g in Model.Groups)
+        {
+            <div class="card" style="margin-bottom:22px">
+                <h3>
+                    @if (g.IsUnassigned)
+                    {
+                        <span>@g.Name</span> <span class="pill pill-warn">@g.Machines.Count</span>
+                    }
+                    else
+                    {
+                        <a href="@(PortalAddresses.Client(g.Client!.Number))">@g.Name</a>
+                        <span class="pill pill-muted">@g.Machines.Count @(g.Machines.Count == 1 ? "machine" : "machines")</span>
+                        @if (g.OpenTickets > 0) { <span class="pill pill-warn">@g.OpenTickets open</span> }
+                        else { <span class="pill pill-ok">nothing open</span> }
+                    }
+                    @if (g.OnlineCount > 0) { <span class="pill pill-ok">@g.OnlineCount online</span> }
+                </h3>
+
+                @if (g.IsUnassigned)
+                {
+                    <p class="muted">Nobody has filed these under a customer. Until they are linked, tickets raised from them do not appear on any client page.</p>
+                }
+
+                <table>
+                    <tr>
+                        <th>Machine</th><th>User</th><th>Operating system</th><th>Processor</th>
+                        <th>RAM</th><th>Disk</th><th>Version</th><th>Last seen</th><th>Whose</th><th></th>
+                    </tr>
+                    @foreach (var m in g.Machines)
+                    {
+                        var d = m.Current;
+                        <tr>
+                            <td>
+                                <strong>@d.MachineName</strong>
+                                @if (m.Online) { <span class="pill pill-ok">online</span> } else { <span class="pill pill-muted">offline</span> }
+                                @if (m.OpenTickets > 0) { <br><a class="pill pill-warn" style="text-decoration:none" href="/portal/tickets?machine=@Uri.EscapeDataString(d.MachineName)&filter=open">@m.OpenTickets open</a> }
+                                @* Whether the person at this machine has allowed unattended access.
+                                   Shown here because the portal is where somebody asks "which of
+                                   our customers can we get into out of hours" — and the honest
+                                   answer to that is a per-machine permission the customer can
+                                   withdraw, not a property of how it was installed. *@
+                                @if (d.UnattendedEnabled)
+                                {
+                                    <br><span class="pill pill-ok" title="@(string.IsNullOrWhiteSpace(d.UnattendedChangedBy) ? "" : "Allowed by " + d.UnattendedChangedBy)@(d.UnattendedChangedUtc.HasValue ? " on " + d.UnattendedChangedUtc.Value.Local().ToString("d MMM yyyy HH:mm") : "")">unattended allowed</span>
+                                }
+                                @* Recognised through a reinstall: same machine, same record, new DeviceId. *@
+                                @if (d.ReinstallCount > 0)
+                                {
+                                    <br><span class="pill pill-muted" title="The record was kept through the reinstall, so the client link and ticket history followed the machine.@(d.ReinstallConfirmedUtc.HasValue && !d.ReinstallUnconfirmed ? " Confirmed as the same machine by " + d.ReinstallConfirmedBy + " on " + d.ReinstallConfirmedUtc.Value.Local().ToString("d MMM yyyy HH:mm") + "." : "")">reinstalled @(d.ReinstallCount == 1 ? "once" : d.ReinstallCount + " times")@(d.LastReinstallUtc.HasValue ? ", last " + d.LastReinstallUtc.Value.Local().ToString("d MMM") : "")</span>
+                                }
+                                @* Recognised by its hardware alone and nobody has said it is the same machine (2026-10-07):
+                                   unattended access waits for a supervisor or the owner. *@
+                                @if (d.ReinstallUnconfirmed)
+                                {
+                                    <br><span class="pill pill-warn reinstall-unconfirmed" title="Recognised by its hardware after an uninstall and reinstall. Until a supervisor or the owner confirms it is the same machine, unattended access waits and connecting asks the person there.">reinstalled — not confirmed</span>
+                                    @if (Model.CanConfirmReinstall)
+                                    {
+                                        <form method="post" asp-page-handler="ConfirmReinstall" class="inline" style="margin-top:4px"
+                                              onsubmit="return confirm('Confirm only if you know about this reinstall — you did it, or the customer told you. If nobody expected it, another computer may be pretending to be this one: leave it, and call the customer.')">
+                                            <input type="hidden" name="deviceId" value="@d.DeviceId">
+                                            <button class="btn btn-sm" type="submit">Confirm same machine</button>
+                                        </form>
+                                    }
+                                }
+                            </td>
+                            @* The name they gave at a support request, while nobody has linked it (2026-10-18): italic and
+                               muted, because it is only what they typed. Windows' own sign-in under it. *@
+                            <td>@if (DevicesModel.NamedByRequest(d))
+                                {
+                                    <em class="muted requested-by" title="@DevicesModel.RequestedTitle(d)">@d.RequestedBy</em>
+                                    @if (!string.IsNullOrWhiteSpace(d.UserName)) { <br><span class="muted" style="font-size:12px">@d.UserName</span> }
+                                }
+                                else { @(string.IsNullOrWhiteSpace(d.UserName) ? "—" : d.UserName) }</td>
+                            <td>@(string.IsNullOrWhiteSpace(d.Os) ? "—" : d.Os)</td>
+                            <td>@(string.IsNullOrWhiteSpace(d.Cpu) ? "—" : d.Cpu)@if (d.Cores > 0) { <span class="muted"> · @d.Cores cores</span> }</td>
+                            <td>@m.Ram</td>
+                            <td>
+                                @if (d.DiskTotalGb > 0)
+                                {
+                                    <span class="@(m.DiskUsedPct >= 90 ? "pill pill-bad" : m.DiskUsedPct >= 75 ? "pill pill-warn" : "")">@(d.DiskTotalGb - d.DiskFreeGb)/@d.DiskTotalGb GB (@m.DiskUsedPct%)</span>
+                                }
+                                else { <text>—</text> }
+                            </td>
+                            @* Which build it runs (2026-10-16, auto-update stage A): the older of its agent's and tray app's, amber
+                               when older than the apps this server hands out. *@
+                            @{ var ver = RemoteSupport.Shared.AppVersion.Oldest(d.AgentVersion, d.ClientVersion); }
+                            <td class="version" data-version="@ver" title="@DevicesModel.VersionDetail(d)">
+                                @if (DevicesModel.Behind(ver)) { <span class="pill pill-warn">@RemoteSupport.Shared.AppVersion.Label(ver)</span> }
+                                else { @RemoteSupport.Shared.AppVersion.Label(ver) }
+                                @if (DevicesModel.NeedsUpdateByHand(d)) { <div class="muted by-hand" style="font-size:12px" title="Connect, then Tools → Scripts → Update this machine — once">update by hand once</div> }
+                            </td>
+                            <td class="muted" style="font-size:12px">@d.LastSeenUtc.Local().ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>
+                                @*
+                                    One dropdown for the whole question "whose machine is this",
+                                    with each company's people listed under it. Two controls — pick
+                                    a client, then pick a contact — would ask a technician to answer
+                                    the same question twice, because choosing Bob at Zenith has
+                                    already said Zenith.
+                                *@
+                                <form method="post" asp-page-handler="Assign" class="cpick-form">
+                                    <input type="hidden" name="deviceId" value="@d.DeviceId">
+                                    @* Typed, not scrolled (2026-10-02): the picker narrows as you type,
+                                       each company with its people under it. Emptied, it is nobody. *@
+                                    <div class="cpick" data-mode="owner">
+                                        <input type="hidden" name="owner" value="@RemoteSupport.Platform.Pages.Portal.DevicesModel.OwnerValue(d)">
+                                        <input class="cpick-in" value="@Model.OwnerLabel(d)" placeholder="Type a client or a person" aria-label="Owner of @d.MachineName">
+                                        <div class="cpick-list" role="listbox" hidden></div>
+                                    </div>
+                                    <button class="btn btn-sm">Set</button>
+                                    @* The name given at the install or a support request, added as a contact at the client chosen
+                                       (2026-10-23) — ticked, because that is nearly always right; unticked for a shared PC. *@
+                                    @if (DevicesModel.OffersGiven(d))
+                                    {
+                                        <label class="add-given muted" style="flex-basis:100%;font-size:12px"><input type="checkbox" name="addGiven" value="true" checked> @DevicesModel.GivenTickText(d)</label>
+                                    }
+                                </form>
+                                @* Linking by the name they gave (2026-10-18): people on file it fits, one press each, and the
+                                   name as a new contact at a client typed below. Offered — never chosen for anybody. *@
+                                @if (DevicesModel.NamedByRequest(d))
+                                {
+                                    <div class="requested-link" style="margin-top:6px;font-size:12px">
+                                        @foreach (var (c, clientName) in Model.SuggestionsFor(d))
+                                        {
+                                            <form method="post" asp-page-handler="Assign" class="inline suggest-contact" style="margin:0 4px 4px 0">
+                                                <input type="hidden" name="deviceId" value="@d.DeviceId"><input type="hidden" name="owner" value="p:@c.Id">
+                                                <button class="btn btn-sm" type="submit" title="Link this machine to @c.Name at @clientName">@c.Name — @clientName</button>
+                                            </form>
+                                        }
+                                        <form method="post" asp-page-handler="AddContact" class="cpick-form add-requested">
+                                            <input type="hidden" name="deviceId" value="@d.DeviceId"><input type="hidden" name="name" value="@d.RequestedBy">
+                                            <span class="muted">Add <strong>@d.RequestedBy</strong> as a contact at</span>
+                                            <div class="cpick" data-mode="id">
+                                                <input type="hidden" name="clientId" value="0">
+                                                <input class="cpick-in" placeholder="Type a client's name" aria-label="Client for @d.RequestedBy">
+                                                <div class="cpick-list" role="listbox" hidden></div>
+                                            </div>
+                                            <button class="btn btn-sm">Add and link</button>
+                                        </form>
+                                    </div>
+                                }
+                                @* Unlinking said plainly (Clint, 2026-10-09: "there is no unlinking option"): emptying the box
+                                   and pressing Set always did it, which nobody would guess. *@
+                                @if (d.ClientId.HasValue || d.ContactId.HasValue)
+                                {
+                                    <form method="post" asp-page-handler="Assign" class="inline" style="margin-top:4px"
+                                          data-confirm="Unlink @d.MachineName from @Model.OwnerLabel(d)? Its tickets keep their client."
+                                          onsubmit="return confirm(this.dataset.confirm)">
+                                        <input type="hidden" name="deviceId" value="@d.DeviceId"><input type="hidden" name="owner" value="0">
+                                        <button class="btn btn-sm" type="submit">Unlink</button>
+                                    </form>
+                                }
+                            </td>
+                            <td><a class="btn btn-sm" href="/portal/tickets?machine=@Uri.EscapeDataString(d.MachineName)&filter=all">History</a>
+                                @if (Model.CanRemove) { <a class="btn btn-sm" href="/portal/removedevice?id=@d.DeviceId" style="margin-top:4px">Remove</a> }</td>
+                        </tr>
+                        @* Older records for the same PC, shown under it rather than as another machine. *@
+                        @if (m.Duplicates.Count > 0)
+                        {
+                            <tr>
+                                <td colspan="10" class="muted" style="font-size:12px;padding-top:0">
+                                    Also @m.Duplicates.Count older record@(m.Duplicates.Count == 1 ? "" : "s") for this machine
+                                    (@string.Join(", ", m.Duplicates.Select(x => "last seen " + x.LastSeenUtc.Local().ToString("yyyy-MM-dd")))) —
+                                    left behind by an uninstall and reinstall, not a second PC.
+                                </td>
+                            </tr>
+                        }
+                        @* An unlinked machine whose name is already owned: the same PC, reinstalled. *@
+                        @if (m.SameNameOwnedBy != null)
+                        {
+                            <tr>
+                                <td colspan="10" style="padding-top:0">
+                                    <span class="pill pill-warn">same name</span>
+                                    <span class="muted" style="font-size:12px">
+                                        A machine called @m.Current.MachineName is already linked to
+                                        <a href="@(PortalAddresses.Client(m.SameNameOwnedBy.Number))">@m.SameNameOwnedBy.Name</a> —
+                                        this is very likely the same PC after a reinstall. Set the client here to bring its work back together.
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </table>
+            </div>
+        }
+
+        <p class="muted" style="font-size:13px">Machines over 90% disk usage are flagged in red — usually the first thing to check when a customer says their PC is slow.</p>
+    }
+
+    @* Removed machines (2026-10-06): who, when and why. Their tickets, sessions and reports are kept. *@
+    @if (Model.Removals.Count > 0)
+    {
+        <div class="card" style="margin-top:22px" id="removedMachines">
+            <h3>Removed machines</h3>
+            <table>
+                <tr><th>Machine</th><th>Removed</th><th>By</th><th>Why</th></tr>
+                @foreach (var r in Model.Removals)
+                {
+                    <tr class="removal-row">
+                        <td><strong>@r.MachineName</strong></td>
+                        <td class="muted">@r.RemovedUtc.Local().ToString("d MMM yyyy HH:mm")</td>
+                        <td>@r.RemovedBy</td>
+                        <td>@(string.IsNullOrEmpty(r.Reason) ? "—" : r.Reason)@if (!string.IsNullOrWhiteSpace(r.Note)) { <span class="muted"> — @r.Note</span> }</td>
+                    </tr>
+                }
+            </table>
+            <p class="muted" style="font-size:13px">Their tickets, sessions and reports are kept. To add one again, install the support program on it again.</p>
+        </div>
+    }
+</div></section>

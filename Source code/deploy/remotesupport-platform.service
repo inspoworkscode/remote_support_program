@@ -1,0 +1,37 @@
+[Unit]
+Description=The Remote Support Program (multi-tenant platform)
+After=network.target
+
+[Service]
+Type=notify
+WorkingDirectory=/opt/rsp
+ExecStart=/opt/rsp/RemoteSupport.Platform run
+Restart=always
+RestartSec=5
+KillSignal=SIGINT
+User=rsp
+Group=rsp
+# Caddy's way in, /run/rsp/platform.sock (2026-10-13, BUGS #12): made fresh at every start and removed at every stop,
+# so no stale socket is ever left behind; 0750 lets only rsp and its group (caddy is a member) inside.
+RuntimeDirectory=rsp
+RuntimeDirectoryMode=0750
+# Owner portal key — set a long random value, or put it in appsettings.json as Platform:AdminKey
+Environment=RSP_Platform__AdminKey=CHANGE-ME
+Environment=RSP_Platform__PublicUrl=https://theremotesupportprogram.com
+Environment=DOTNET_CLI_TELEMETRY_OPTOUT=1
+# Fenced in (2026-10-01, HANDOVER §72). The program can never gain privileges, sees /usr, /boot and
+# /etc read-only, has a /tmp of its own (where health-check PDFs are made), cannot see anyone's
+# home, and cannot touch kernel settings. Writing is limited by file ownership: only data/ is the
+# service's own (go-live.sh). Chrome, started for PDFs, runs headless with --no-sandbox and needs
+# none of what is fenced off.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+
+[Install]
+WantedBy=multi-user.target

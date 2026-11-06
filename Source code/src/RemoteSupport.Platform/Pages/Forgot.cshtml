@@ -1,0 +1,23 @@
+@page "/forgot"
+@model ForgotModel
+@{ ViewData["Title"] = "Forgot password"; }
+<section class="section">
+    <div class="wrap" style="max-width:520px">
+        <h1>Forgot your password?</h1>
+        @if (Model.Sent)
+        {
+            <div class="alert alert-ok">If <strong>@Model.Email</strong> has an account, we have emailed it a link to choose a new password. The link works once, for 2 hours.</div>
+            <p class="muted">Nothing arrived after a few minutes? Check your junk folder, or ask your supervisor to press <em>Send reset link</em> beside your name on the People page.</p>
+            <p><a href="/login">Back to sign in</a></p>
+        }
+        else
+        {
+            <p class="muted">Type the email address you sign in with. We'll email you a link to choose a new one. You'll still need the code from your authenticator app afterwards.</p>
+            <form method="post" class="form">
+                <label>Email</label><input name="Email" type="email" value="@Model.Email" required autofocus autocomplete="username">
+                <div class="actions"><button class="btn btn-accent btn-lg" type="submit">Email me a link</button></div>
+            </form>
+            <p class="muted" style="margin-top:20px"><a href="/login">Back to sign in</a></p>
+        }
+    </div>
+</section>

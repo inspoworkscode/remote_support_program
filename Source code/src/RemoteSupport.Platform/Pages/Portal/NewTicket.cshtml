@@ -1,0 +1,224 @@
+@page "/portal/tickets/new"
+@model RemoteSupport.Platform.Pages.Portal.NewTicketModel
+@{ ViewData["Title"] = "New ticket"; ViewData["Section"] = "portal"; }
+<section class="portal"><div class="wrap">
+    <p><a href="/portal/tickets">← Back to tickets</a></p>
+    <h1>New ticket</h1>
+    <p class="muted">Anyone in the office can raise a job and assign it to the right person.</p>
+    @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad">@Model.Error</div> }
+
+    @* "form" is what stacks each label over its box and makes the boxes full width. The page went
+       without it until 2026-09-28, and every label sat squeezed on the line beside its box. *@
+    <form method="post" class="card form" style="max-width:860px">
+        <h3>Type of job</h3>
+        @* Each category in its own colour, the chosen one filled with a tick (Clint, 2026-10-09: the wrong one had
+           been chosen because the old grey strip did not show it enough). Colours: TicketSummary.CategoryColors. *@
+        <div class="cat-pick" role="radiogroup" aria-label="Type of job">
+            @* The VALUE, not the loop position: General is offered first and is stored as 4. *@
+            @foreach (var v in Model.CategoryOrder)
+            {
+                var (fill, onDark) = RemoteSupport.Shared.TicketSummary.CategoryColors[v];
+                <button type="button" class="@(Model.Category == v ? "on" : "")" data-cat="@v" onclick="pickCat(@v)"
+                        role="radio" aria-checked="@(Model.Category == v ? "true" : "false")"
+                        style="--c:@fill;--cd:@onDark">@Model.CategoryNames[v]@(v == 5 ? "…" : "")</button>
+            }
+        </div>
+        <input type="hidden" name="Category" id="Category" value="@Model.Category">
+
+        <h3 style="margin-top:22px">Client</h3>
+        <label>Search or type a new client name <span id="clientOpt" class="muted" style="font-weight:400;display:@(Model.Category == 4 ? "inline" : "none")">— optional for a General ticket</span></label>
+        <input name="ClientName" id="ClientName" value="@Model.ClientName" autocomplete="off" required="@(Model.Category != 4)"
+               placeholder="Start typing — matches appear below" oninput="lookup()">
+        <input type="hidden" name="ClientId" id="ClientId" value="@Model.ClientId">
+        <div id="matches" style="margin-top:6px"></div>
+        <div id="newClient" style="display:none;margin-top:10px;padding:12px;border:1px dashed var(--purple);border-radius:12px">
+            <p class="muted" style="margin:0 0 8px"><strong>New client</strong> — no existing match selected, so this will be created.</p>
+            <div class="row">
+                <div><label>Phone</label><input name="NewClientPhone" value="@Model.NewClientPhone"></div>
+                <div><label>Email</label><input name="NewClientEmail" type="email" value="@Model.NewClientEmail"></div>
+            </div>
+            <label>Address</label><input name="NewClientAddress" value="@Model.NewClientAddress">
+        </div>
+
+        <h3 style="margin-top:22px">The job</h3>
+        <label>Subject</label><input name="Subject" value="@Model.Subject" required>
+        <label>Description / fault reported</label><textarea name="Description" rows="4">@Model.Description</textarea>
+        <div class="row">
+            <div>
+                <label>Priority</label>
+                <select name="Priority">
+                    @for (int i = 0; i < 4; i++) { <option value="@i" selected="@(Model.Priority == i)">@RemoteSupport.Shared.TicketSummary.PriorityNames[i]</option> }
+                </select>
+            </div>
+            @* When it is due (2026-10-26, HANDOVER §165): a day, optional, for any type of job. *@
+            <div><label>Due date <span class="muted" style="font-weight:400">(optional)</span></label><input name="DueDate" type="date" value="@Model.DueDate" min="@RemoteSupport.Platform.Services.CompanyClock.Now.ToString("yyyy-MM-dd")"></div>
+        </div>
+        @* Several people may be on one job from the start (2026-09-28). *@
+        <div id="peopleBox"><partial name="_People" model="Model.Picker" /></div>
+        <p id="assignReq" class="muted" style="display:none;margin:4px 0 0">A workshop machine is booked in to at least one named technician.</p>
+
+        <div id="callout" style="display:none">
+            <h3 style="margin-top:22px">Call out</h3>
+            <label>Site address</label><textarea name="SiteAddress" rows="2">@Model.SiteAddress</textarea>
+            <div class="row">
+                <div><label>Appointment date</label><input name="AppointmentDate" type="date" value="@Model.AppointmentDate"></div>
+                <div><label>Appointment time</label><input name="AppointmentTime" type="time" value="@Model.AppointmentTime"></div>
+            </div>
+        </div>
+
+        <div id="workshop" style="display:none">
+            <h3 style="margin-top:22px">Workshop booking</h3>
+            <div class="row">
+                <div><label>Make</label><input name="AssetMake" value="@Model.AssetMake"></div>
+                <div><label>Model</label><input name="AssetModel" value="@Model.AssetModel"></div>
+            </div>
+            <label>Serial number</label><input name="AssetSerial" value="@Model.AssetSerial">
+            <label>Accessories supplied (charger, bag, cables…)</label><textarea name="Accessories" rows="2">@Model.Accessories</textarea>
+            <label><input type="checkbox" name="DevicePasswordProtected" value="true" id="pwChk" onchange="togglePw()" style="width:auto" checked="@Model.DevicePasswordProtected"> Machine is password protected</label>
+            <div id="pwBox" style="display:none">
+                <label>Device password</label><input name="DevicePassword" value="@Model.DevicePassword" autocomplete="new-password">
+                <p class="muted" style="font-size:13px">Stored encrypted and only shown to signed-in staff.</p>
+            </div>
+
+            @* The photos of the machine as it arrived. Uploaded as they are picked rather than
+               with the form, because they have to exist before the ticket does — they are staged
+               against StageId and attached the moment it is created. *@
+            <h3 style="margin-top:22px">
+                Photos of the machine as it arrived@(Model.PhotosRequired == 0 ? " (optional)" : "")
+                <span class="pill pill-warn" id="photoCount">0 of @Model.PhotosRequired</span>
+            </h3>
+            @if (Model.PhotosRequired > 0)
+            {
+                <p class="muted" style="font-size:13px">
+                    At least @Model.PhotosRequired photos are needed before this machine can be booked in — the lid, the base and the screen is the usual set — and you can add as many as the damage needs, a few at a time or all at once.
+                    This is what settles an argument about a scratch six weeks later.
+                </p>
+            }
+            else
+            {
+                @* Job types: the company does not ask for them, so they are a help and never a gate. *@
+                <p class="muted" style="font-size:13px">Your company doesn't ask for photos when a machine is booked in. Add some if they help.</p>
+            }
+            <input type="hidden" name="StageId" value="@Model.StageId" id="StageId">
+            <input type="file" id="photoPick" accept="image/*" multiple capture="environment"
+                   onchange="uploadPhotos()" style="padding:10px 0">
+            <div id="photoList" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+                @foreach (var p in Model.Staged)
+                {
+                    <img src="@(PortalAddresses.Photo(p.Token))" alt="@p.OriginalName"
+                         style="width:120px;height:90px;object-fit:cover;border-radius:10px;border:1px solid var(--line)">
+                }
+            </div>
+            <p class="muted" id="photoNote" style="font-size:13px;margin-top:8px"></p>
+        </div>
+
+        <div class="actions"><button class="btn btn-accent btn-lg" type="submit">Create ticket</button></div>
+    </form>
+</div></section>
+
+<script src="/photos.js?v=@RemoteSupport.Platform.Services.BuildStamp.Value"></script>
+<script>
+// i is the stored TicketCategory VALUE, not the button's position: 0 remote support, 1 walk in,
+// 2 workshop, 3 call out, 4 general. General is offered first and shows no extra fields.
+function pickCat(i){
+  // 5, a recurring task, is a schedule set up once rather than one ticket: it has its own form,
+  // which offers the office as well as the technicians (2026-10-07). The client goes with it.
+  if (i == 5) {
+    const cid = document.getElementById('ClientId').value;
+    location.href = '/portal/r/new' + (cid && cid !== '0' ? '?clientId=' + encodeURIComponent(cid) : '');
+    return;
+  }
+  document.getElementById('Category').value = i;
+  document.querySelectorAll('.cat-pick button').forEach(function(b){ b.classList.toggle('on', b.dataset.cat == i); b.setAttribute('aria-checked', b.dataset.cat == i); });
+  document.getElementById('callout').style.display  = (i == 3) ? 'block' : 'none';
+  document.getElementById('workshop').style.display = (i == 2) ? 'block' : 'none';
+  // A workshop machine is booked in to a named technician (the server refuses it otherwise).
+  document.getElementById('assignReq').style.display = (i == 2) ? 'block' : 'none';
+  // A General ticket may be an instruction to somebody in the office, with no client (2026-09-27).
+  document.getElementById('ClientName').required = (i != 4);
+  document.getElementById('clientOpt').style.display = (i == 4) ? 'inline' : 'none';
+}
+function togglePw(){ document.getElementById('pwBox').style.display = document.getElementById('pwChk').checked ? 'block' : 'none'; }
+
+// The browser cannot require "at least one" of a set of tick boxes, so a workshop booking is
+// stopped here before it is sent. The server refuses it anyway (TicketService.CheckBookIn).
+document.querySelector('form.card').addEventListener('submit', function(e){
+  if (document.getElementById('Category').value == 2 && !document.querySelector('#peopleBox input[name=people]:checked')) {
+    e.preventDefault();
+    document.getElementById('peopleBox').scrollIntoView({ block: 'center' });
+  }
+});
+
+// Photos go up as they are picked. The counter is a courtesy so nobody fills the whole form and
+// is refused at the end; the rule itself is on the server, in TicketPhotoService.
+const photosNeeded = @Model.PhotosRequired;
+let photosSoFar = @Model.Staged.Count;
+function paintPhotoCount(){
+  const el = document.getElementById('photoCount');
+  el.textContent = photosSoFar >= photosNeeded ? photosSoFar + ' added' : photosSoFar + ' of at least ' + photosNeeded;
+  el.className = 'pill ' + (photosSoFar >= photosNeeded ? 'pill-ok' : 'pill-warn');
+}
+// ONE PHOTO PER UPLOAD (2026-09-29): all of them in one request lost fourteen photos of a dropped
+// laptop at once — 60 MB, past what the server took. Pick as many as you like, as often as you like.
+async function uploadPhotos(){
+  const input = document.getElementById('photoPick');
+  const note = document.getElementById('photoNote');
+  if (!input.files.length) return;
+  const files = Array.from(input.files);
+  const problems = [];
+  for (let i = 0; i < files.length; i++) {
+    note.textContent = 'Uploading ' + (i + 1) + ' of ' + files.length + '…';
+    const form = new FormData();
+    form.append('kind', 'before');
+    form.append('stage', document.getElementById('StageId').value);
+    form.append('files', await shrinkPhoto(files[i]));
+    try {
+      const res = await fetch('/api/portal/photos', { method: 'POST', body: form });
+      const body = await res.json();
+      if (!res.ok && body.error) problems.push(files[i].name + ': ' + body.error);
+      for (const p of (body.photos || [])) {
+        if (p.error) { problems.push(p.error); continue; }
+        photosSoFar++;
+        const img = document.createElement('img');
+        img.src = '/portal/p/' + p.token;
+        img.style.cssText = 'width:120px;height:90px;object-fit:cover;border-radius:10px;border:1px solid var(--line)';
+        document.getElementById('photoList').appendChild(img);
+      }
+    } catch (e) { problems.push(files[i].name + ': did not upload'); }
+    paintPhotoCount();
+  }
+  note.textContent = problems.join(' ');
+  input.value = '';
+  paintPhotoCount();
+}
+paintPhotoCount();
+
+let timer = null;
+function lookup(){
+  document.getElementById('ClientId').value = '';   // typing again means "not the one I picked"
+  clearTimeout(timer);
+  timer = setTimeout(async function(){
+    const term = document.getElementById('ClientName').value.trim();
+    const box = document.getElementById('matches');
+    if (term.length < 2) { box.innerHTML = ''; showNew(true); return; }
+    try {
+      const res = await fetch('/api/portal/clients?term=' + encodeURIComponent(term));
+      const list = await res.json();
+      if (!list.length) { box.innerHTML = '<p class="muted" style="font-size:13px">No existing client matches — a new one will be created.</p>'; showNew(true); return; }
+      box.innerHTML = list.map(function(c){
+        return '<button type="button" class="btn btn-sm" style="margin:3px 4px 0 0" onclick="choose(' + c.id + ',' + JSON.stringify(c.name).replace(/"/g,'&quot;') + ')">' +
+               c.display.replace(/</g,'&lt;') + '</button>';
+      }).join('') + '<p class="muted" style="font-size:13px;margin-top:6px">Pick one to avoid a duplicate, or keep typing to create a new client.</p>';
+      showNew(true);
+    } catch(e) { box.innerHTML = ''; }
+  }, 200);
+}
+function choose(id, name){
+  document.getElementById('ClientId').value = id;
+  document.getElementById('ClientName').value = name;
+  document.getElementById('matches').innerHTML = '<span class="pill pill-ok">Linked to existing client: ' + name.replace(/</g,'&lt;') + '</span>';
+  showNew(false);
+}
+function showNew(on){ document.getElementById('newClient').style.display = on ? 'block' : 'none'; }
+pickCat(@Model.Category); togglePw();
+</script>

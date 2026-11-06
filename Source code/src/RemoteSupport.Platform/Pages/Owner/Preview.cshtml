@@ -1,0 +1,20 @@
+@page "/owner/preview"
+@model RemoteSupport.Platform.Pages.Owner.PreviewModel
+@{ ViewData["Title"] = "Preview the site"; ViewData["Section"] = "owner"; }
+<section class="portal"><div class="wrap">
+    <h1>Preview the site</h1>
+    <p class="muted">
+        Until go-live the public sees the holding page and nobody can sign up. Here you can let <strong>this browser</strong>
+        see the real home, features and pricing pages, and sign a test company up — for 30 days, or until you turn it off.
+        Nobody else is affected.
+    </p>
+    @if (Model.Message.Length > 0) { <div class="alert alert-ok" id="previewMessage">@Model.Message</div> }
+    <div class="card" id="previewState" data-on="@(Model.On ? "yes" : "no")">
+        <p>This browser: <strong>@(Model.On ? "sees the real site" : "sees the holding page")</strong>.</p>
+        <form method="post">
+            <input type="hidden" name="on" value="@(Model.On ? "false" : "true")">
+            <button class="btn @(Model.On ? "" : "btn-accent")" type="submit">@(Model.On ? "Turn the preview off" : "Turn the preview on")</button>
+        </form>
+        @if (Model.On) { <p style="margin-top:12px"><a href="/pricing">Pricing</a> · <a href="/signup">Sign up</a> · <a href="/">Home</a></p> }
+    </div>
+</div></section>

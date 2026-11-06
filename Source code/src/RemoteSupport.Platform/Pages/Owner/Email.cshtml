@@ -1,0 +1,20 @@
+@page "/owner/email"
+@model RemoteSupport.Platform.Pages.Owner.EmailModel
+@{ ViewData["Title"] = "Email the owners"; ViewData["Section"] = "owner"; var c = Model.Company!; }
+<section class="portal"><div class="wrap" style="max-width:720px">
+    <h1>Email @c.Name's owners</h1>
+    @if (Model.Message.Length > 0) { <div class="alert alert-ok">@Model.Message</div> }
+    @if (Model.Problem.Length > 0) { <div class="alert alert-bad">@Model.Problem</div> }
+    <p class="muted">To: @(c.Owners.Count > 0 ? string.Join(", ", c.Owners.Select(o => $"{o.Name} <{o.Email}>")) : c.SupportEmail.Contains('@') ? $"{c.Name} <{c.SupportEmail}> (no owner — their support address)" : "nobody — they have no owner or support address")</p>
+    @if (Model.CanManage)
+    {
+        <form method="post" class="form card" id="emailOwners">
+            <input type="hidden" name="Server" value="@Model.Server"><input type="hidden" name="Id" value="@Model.Id">
+            <label>Subject</label><input name="Subject" value="@Model.Subject" required maxlength="200">
+            <label>Message</label><textarea name="Body" rows="10" required data-autogrow>@Model.Body</textarea>
+            <p class="muted" style="font-size:13px">Sent from our mailbox and signed with your name; replies come to your own address.</p>
+            <div class="actions"><button class="btn btn-accent" type="submit">Send</button> <a class="btn" href="/owner/tenants">Back</a></div>
+        </form>
+    }
+    else { <div class="alert">You are a Viewer: you cannot send emails from here.</div> }
+</div></section>

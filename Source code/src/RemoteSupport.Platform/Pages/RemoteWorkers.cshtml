@@ -1,0 +1,135 @@
+@page "/remote-workers"
+@using RemoteSupport.Shared
+@*
+    The Basic Version for Remote Workers (2026-10-25, Clint: "we also need to add as many keywords as possible for remote working
+    for when the site goes live"). Search engines read what a page SAYS, not a hidden list, so this page says it — working from
+    home, reaching the office computer, unattended access — in plain words, every one of them true of the Basic version
+    (FreePlan, R50, three computers). The keywords meta is for the engines that still read it. Behind the holding page until
+    go-live like every page in SitePages.Public (deploy/go-live.sh; tools/sitecheck proves it).
+*@
+@{
+    var za = Pricing.For("ZA");
+    var price = Pricing.Money(za, za.Basic);
+    var extra = Pricing.Money(za, za.ExtraMachine);
+    ViewData["Title"] = "Work from home on your office computer";
+    ViewData["Description"] = $"Remote access to your work computer from home: reach your office PC, files and printer from anywhere. Unattended, encrypted, {price} a month.";
+    ViewData["Keywords"] = "remote working, work from home, remote access, remote desktop, access office computer from home, access work PC from home, "
+        + "remote access software, unattended remote access, remote desktop software South Africa, remote PC access, connect to work computer remotely, "
+        + "access files remotely, remote printing, hybrid work, home office, branch office access, AnyDesk alternative, TeamViewer alternative, "
+        + "secure remote access, two-factor remote desktop, end-to-end encrypted remote desktop, Windows remote access, remote workers";
+}
+@section Head {
+    <script type="application/ld+json">
+    {
+      "@@context": "https://schema.org",
+      "@@graph": [
+        {
+          "@@type": "SoftwareApplication",
+          "name": "@FreePlan.FullName",
+          "applicationCategory": "BusinessApplication",
+          "applicationSubCategory": "Remote desktop software",
+          "operatingSystem": "Windows 10, Windows 11",
+          "description": "Remote access for remote workers: reach your own office computer from home, unattended, encrypted end to end.",
+          "offers": { "@@type": "Offer", "price": "@za.Basic", "priceCurrency": "ZAR", "description": "A month, after a 14-day free trial" }
+        },
+        {
+          "@@type": "FAQPage",
+          "mainEntity": [
+            { "@@type": "Question", "name": "Can I access my work computer from home?",
+              "acceptedAnswer": { "@@type": "Answer", "text": "Yes. Install it on your office computer once, choosing a password, and connect to it from home with the console — nobody needs to be at the office." } },
+            { "@@type": "Question", "name": "Is remote access to my office PC secure?",
+              "acceptedAnswer": { "@@type": "Answer", "text": "Every session is encrypted end to end, you sign in with a code from an authenticator app, and each computer has its own password." } },
+            { "@@type": "Question", "name": "How much does it cost?",
+              "acceptedAnswer": { "@@type": "Answer", "text": "@price a month for one person and @FreePlan.MaxMachines computers, and @extra a month for each one more, up to @FreePlan.MostMachines, after a 14-day free trial. No VAT. Cancel any time." } },
+            { "@@type": "Question", "name": "Can I print and copy files from my work computer at home?",
+              "acceptedAnswer": { "@@type": "Answer", "text": "Yes. Files and folders copy both ways, copy and paste works between the two computers, and a document on the office computer can print on your printer at home." } },
+            { "@@type": "Question", "name": "Is there a free version?",
+              "acceptedAnswer": { "@@type": "Answer", "text": "Yes. The Free Version reaches one computer of your own, unattended with its password, with nothing to pay and no card. Upgrade to the Basic version any time for more computers." } }
+          ]
+        }
+      ]
+    }
+    </script>
+}
+<section class="page-head">
+    <div class="wrap">
+        <h1>Work from home on your office computer</h1>
+        <p class="lede">@FreePlan.FullName: remote access to your work computer — and your other computers — from anywhere. Sit at home, and use the computer at the office
+            as if you were in front of it — your programs, your files, your printer — with nobody there to let you in.
+            <strong>@price a month</strong>, after a 14-day free trial.</p>
+        <div class="next-links"><a class="btn btn-accent" href="/signup?region=ZA&amp;plan=basic">Start your free trial</a> <a class="btn" href="/pricing#free">Pricing</a></div>
+    </div>
+</section>
+
+<section class="section">
+    <div class="wrap">
+        <h2>Made for remote workers</h2>
+        <ul class="feature-list" style="margin-top:18px">
+            <li><strong>Working from home</strong>: reach your office PC and work on it exactly as you would at your desk</li>
+            <li><strong>Hybrid work</strong>: in the office on Monday, at home on Tuesday — the same computer, the same files</li>
+            <li><strong>Branch offices and shops</strong>: look after the computers at another site without driving there</li>
+            <li><strong>After hours</strong>: finish something on the work computer at night, or check the shop's computer on a Sunday</li>
+            <li><strong>@FreePlan.MaxMachines computers included</strong>, and more at @extra a month each — up to @FreePlan.MostMachines — each with its own password</li>
+            <li><strong>Unattended remote access</strong>: nobody at the computer has to click Allow</li>
+            <li><strong>Attended too</strong>: a computer without a password asks whoever is at it to allow you in</li>
+        </ul>
+    </div>
+</section>
+
+<section class="section alt">
+    <div class="wrap grid2">
+        <div>
+            <h2>Everything you need from the office computer</h2>
+            <ul class="feature-list" style="grid-template-columns:1fr;margin-top:14px">
+                <li>Remote desktop control: a sharp, fast picture that adjusts to a slow connection</li>
+                <li>Copy and paste, and whole files and folders, both ways</li>
+                <li>Print an office document on your printer at home</li>
+                <li>Restart it, lock it, or send Ctrl+Alt+Del — and it comes back by itself after a restart</li>
+                <li>Two computers on screen at once, one on each monitor</li>
+            </ul>
+        </div>
+        <div>
+            <h2>Secure remote access</h2>
+            <ul class="feature-list" style="grid-template-columns:1fr;margin-top:14px">
+                <li>Encrypted end to end: not even our server can see your screen</li>
+                <li>Two-factor sign-in with an authenticator app on your phone</li>
+                <li>A password on every computer, chosen when it is installed</li>
+                <li>Whoever is at the computer sees a bar saying it is being used remotely</li>
+                <li>Your data is kept under South African law (POPIA) — <a href="/security">more about security</a></li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<section class="section">
+    <div class="wrap">
+        <h2>Set up in three steps</h2>
+        <ol class="steps-list" style="line-height:1.9;padding-left:20px;margin-top:14px">
+            <li>Sign up and add your card — nothing is charged for 14 days.</li>
+            <li>On your office computer, install the program and choose its password.</li>
+            <li>At home, download the console, sign in, and double-click the office computer to connect.</li>
+        </ol>
+        <p class="muted" style="margin-top:12px">Windows 10 and Windows 11, at both ends. One person, who is both the owner and the person connecting.</p>
+    </div>
+</section>
+
+<section class="section alt">
+    <div class="wrap">
+        <h2>Questions remote workers ask</h2>
+        <div class="facts" style="margin-top:16px">
+            <div class="card fact"><h3>Can I access my work computer from home?</h3><p>Yes. Install it on your office computer once, choosing a password,
+                and connect to it from home with the console. Nobody needs to be at the office.</p></div>
+            <div class="card fact"><h3>Is it allowed on my employer's computer?</h3><p>Yes, if the computer is yours or its owner lets you reach it — for a work
+                computer, ask your employer first. Whoever uses it must know it can be reached remotely; the bar on its screen tells them.</p></div>
+            <div class="card fact"><h3>An AnyDesk or TeamViewer alternative?</h3><p>For one person reaching their own computers, yes: remote control, files and
+                printing, unattended and encrypted, for @price a month. Supporting customers is the <a href="/pricing">full version</a>.</p></div>
+            <div class="card fact"><h3>What does it cost?</h3><p>@price a month for one person and @FreePlan.MaxMachines computers, and @extra for each one more (up to @FreePlan.MostMachines), by card, after a
+                14-day free trial. No VAT, no contract, cancel any time.</p></div>
+            <div class="card fact"><h3>Is there a free version?</h3><p>Yes: @FreePlan.FreeFullName reaches <strong>one</strong> computer of your own, unattended with
+                its password — nothing to pay, no card. Upgrade to the Basic version any time for more. <a href="/signup?region=ZA&amp;plan=free">Start free</a></p></div>
+            <div class="card fact"><h3>What if I need more?</h3><p>Upgrade in place to the full version: the same account, the same computers and saved
+                passwords, for supporting customers and a whole team.</p></div>
+        </div>
+        <div class="next-links" style="margin-top:20px"><a class="btn btn-accent" href="/signup?region=ZA&amp;plan=basic">Start your free trial</a> <a class="btn" href="/remote-support">How the remote control works</a></div>
+    </div>
+</section>

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>consentfront</AssemblyName>
+    <RootNamespace>RemoteSupport.Tools.ConsentFront</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\RemoteSupport.Shared\RemoteSupport.Shared.csproj" />
+    <ProjectReference Include="..\..\src\RemoteSupport.UI\RemoteSupport.UI.csproj" />
+    <!-- The customer's Allow prompt: the host's own window, asked through ConsentPrompt.Ask by reflection. -->
+    <ProjectReference Include="..\..\src\RemoteSupport.Host\RemoteSupport.Host.csproj" />
+  </ItemGroup>
+</Project>

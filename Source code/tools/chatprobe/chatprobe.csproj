@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\RemoteSupport.Shared\RemoteSupport.Shared.csproj" />
+    <ProjectReference Include="..\..\src\RemoteSupport.UI\RemoteSupport.UI.csproj" />
+    <ProjectReference Include="..\..\src\RemoteSupport.Client\RemoteSupport.Client.csproj" />
+  </ItemGroup>
+</Project>

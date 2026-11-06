@@ -1,0 +1,189 @@
+@page "/portal/technicians"
+@model RemoteSupport.Platform.Pages.Portal.TechniciansModel
+@using RemoteSupport.Platform.Pages.Portal
+@{
+    ViewData["Title"] = "People"; ViewData["Section"] = "portal";
+    var bill = Model.Bill;
+    var limited = Pricing.Limited(Model.Tenant);
+    var extraSeat = Pricing.Money(bill.Region, bill.Region.ExtraSeat);
+    var extraAllowed = Pricing.MayHaveExtra(Model.Tenant);
+    var myEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+}
+<section class="portal"><div class="wrap">
+    <h1>People <span class="pill pill-muted" id="seatPill">@(!limited ? $"{bill.People} seats in use · not limited" : extraAllowed ? $"{bill.People} of {Model.Most} seats in use · {bill.Included} in your package" : $"{bill.People} of {bill.Included} seats in use")</span></h1>
+    <p class="muted">Tick every role a person does — one person can be a technician, a supervisor and the office administrator, and still uses one seat. Everybody uses a seat: technicians, supervisors and office administrators. One owner on their own is free; an owner who ticks another box as well, and every further owner, uses a seat. Only an owner can make somebody an owner, and there is always at least one. Technicians and supervisors work in the desktop console; office administrators on this website only.@if (limited && extraAllowed) {<text> Your package has @bill.Included seats, and we have allowed you up to @Model.Most; each person beyond @bill.Included is @extraSeat a month@(Model.Tenant.Pilot ? ", invoiced by us" : "").</text>} else if (limited) {<text> A company has @bill.Included seats; more are on request — an owner can ask on the <a href="/portal/billing#moreSeats">Billing</a> page.</text>}</p>
+    @if (Model.Asking is { } q)
+    {
+        var after = q.Rise.After;
+        @* The owner agrees to the new price — or not — before the change is made (2026-10-05; back 2026-10-25 for seats we allowed). *@
+        <div class="card price-question" id="priceQuestion" style="border:2px solid var(--accent);margin-bottom:18px">
+            <h3 style="margin-top:0">@q.Doing raises your monthly price</h3>
+            <table class="price-table" style="max-width:560px">
+                <tr><td>Now</td><td><span style="white-space:nowrap"><strong>@q.Rise.Before.Total</strong> a month</span><br><span class="muted" style="font-size:13px">@q.Rise.Before.People people in seats</span></td></tr>
+                <tr><td>After</td><td><span style="white-space:nowrap"><strong style="font-size:20px">@after.Total</strong> a month</span><br><span class="muted" style="font-size:13px">@after.People people: @after.PackageText + @after.ExtraText</span></td></tr>
+            </table>
+            <p class="muted">@(Model.Tenant.Pilot ? "We invoice the extra seats each month." : "The new price starts with your next payment — your card is charged the new amount by PayFast; nothing is charged today.") If somebody leaves later, remove them here and the price comes down again.</p>
+            <div class="actions">
+                <form method="post" asp-page-handler="@q.Handler" class="inline">
+                    <input type="hidden" name="name" value="@q.Name"><input type="hidden" name="email" value="@q.Email">
+                    @foreach (var r in q.Roles) { <input type="hidden" name="role" value="@r"> }
+                    <input type="hidden" name="agreed" value="@q.Rise.Token">
+                    <button class="btn btn-accent" type="submit" id="acceptPrice">Accept @after.Total a month</button>
+                </form>
+                <form method="post" asp-page-handler="Decline" class="inline">
+                    <input type="hidden" name="doing" value="@q.Doing">
+                    <button class="btn" type="submit" id="declinePrice">Don't do it</button>
+                </form>
+            </div>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(Model.Message))
+    {
+        <div class="alert @(Model.HandOnLink.Length > 0 ? "alert-warn" : "alert-ok")">@Model.Message
+            @if (Model.HandOnLink.Length > 0)
+            {
+                <div class="copy" style="margin-top:8px"><code id="handon" style="user-select:all;word-break:break-all">@Model.HandOnLink</code>
+                    <button type="button" class="btn btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('handon').textContent);this.textContent='Copied'">Copy</button></div>
+            }
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad">@Model.Error</div> }
+    <div class="people-grid">
+        <div class="table-scroll">
+            <table>
+                <tr><th>Name</th><th>Email</th><th>Role</th><th>Last sign-in</th><th>Two-factor</th><th></th></tr>
+                @foreach (var x in Model.List)
+                {
+                    var mayEdit = !x.IsOwner || Model.CanChangeOwner;
+                    <tr>
+                        <td>@x.DisplayName</td>
+                        <td>@x.Email</td>
+                        <td class="roles-cell">
+                            @if (!mayEdit)
+                            {
+                                <span>@x.RoleLabel</span>
+                            }
+                            else
+                            {
+                                <form method="post" asp-page-handler="Role" class="people roles-row">
+                                    <input type="hidden" name="email" value="@x.Email">
+                                    @* Several owners (2026-10-08): only an owner sees the Owner box, and the last owner's is locked on. *@
+                                    @if (x.IsOwner && Model.LastOwner(x))
+                                    {
+                                        <input type="hidden" name="role" value="owner">
+                                        <label class="person locked" title="A company always has at least one owner. Make somebody else an owner first."><input type="checkbox" checked disabled> Owner</label>
+                                    }
+                                    else if (Model.CanChangeOwner)
+                                    {
+                                        <label class="person" title="Billing, prices and the people. One owner on their own is free; every other owner uses a seat."><input type="checkbox" name="role" value="owner" checked="@x.IsOwner"> Owner</label>
+                                    }
+                                    @foreach (var (box, label) in TenantRoles.Boxes.Where(b => b.box != TenantRole.Owner))
+                                    {
+                                        <label class="person"><input type="checkbox" name="role" value="@TechniciansModel.ValueOf(box)" checked="@x.Role.Has(box)"> @label</label>
+                                    }
+                                    <button class="btn btn-sm">Save</button>
+                                </form>
+                            }
+                        </td>
+                        <td>@(x.AwaitingSetup ? "—" : x.LastLoginUtc.Local()?.ToString("yyyy-MM-dd HH:mm") ?? "never")</td>
+                        <td>
+                            @* Set up at their next sign-in if not yet — nobody gets in without it. *@
+                            @if (x.AwaitingSetup) { <span class="pill pill-warn" title="They have been sent an invitation and have not used it yet">Invited — not set up</span> }
+                            else if (x.HasTwoFactor) { <span class="pill pill-ok" title="Since @x.TotpEnabledUtc.Local()?.ToString("yyyy-MM-dd")">On</span> }
+                            else { <span class="pill pill-muted" title="They will be asked to set it up when they next sign in">At next sign-in</span> }
+                        </td>
+                        <td class="people-actions">
+                            @if (mayEdit && x.AwaitingSetup)
+                            {
+                                <form method="post" asp-page-handler="Invite" class="inline">
+                                    <input type="hidden" name="email" value="@x.Email">
+                                    <button class="btn btn-sm" title="A fresh invitation; the earlier link stops working">Resend invitation</button>
+                                </form>
+                            }
+                            else if (mayEdit)
+                            {
+                                <form method="post" asp-page-handler="SendReset" class="inline" onsubmit="return confirm('Email @x.DisplayName a link to choose a new password?')">
+                                    <input type="hidden" name="email" value="@x.Email">
+                                    <button class="btn btn-sm" title="They are emailed a link to choose a new password. Nobody else ever knows it.">Send reset link</button>
+                                </form>
+                                <form method="post" asp-page-handler="SignOut" class="inline" onsubmit="return confirm('Sign @x.DisplayName out of every console, session and browser?')">
+                                    <input type="hidden" name="email" value="@x.Email">
+                                    <button class="btn btn-sm" title="Out of every console, session and browser, now">Sign out</button>
+                                </form>
+                                @if (x.HasTwoFactor)
+                                {
+                                    <form method="post" asp-page-handler="ResetTwoFactor" class="inline" onsubmit="return confirm('Reset @x.DisplayName\'s two-factor sign-in? Use this when they have lost their phone. They will set up their authenticator again at their next sign-in.')">
+                                        <input type="hidden" name="email" value="@x.Email">
+                                        <button class="btn btn-sm" title="Lost phone: they set up their authenticator again at their next sign-in">Reset two-factor</button>
+                                    </form>
+                                }
+                            }
+                            @if (x.Email != myEmail && (!x.IsOwner || (Model.CanChangeOwner && !Model.LastOwner(x))))
+                            {
+                                <form method="post" asp-page-handler="Remove" class="inline" onsubmit="return confirm('Remove @x.DisplayName?')">
+                                    <input type="hidden" name="email" value="@x.Email">
+                                    <button class="btn btn-sm btn-danger">Remove</button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+            </table>
+        </div>
+        <div class="card form">
+            <h3>Add a person</h3>
+            @if (Model.Full)
+            {
+                @* Five seats, or what we allowed (2026-10-25). The service refuses anyway; the page says so before anybody types. *@
+                <div class="alert alert-warn" id="seatsLimit">All @Model.Most seats your company may have are in use. To add somebody, first remove a person who has left, or untick the boxes of somebody who no longer needs a seat — or
+                    @(Permissions.CanAcceptPrice(Model.MyRole) ? Html.Raw("<a href=\"/portal/billing#moreSeats\">ask us for more seats</a>.") : "ask an owner to ask us for more seats.")</div>
+            }
+            else
+            {
+            <form method="post" asp-page-handler="Add">
+                <label>Full name</label><input name="name" required>
+                <label>Email (their login)</label><input name="email" type="email" required>
+                <p class="muted" style="font-size:13px;margin:4px 0 10px">They are emailed an invitation to choose their own password and set up two-factor sign-in — with the console download link if they have a seat.</p>
+                <label class="people-label">Roles — tick every one that applies</label>
+                <div class="people" id="addRoles" onchange="roleHelp()">
+                    <label class="person" title="Works on machines in the desktop console"><input type="checkbox" name="role" value="technician" checked> Technician</label>
+                    <label class="person" title="The console, and runs the company on this website"><input type="checkbox" name="role" value="supervisor"> Supervisor</label>
+                    <label class="person" title="Books jobs in, quotes and invoices, on this website"><input type="checkbox" name="role" value="office"> Office administrator</label>
+                    @if (Model.CanChangeOwner)
+                    {
+                        @* Several owners (2026-10-08): only an owner adds another. *@
+                        <label class="person" title="Billing, prices and the people, like you"><input type="checkbox" name="role" value="owner"> Owner</label>
+                    }
+                </div>
+                <p class="muted" id="roleHelp" style="font-size:13px;margin-top:8px">Works on machines in the console. Uses one seat.</p>
+                <div class="actions"><button class="btn btn-accent" type="submit">Add person</button></div>
+            </form>
+            }
+            @if (!Model.Full && limited && !bill.NotBilled && bill.People >= bill.Included)
+            {
+                <div class="alert alert-warn" id="seatsFull">All @bill.Included seats in your package are in use. Each person you add now costs @extraSeat a month more —
+                    @(Permissions.CanAcceptPrice(Model.MyRole) ? "you will see the new price and be asked to agree before anybody is added." : "only an owner can agree to that, so ask them to add the person.")</div>
+            }
+        </div>
+    </div>
+</div></section>
+<script>
+// One seat per person, however many boxes — every box takes one (2026-10-05); ONE owner on their own is
+// free, and every other owner on their own uses a seat (2026-10-08).
+var freeOwnerTaken = @(Model.FreeOwnerTaken ? "true" : "false");
+function roleHelp(){
+  var on = function(v){ var b = document.querySelector('#addRoles input[value="'+v+'"]'); return !!(b && b.checked); };
+  var owner = on('owner');
+  document.getElementById('roleHelp').textContent =
+      on('supervisor') ? 'Runs the company on this website and works in the console. Uses one seat, however many boxes are ticked.'
+    : on('technician') ? (on('office') ? 'Works in the console and does the office work too. Uses one seat.' : 'Works on machines in the console. Uses one seat.')
+    : on('office') ? 'This website only, with no access to the console. Uses one seat.'
+    : owner ? (freeOwnerTaken ? 'Another owner: billing, prices and the people. Uses one seat — only one owner on their own is free.'
+                              : 'An owner: billing, prices and the people. Free, as the one owner on their own.')
+    : 'Tick at least one role.';
+}
+// No add form at all once the five seats are full.
+if (document.querySelector('#addRoles')) document.querySelector('#addRoles').closest('form').addEventListener('submit', function(e){
+  if (!document.querySelector('#addRoles input:checked')) { e.preventDefault(); roleHelp(); }
+});
+</script>

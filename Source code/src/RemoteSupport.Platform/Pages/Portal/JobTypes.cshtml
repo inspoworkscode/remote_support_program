@@ -1,0 +1,142 @@
+@page "/portal/jobtypes"
+@model RemoteSupport.Platform.Pages.Portal.JobTypesModel
+@using RemoteSupport.Platform.Services
+@{
+    ViewData["Title"] = "Job types"; ViewData["Section"] = "portal";
+    var t = Model.Tenant;
+    var lines = RemoteSupport.Platform.Pages.Portal.JobTypesModel.Lines(t.JobTypesOff);
+    bool may = Model.MayChange;
+}
+<style>
+.jt-cards{display:grid;gap:18px;max-width:860px}
+.jt-head{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.jt-head h3{margin:0}
+.jt-intro{margin:6px 0 12px;color:var(--muted)}
+.jt-line{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line);font-weight:400}
+.jt-line input{width:auto;margin-top:4px;flex:none}
+.jt-line strong{display:block}
+.jt-line small{display:block;color:var(--muted);font-size:13px;margin-top:2px}
+.jt-locked{color:var(--muted)}
+.jt-locked strong{color:var(--ink);opacity:.75}
+.jt-lock{flex:none;width:18px;text-align:center;margin-top:2px}
+.jt-cat{display:flex;gap:8px;align-items:center;font-weight:800;margin:0}
+.jt-cat input{width:auto}
+.jt-path{margin:12px 0 0;padding:10px 12px;border-radius:12px;background:var(--lift-hi);font-size:14px;line-height:1.5}
+.jt-path:empty{display:none}
+.jt-path b{font-weight:800}
+.jt-card.jt-offcard .jt-line{opacity:.45}
+.jt-bar{position:sticky;bottom:0;display:flex;gap:10px;flex-wrap:wrap;padding:14px 0;background:var(--solid);max-width:860px;z-index:2}
+</style>
+<section class="portal"><div class="wrap">
+    <h1>Job types</h1>
+    @if (Model.First)
+    {
+        <div class="alert alert-ok" style="max-width:860px">
+            Everything is switched on. Untick what your company doesn't use. You can change this any time under
+            <strong>Job types</strong>.
+        </div>
+    }
+    <p class="muted" style="max-width:860px">
+        The kinds of job your company does, and the steps each one goes through. Untick a kind of job you don't do, or a step
+        you don't use. The steps with a lock can't be switched off: without them a job could not finish. Tickets already open
+        finish the way they started; only new ones follow a change.
+        @if (!may) { <br><strong>Only a supervisor or the owner can change this.</strong> }
+    </p>
+    @if (!string.IsNullOrEmpty(Model.Message)) { <div class="alert alert-ok" style="max-width:860px">@Model.Message</div> }
+    @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad" style="max-width:860px">@Model.Error</div> }
+    <div class="alert alert-bad" id="jtProblem" style="max-width:860px" hidden></div>
+
+    <form method="post" id="jtForm">
+        <div class="jt-cards">
+            @foreach (var card in JobTypes.Cards)
+            {
+                bool catOff = card.CategorySwitch != null && Model.Off.Contains(card.CategorySwitch);
+                <div class="card jt-card @(catOff ? "jt-offcard" : "")" data-card="@card.Title">
+                    <div class="jt-head">
+                        <h3>@card.Title</h3>
+                        @if (card.CategorySwitch != null)
+                        {
+                            <label class="jt-cat">
+                                <input type="checkbox" name="on" value="@card.CategorySwitch" class="jt-catbox" checked="@(!catOff)" disabled="@(!may)">
+                                We use this
+                            </label>
+                        }
+                        else if (card.AlwaysOn.Length > 0)
+                        {
+                            <span class="pill pill-muted" title="@card.AlwaysOn">🔒 Always on</span>
+                        }
+                    </div>
+                    <p class="jt-intro">@card.Intro@(card.AlwaysOn.Length > 0 ? " " + card.AlwaysOn : "")</p>
+                    @foreach (var line in card.Lines)
+                    {
+                        if (line.IsLocked)
+                        {
+                            <div class="jt-line jt-locked">
+                                <span class="jt-lock" aria-hidden="true">🔒</span>
+                                <span><strong>@line.Label</strong><small>@line.Locked</small></span>
+                            </div>
+                        }
+                        else
+                        {
+                            var s = JobTypes.Switch(line.Switch!)!;
+                            <label class="jt-line">
+                                <input type="checkbox" name="on" value="@s.Key" class="jt-box" checked="@(!Model.Off.Contains(s.Key))" disabled="@(!may || catOff)">
+                                <span><strong>@line.Label</strong><small>With it off: @s.Off</small></span>
+                            </label>
+                        }
+                    }
+                    <p class="jt-path" data-path="@card.Title">@lines[card.Title]</p>
+                </div>
+            }
+        </div>
+        @if (may)
+        {
+            <div class="jt-bar">
+                <button class="btn btn-accent" type="submit" id="jtSave">Save</button>
+                @if (Model.First) { <button class="btn" type="submit" formaction="?handler=Keep" formnovalidate>Keep everything</button> }
+            </div>
+        }
+    </form>
+    @if (t.JobTypesChosenUtc is DateTime at)
+    {
+        <p class="muted" style="max-width:860px;margin-top:6px">Last changed by @t.JobTypesChosenBy on @at.Local().ToString("d MMMM yyyy 'at' HH:mm").</p>
+    }
+</div></section>
+@if (may)
+{
+<script>
+// Ticking a box redraws every card's line and says at once if the set would be refused. The server decides both
+// (?handler=Path): the browser has no copy of the routes, so it can never disagree with what saving will do.
+(function () {
+  const form = document.getElementById('jtForm');
+  const problem = document.getElementById('jtProblem');
+  const save = document.getElementById('jtSave');
+  let asked = 0;
+  function offKeys() {
+    return Array.from(form.querySelectorAll('input[name=on]')).filter(b => !b.checked || b.disabled).map(b => b.value);
+  }
+  function paintCategories() {
+    form.querySelectorAll('.jt-card').forEach(card => {
+      const cat = card.querySelector('.jt-catbox');
+      if (!cat) return;
+      card.classList.toggle('jt-offcard', !cat.checked);
+      card.querySelectorAll('.jt-box').forEach(b => b.disabled = !cat.checked);
+    });
+  }
+  async function redraw() {
+    paintCategories();
+    const mine = ++asked;
+    try {
+      const r = await fetch('?handler=Path&off=' + encodeURIComponent(offKeys().join(',')), { headers: { 'Accept': 'application/json' } });
+      if (!r.ok || mine !== asked) return;
+      const d = await r.json();
+      form.querySelectorAll('[data-path]').forEach(p => p.textContent = d.lines[p.dataset.path] || '');
+      problem.hidden = !d.problem;
+      problem.textContent = d.problem ? 'This would not save: ' + d.problem : '';
+      save.disabled = !!d.problem;
+    } catch { /* the line is a help, not the rule: saving still asks the server */ }
+  }
+  form.addEventListener('change', e => { if (e.target.name === 'on') redraw(); });
+})();
+</script>
+}

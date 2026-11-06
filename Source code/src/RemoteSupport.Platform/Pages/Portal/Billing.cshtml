@@ -1,0 +1,210 @@
+@page "/portal/billing"
+@model RemoteSupport.Platform.Pages.Portal.BillingModel
+@{ ViewData["Title"] = "Billing"; ViewData["Section"] = "portal"; var t = Model.Tenant; var b = Model.Bill; }
+@if (Model.Checkout is { } co)
+{
+    @* On to PayFast for the card. action= written out: no antiforgery token, which would fall outside PayFast's signature. *@
+    <section class="portal"><div class="wrap">
+        <h1>Going to PayFast…</h1>
+        <form id="toPayfast" method="post" action="@co.Action">
+            @foreach (var f in co.Fields) { <input type="hidden" name="@f.Key" value="@f.Value"> }
+            <button class="btn btn-accent" type="submit">Continue to PayFast</button>
+        </form>
+        <script>document.getElementById('toPayfast').submit();</script>
+    </div></section>
+    return;
+}
+<section class="portal"><div class="wrap">
+    <h1>Billing</h1>
+    @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad" id="billingError">@Model.Error</div> }
+    @if (!string.IsNullOrEmpty(Model.Message)) { <div class="alert alert-ok" id="billingMessage">@Model.Message</div> }
+    <div class="grid2">
+        <div class="card">
+            <h3>Your plan</h3>
+            @if (b.NotBilled)
+            {
+                <p><strong>Not billed.</strong> <span class="muted">@b.People people in seats.</span></p>
+            }
+            else if (b.FreeVersion)
+            {
+                @* The Free version (back 2026-10-25, §163): nothing to pay, one computer — and the two ways up. *@
+                <p id="freePlan"><strong>@RemoteSupport.Shared.FreePlan.FreeFullName</strong> — one person, @RemoteSupport.Shared.FreePlan.FreeMachines computer, unattended with its password. Nothing to pay.</p>
+                <p class="muted" style="font-size:14px">More computers, or connecting with somebody at the computer? @RemoteSupport.Shared.FreePlan.FullName is
+                    @Pricing.Money(b.Region, b.Region.Basic) a month for @RemoteSupport.Shared.FreePlan.MaxMachines computers, attended and unattended. Supporting customers needs the full version.</p>
+                @if (Model.MayPay) { <p><a class="btn btn-accent" href="/portal/upgrade" id="freeUpgrade">Upgrade</a></p> }
+            }
+            else
+            {
+                <p>Your monthly price: <span class="price" style="font-size:28px" id="monthlyTotal">@b.Total</span></p>
+                @if (b.Basic)
+                {
+                    @* The Basic version (2026-10-25): one person, three computers, one price — no seats to count. *@
+                    <table class="price-table" style="margin:6px 0 12px" id="basicPlan">
+                        <tr><td>@RemoteSupport.Shared.FreePlan.FullName — one person, @RemoteSupport.Shared.FreePlan.MaxMachines computers</td><td style="text-align:right">@Pricing.Money(b.Region, b.Region.Basic)</td></tr>
+                        @if (b.ExtraMachines > 0) { <tr id="extraMachines"><td>@b.ExtraMachinesText.Split(" = ")[0]</td><td style="text-align:right">@Pricing.Money(b.Region, b.ExtraMachines * b.Region.ExtraMachine)</td></tr> }
+                        <tr><td><strong>A month</strong></td><td style="text-align:right"><strong>@b.Total</strong></td></tr>
+                    </table>
+                    @* Extra computers (2026-10-25, Clint): R10 / $1 / £1 / €1 each, set here by the owner, up to 20 — a rise is shown and accepted first. *@
+                    <div id="basicMachines" style="margin:14px 0">
+                        <h3 style="margin-bottom:6px">Computers</h3>
+                        <p class="muted" style="font-size:14px">You pay for <strong>@b.Machines</strong> computers (@Model.Installed installed). @RemoteSupport.Shared.FreePlan.MaxMachines are in the price; each one more is
+                            @Pricing.Money(b.Region, b.Region.ExtraMachine) a month, up to @RemoteSupport.Shared.FreePlan.MostMachines.</p>
+                        @if (Model.MachinesQuestion is { } mq)
+                        {
+                            <div class="card price-question" id="machinesQuestion" style="border:2px solid var(--accent);margin:10px 0">
+                                <p style="margin-top:0">Paying for <strong>@mq.After.Machines computers</strong> raises your monthly price from <strong>@mq.Before.Total</strong> to <strong style="font-size:18px">@mq.After.Total</strong>.</p>
+                                <p class="muted" style="font-size:13px">@(Model.Card is { Status: PayfastStatus.Active } ? "PayFast charges the new amount from your next payment; nothing is charged today." : "It is charged from your first payment; nothing is charged today.") Pay for fewer later and it comes down again.</p>
+                                <div class="actions">
+                                    <form method="post" asp-page-handler="Machines" class="inline"><input type="hidden" name="machines" value="@mq.After.Machines"><input type="hidden" name="agreed" value="@mq.Token">
+                                        <button class="btn btn-accent" type="submit" id="acceptMachines">Accept @mq.After.Total a month</button></form>
+                                    <a class="btn" href="/portal/billing#basicMachines" id="declineMachines">Don't do it</a>
+                                </div>
+                            </div>
+                        }
+                        else if (Model.MayPay)
+                        {
+                            <form method="post" asp-page-handler="Machines" class="inline" id="machinesForm">
+                                <input name="machines" type="number" min="@RemoteSupport.Shared.FreePlan.MaxMachines" max="@RemoteSupport.Shared.FreePlan.MostMachines" value="@b.Machines" style="width:80px">
+                                <button class="btn" type="submit">Change</button>
+                            </form>
+                        }
+                    </div>
+                    <p class="muted" style="font-size:13px">Supporting customers, or more than @RemoteSupport.Shared.FreePlan.MostMachines computers? <a href="/portal/upgrade?to=full">Upgrade to the full version</a>.</p>
+                    @* Down to the Free version (§163): one computer, nothing to pay — the card cancelled at once. *@
+                    @if (Model.MayPay) { <p class="muted" style="font-size:13px" id="moveDown">Only need one computer, reached with its password? <a href="/portal/upgrade?to=free">Move to the Free version</a> — nothing to pay.</p> }
+                }
+                else
+                {
+                <table class="price-table" style="margin:6px 0 12px">
+                    <tr><td>Package — @b.Included seats@(b.Pilot ? ", free while you are a pilot company" : "")</td><td style="text-align:right">@Pricing.Money(b.Region, b.PackagePrice)</td></tr>
+                    @if (b.Extra > 0) { <tr id="extraSeats"><td>@b.Extra extra seat@(b.Extra == 1 ? "" : "s") × @Pricing.Money(b.Region, b.Region.ExtraSeat)@(b.Pilot ? ", invoiced by us" : "")</td><td style="text-align:right">@Pricing.Money(b.Region, b.Extra * b.Region.ExtraSeat)</td></tr> }
+                    <tr><td><strong>A month</strong></td><td style="text-align:right"><strong>@b.Total</strong></td></tr>
+                </table>
+                <p class="muted" style="font-size:13px">@b.People of @Model.Most seats in use: @string.Join(", ", Pricing.InSeats(Model.People).Select(x => x.DisplayName)).
+                    @(Model.Most > b.Included ? $"Your package has {b.Included} seats and we have allowed you up to {Model.Most}." : $"A company has {b.Included} seats; more are on request.") <a href="/portal/technicians">People</a></p>
+                }
+            }
+            <p>Status: <span class="pill @Model.StatusPill">@Model.StatusText</span></p>
+            @if (t.Status == TenantStatus.Trial && !t.TrialExpired) { <p class="muted">Your trial ends on <strong>@t.TrialEndsUtc.Local()?.ToString("d MMMM yyyy")</strong>. @(Model.CardRefusal == null ? "Add your card before then and nothing changes for you." : "We'll be in touch before then to set up your subscription.")</p> }
+            @if (t.TrialExpired) { <div class="alert alert-bad">Your trial has ended. @(Model.CardRefusal == null ? "Add your card to restore access at once." : "Contact us below to activate your subscription and restore access.")</div> }
+            @if (t.Pilot && t.PilotEndsUtc is { } ends) { <div class="alert alert-warn" id="pilotEnding">@PilotService.EndingWords(t, Pricing.Money(b.Region, b.Region.Package))</div> }
+            else if (t.Pilot) { <p class="muted" id="pilotNote">You are one of our pilot companies: your @b.Included seats are free while you are a pilot.</p> }
+            else if (t.Status == TenantStatus.Active && !b.FreeVersion && Model.Card is not { Status: PayfastStatus.Active }) { <p class="muted">Thank you — your subscription is active. Invoices are sent monthly@(string.IsNullOrWhiteSpace(t.SupportEmail) ? "" : $" to {t.SupportEmail}").</p> }
+            @if (!b.FreeVersion) { <p class="muted" style="font-size:13px">Billed in @b.Region.Currency (@b.Region.Name).</p> }
+            @if (!b.NotBilled && !RemoteSupport.Shared.FreePlan.Is(t.Plan))
+            {
+                @* Five seats; more on request (2026-10-25): the owner asks, we decide, then they add people on People and agree the price. *@
+                <div id="moreSeats" style="margin-top:18px">
+                    <h3>More seats</h3>
+                    <p class="muted" style="font-size:14px">Every company starts with @b.Included seats. If you need more, ask us: if we agree, you can add people past
+                        @b.Included at @Pricing.Money(b.Region, b.Region.ExtraSeat) a month each@(b.Pilot ? ", invoiced by us" : Model.Card is { Status: PayfastStatus.Active } ? ", added to your PayFast payment from the next one" : "") — you see the new price, and accept it, before anybody is added.</p>
+                    @if (t.SeatsAskedFor > 0)
+                    {
+                        <div class="alert alert-warn" id="seatsAsked">You asked for <strong>@t.SeatsAskedFor seats</strong> on @t.SeatsAskedUtc.Local()?.ToString("d MMMM yyyy")@(t.SeatsAskedBy.Length > 0 ? $" ({t.SeatsAskedBy})" : ""). We will email you when we have looked at it.</div>
+                    }
+                    @if (Model.MayPay)
+                    {
+                        <form method="post" asp-page-handler="Seats" class="form" id="askSeats">
+                            <label>How many seats do you need in all?</label>
+                            <input name="seats" type="number" min="@(Model.Most + 1)" max="@Pricing.MostAllowed" value="@(t.SeatsAskedFor > Model.Most ? t.SeatsAskedFor : Model.Most + 1)" required style="max-width:120px">
+                            <label>Why — what the extra people will do (optional)</label>
+                            <textarea name="note" maxlength="500" rows="2">@t.SeatsAskedNote</textarea>
+                            <button class="btn" type="submit">@(t.SeatsAskedFor > 0 ? "Change what we asked for" : "Ask for more seats")</button>
+                        </form>
+                    }
+                    else { <p class="muted">An owner asks for more seats.</p> }
+                </div>
+            }
+            @if (Model.Agreements.Count > 0)
+            {
+                <h3 style="margin-top:18px">Price changes agreed</h3>
+                <table class="price-table" id="agreements">
+                    @foreach (var a in Model.Agreements)
+                    {
+                        var r = Pricing.For(a.Region);
+                        <tr><td style="white-space:nowrap">@a.AgreedUtc.Local().ToString("d MMM yyyy")</td><td>@a.What</td><td style="white-space:nowrap">@Pricing.Money(r, a.MonthlyBefore) → <strong>@Pricing.Money(r, a.Monthly)</strong></td><td class="muted">@a.AgreedBy</td></tr>
+                    }
+                </table>
+            }
+        </div>
+        <div class="card">
+            <h3>How to pay</h3>
+            @if (Model.Card is { Status: PayfastStatus.Active } card)
+            {
+                <div id="cardOn">
+                    <p><strong>By card, through PayFast.</strong> @Pricing.Money(b.Region, card.AmountCents / 100m) a month,
+                        next on <strong>@(card.NextRunDate.Length > 0 ? card.NextRunDate : card.BillingDate)</strong>.</p>
+                    @if (card.AmountProblem.Length > 0)
+                    {
+                        <div class="alert alert-warn" id="amountPending">Your price is now @b.Total a month, and PayFast has not yet taken the new
+                            amount — we keep trying. (@card.AmountProblem)</div>
+                    }
+                    @if (card.LateDue.Length > 0)
+                    {
+                        <div class="alert alert-bad" id="paymentLate">The payment due on <strong>@card.LateDue</strong> has not come through. PayFast tries the
+                            card again by itself; if it has expired or changed, change it below. Unpaid more than @CompanyBilling.GraceDays days, the service
+                            is suspended — and starts again as soon as the payment comes.</div>
+                    }
+                    @if (Model.CardUpdateUrl.Length > 0 && Model.MayPay) { <p><a class="btn" href="@Model.CardUpdateUrl">Change the card</a></p> }
+                    <p class="muted" style="font-size:13px">We and PayFast each email a receipt for every payment. Adding or removing people changes the amount from the next charge.</p>
+                    @if (Model.Payments.Count > 0)
+                    {
+                        <table class="price-table" id="cardPayments" style="margin-top:8px">
+                            @foreach (var p in Model.Payments)
+                            {
+                                <tr data-pf="@p.PfPaymentId"><td style="white-space:nowrap">@p.ReceivedUtc.Local().ToString("d MMM yyyy")</td><td>@Pricing.Money(b.Region, p.AmountGrossCents / 100m)</td><td class="muted">PayFast @p.PfPaymentId</td></tr>
+                            }
+                        </table>
+                    }
+                    @if (Model.MayPay)
+                    {
+                        <details id="cancelCard" style="margin-top:14px">
+                            <summary>Cancel the subscription</summary>
+                            <form method="post" asp-page-handler="Cancel" class="form" style="margin-top:8px">
+                                <p class="muted" style="font-size:13px">Nothing more is charged. Your service carries on to the end of the time you have paid
+                                    for (the day before @(card.NextRunDate.Length > 0 ? card.NextRunDate : card.BillingDate)); then every computer stops connecting and your
+                                    people cannot sign in. No part-month refunds.</p>
+                                <label><input type="checkbox" name="sure" value="true" style="width:auto"> I want to cancel @t.CompanyName's subscription</label>
+                                <button class="btn btn-danger" type="submit">Cancel the subscription</button>
+                            </form>
+                        </details>
+                    }
+                </div>
+            }
+            else if (Model.CardRefusal == null && !b.NotBilled)
+            {
+                @if (Model.Card is { Status: PayfastStatus.Cancelled, EndedUtc: null, EndsOn.Length: > 0 } ending)
+                {
+                    <div class="alert alert-warn" id="cardEnding">Your subscription is cancelled. The service carries on until the end of
+                        <strong>@ending.EndsOn</strong>, then stops. Add your card again before then and nothing stops.</div>
+                }
+                <div id="cardOff">
+                    <p><strong>Pay by card, through PayFast.</strong> Your card is charged once a month; nothing changes until your
+                        @(t.Status == TenantStatus.Trial && !t.TrialExpired ? "trial ends" : "next month").</p>
+                    @if (Model.MayPay)
+                    {
+                        <form method="post" asp-page-handler="Card"><button class="btn btn-accent" type="submit">Add your card</button></form>
+                    }
+                    else { <p class="muted">The owner adds the company's card.</p> }
+                </div>
+            }
+            else if (b.FreeVersion)
+            {
+                <p id="freeNothing">Nothing to pay on the Free version — no card is needed. Upgrading asks for one.</p>
+            }
+            else
+            {
+                <p>We invoice monthly. Pay by EFT (South Africa) or bank transfer (international).</p>
+            }
+            <p>A billing question: <a href="mailto:sales@theremotesupportprogram.com?subject=Subscription for @t.CompanyName">sales@theremotesupportprogram.com</a></p>
+            @if (Model.TermsAccepted is { } ta)
+            {
+                <details id="termsAccepted" style="margin-top:12px">
+                    <summary>Terms accepted on @ta.AcceptedUtc.Local().ToString("d MMM yyyy") by @ta.AcceptedByName — version @ta.Version@(ta.Draft ? " (draft)" : "")</summary>
+                    <div class="kb-body" style="font-size:14px;margin-top:10px;max-height:420px;overflow:auto">@Html.Raw(KbText.Render(ta.Text))</div>
+                </details>
+            }
+            @if (!b.Basic && !b.FreeVersion) { <p style="margin-top:14px"><a class="btn" href="/portal/tickets">View ticket history &amp; billable time →</a></p> }
+        </div>
+    </div>
+</div></section>

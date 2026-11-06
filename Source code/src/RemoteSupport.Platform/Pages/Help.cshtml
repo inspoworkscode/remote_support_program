@@ -1,0 +1,144 @@
+@page "/help/{slug}"
+@model HelpModel
+@{
+    Layout = null;
+    var t = Model.Tenant;
+    var company = t?.CompanyName ?? "Support";
+    var accent = t?.AccentColor ?? "#6d28d9";
+}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>@company — help in your browser</title>
+    <link rel="stylesheet" href="/site.css?v=@RemoteSupport.Platform.Services.BuildStamp.Value">
+    <style>
+        .help { max-width: 640px; margin: 0 auto; padding: 48px 16px 64px; }
+        .help h1 { text-align: center; margin: 0 0 8px; }
+        .help .lead { text-align: center; color: var(--muted); margin: 0 auto 24px; max-width: 540px; }
+        .help .card { padding: 20px; }
+        .help label { display: block; font-weight: 800; font-size: 14px; margin: 14px 0 4px; }
+        .help input, .help textarea { width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--solid); color: var(--ink); font: inherit; }
+        .help .row2 { display: flex; gap: 12px; flex-wrap: wrap; } .help .row2 > div { flex: 1 1 220px; }
+        .help .go { width: 100%; margin-top: 18px; background: @accent; border-color: @accent; color: #fff; }
+        .help .note { color: var(--muted); font-size: 13px; }
+        .help .full { margin-top: 18px; padding: 14px 16px; border-left: 4px solid @accent; background: var(--mist); border-radius: 10px; font-size: 14px; }
+        .help .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+        .help .banner { text-align: center; margin-bottom: 20px; }
+        .help .banner img { max-height: 72px; max-width: 280px; }
+        .call-state { font-size: 18px; font-weight: 800; text-align: center; margin: 4px 0 6px; }
+        .call-sub { text-align: center; color: var(--muted); margin: 0 0 16px; }
+        .share { display: none; text-align: center; margin: 12px 0; }
+        .share .btn { background: @accent; border-color: @accent; color: #fff; }
+        .voice { display: none; text-align: center; margin: 12px 0; padding: 12px 14px; border-radius: 12px; background: var(--mist); }
+        .voice p { margin: 0 0 10px; }
+        .voice .btn { margin: 4px; }
+        .voice #voiceYes { background: @accent; border-color: @accent; color: #fff; }
+        .chatlog { height: 220px; overflow-y: auto; border: 1px solid var(--line); border-radius: 12px; padding: 10px; background: var(--solid); display: flex; flex-direction: column; gap: 6px; }
+        .chatlog .m { max-width: 85%; align-self: flex-start; background: var(--mist); border-radius: 10px; padding: 6px 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
+        .chatlog .m.me { align-self: flex-end; background: rgba(109, 40, 217, .18); }
+        .chatlog .who { font-size: 11px; color: var(--muted); }
+        .chatrow { display: flex; gap: 8px; margin-top: 8px; } .chatrow input { flex: 1; }
+        .pulse { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: @accent; margin-right: 8px; animation: pulse 1.2s infinite; }
+        @@keyframes pulse { 0% { opacity: 1 } 50% { opacity: .25 } 100% { opacity: 1 } }
+    </style>
+</head>
+<body>
+<main class="help">
+    <div class="banner">
+        @if (Model.HasLogo) { <img src="/logo/@t!.Slug" alt="@company"> } else { <strong style="font-size:24px">@company</strong> }
+    </div>
+
+    @if (Model.State == "off")
+    {
+        <h1>Help in your browser</h1>
+        <p class="lead">@(t == null ? "This support link isn't active." : $"{company} is not taking requests from this page at the moment.")</p>
+        @if (t != null && Model.AppAvailable) { <p class="lead"><a href="/get/@t.Slug">Get the @company support app instead</a></p> }
+    }
+    else if (Model.State == "closed")
+    {
+        <h1>We're closed right now</h1>
+        <p class="lead">@company answers requests from this page during these hours:</p>
+        <div class="card" style="text-align:center">
+            @foreach (var h in Model.Hours) { <div>@h</div> }
+            @if (!string.IsNullOrEmpty(t!.SupportPhone) || !string.IsNullOrEmpty(t.SupportEmail))
+            {
+                <p class="note" style="margin-top:12px">Something urgent? @(string.IsNullOrEmpty(t.SupportPhone) ? "" : $"Phone {t.SupportPhone}. ")@(string.IsNullOrEmpty(t.SupportEmail) ? "" : $"Email {t.SupportEmail}.")</p>
+            }
+        </div>
+    }
+    else if (Model.State == "sent")
+    {
+        <h1>Thank you</h1>
+        <p class="lead">Your request has been received.</p>
+    }
+    else if (Model.State == "call")
+    {
+        @* The call. wwwroot/help.js does the rest: it rings, shows who answered, shares the screen when
+           the person says so, and carries the chat. *@
+        <div id="call" data-tenant="@t!.Id" data-id="@Model.CallerId" data-token="@Model.CallerToken" data-company="@company" data-me="@Model.Name">
+            <div class="card">
+                <p class="call-state" id="state"><span class="pulse"></span>Calling @company…</p>
+                <p class="call-sub" id="sub">A technician will answer shortly. Keep this page open.</p>
+                <div class="share" id="share">
+                    <p style="margin:0 0 10px">They would like to see your screen. They can <strong>see</strong> it, but cannot move your mouse or type — nothing is installed.</p>
+                    <button type="button" class="btn btn-lg" id="shareBtn">Share my screen</button>
+                    <p class="note" id="shareNote" style="margin-top:8px"></p>
+                </div>
+                @* Talking (3.3): shown when the technician talks. Their voice needs no permission; the
+                   microphone is the caller's own choice, and the browser asks as well. *@
+                <div class="voice" id="voice" aria-live="polite">
+                    <p id="voiceText"></p>
+                    <button type="button" class="btn btn-lg" id="voiceYes"></button>
+                    <button type="button" class="btn" id="voiceNo"></button>
+                </div>
+                <div class="chatlog" id="log" aria-live="polite"></div>
+                <form class="chatrow" id="chatForm">
+                    <input id="chatBox" autocomplete="off" placeholder="Type a message to the technician" maxlength="2000">
+                    <button class="btn btn-accent" type="submit">Send</button>
+                </form>
+                <p style="text-align:center;margin:14px 0 0"><button type="button" class="btn btn-sm" id="hangUp">Cancel request</button></p>
+            </div>
+            @if (Model.AppAvailable)
+            {
+                <div class="full">
+                    <strong>Want them to fix it for you?</strong> From the browser they can only look. With the
+                    @company support app they can take control, with your permission.
+                    <a href="/get/@t.Slug" target="_blank" rel="noopener">Get the app</a>
+                </div>
+            }
+        </div>
+        <script src="/sounds.js?v=@RemoteSupport.Platform.Services.BuildStamp.Value"></script>
+        <script src="/e2e.js?v=@RemoteSupport.Platform.Services.BuildStamp.Value"></script>
+        <script src="/help.js?v=@RemoteSupport.Platform.Services.BuildStamp.Value"></script>
+    }
+    else
+    {
+        <h1>Get help in your browser</h1>
+        <p class="lead">@* Not "A @company technician": "A Anywhere IT technician" (the download page learned this first). *@
+        Tell us who you are and what is wrong. A technician from @company will answer here, and you can show them your screen — nothing to install.</p>
+        @if (Model.Error.Length > 0) { <div class="alert alert-bad">@Model.Error</div> }
+        <form method="post" class="card">
+            <div class="row2">
+                <div><label for="Name">Your name</label><input id="Name" name="Name" value="@Model.Name" required maxlength="80" autocomplete="name"></div>
+                <div><label for="Company">Company <span class="note">(optional)</span></label><input id="Company" name="Company" value="@Model.Company" maxlength="120" autocomplete="organization"></div>
+            </div>
+            <div class="row2">
+                <div><label for="Phone">Phone</label><input id="Phone" name="Phone" value="@Model.Phone" maxlength="40" inputmode="tel" autocomplete="tel"></div>
+                <div><label for="Email">Email</label><input id="Email" name="Email" type="email" value="@Model.Email" maxlength="160" autocomplete="email"></div>
+            </div>
+            <p class="note" style="margin:6px 0 0">A phone number or an email address, so we can reach you if the call drops.</p>
+            <label for="Issue">What is wrong?</label>
+            <textarea id="Issue" name="Issue" rows="4" required maxlength="2000">@Model.Issue</textarea>
+            <div class="hp" aria-hidden="true"><label for="Website">Leave this empty</label><input id="Website" name="Website" tabindex="-1" autocomplete="off"></div>
+            <button class="btn btn-lg go" type="submit">Call a technician</button>
+            <p class="note" style="margin-top:12px;text-align:center">Works in Chrome, Edge and Firefox on a computer. Your screen is only shared if you choose to share it.</p>
+        </form>
+        @if (Model.AppAvailable)
+        {
+            <p class="lead" style="margin-top:18px"><a href="/get/@t!.Slug">Or get the @company support app</a> — a technician can then fix things directly.</p>
+        }
+    }
+</main>
+</body>
+</html>

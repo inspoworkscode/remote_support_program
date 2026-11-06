@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Remote Support Program — branded remote support for IT companies</title>
+<meta name="description" content="Remote support, ticketing and machine inventory under your own brand. Five seats for R500 a month, everything included. Opening in South Africa first.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://theremotesupportprogram.com/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="The Remote Support Program">
+<meta property="og:description" content="Remote support that carries your brand. Screen share, file transfer, unattended access and remote scripts — all under your name.">
+<meta property="og:url" content="https://theremotesupportprogram.com/">
+<!-- No third-party requests, deliberately: no web fonts, no analytics, no CDN. Everything the
+     page needs is in this one file, including the favicon below as a data URI. The type is
+     whatever the visitor's own system provides. -->
+<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAgMTIwIiB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJyc3AxIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjOGI1Y2Y2Ii8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjNWIyMWI2Ii8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9IjEyMCIgaGVpZ2h0PSIxMjAiIHJ4PSIyNiIgZmlsbD0idXJsKCNyc3AxKSIvPjxwYXRoIGQ9Ik0zMi4wNiA0My40IEEyMyAyMyAwIDAgMSA1My40IDIyLjA2IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMTEiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjxwYXRoIGQ9Ik0wIDAgTDAgMTcgTDQuNSAxMyBMNy41IDIwIEwxMC4yIDE4LjkgTDcuNCAxMi4zIEwxMyAxMi4zIFoiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDU1IDQ1KSBzY2FsZSgyLjkpIiBmaWxsPSIjZmZmIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMC41NSIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjwvc3ZnPgo=">
+<style>
+  /* DARK GRAPE — chosen by Clint 2026-09-16 from the three-way comparison.
+     Navy ground, our signature purple kept, so the page stays continuous with everything
+     already shipped and printed. Kept inline: one file is the whole deployment.
+
+     Two purples, on purpose. --grape is LIFTED so it reads as text on the navy ground; the
+     print colour #7c3aed manages only 2.9:1 there. --fill is the deeper pair, used only where
+     white text sits on top of it, where the lifted one would fail instead. Anything that is
+     text takes --grape; anything that is a filled button takes --fill. */
+  :root {
+    --peach:#0b1016; --mist:#0e141c; --ice:#121a23;
+    --ink:#eef3f8; --muted:#93a4b6; --line:rgba(255,255,255,.10);
+    --card:#121a23; --solid:#17212c; --raised:#1b2633;
+    --blue:#60a5fa; --green:#34d399; --pink:#fb7185; --purple:#c4b5fd; --orange:#fb923c;
+    --grape:#a78bfa; --grape-lite:#c4b5fd; --grape-dark:#ddd6fe; --grape-rgb:167,139,250;
+    --fill:#6d28d9; --fill-lite:#7c3aed;
+    --r-hero:28px; --r-card:24px; --r-btn:18px;
+    --sh-hero:0 20px 60px rgba(0,0,0,.45);
+    --sh-card:0 18px 45px rgba(0,0,0,.38);
+    --sh-btn:0 10px 20px rgba(0,0,0,.40);
+  }
+  * { box-sizing:border-box; }
+  html { min-height:100%; background:#0b1016; }
+  body {
+    margin:0; color:var(--ink); line-height:1.6; min-height:100vh;
+    /* The warm peach-to-ice gradient cannot survive on a dark ground; two soft glows do the
+       same job of stopping the page being a flat black rectangle. */
+    background:
+      radial-gradient(760px 420px at 18% -8%, rgba(124,58,237,.20), transparent 62%),
+      radial-gradient(620px 420px at 92% 108%, rgba(96,165,250,.10), transparent 62%);
+    background-attachment:fixed;
+    /* The system stack, in the order each platform prefers: Segoe UI Variable on Windows 11,
+       SF on Apple, Roboto on Android. All of them carry real weights up to 800-900, so the
+       headings stay heavy without a downloaded font. */
+    font-family:system-ui,-apple-system,"Segoe UI Variable Display","Segoe UI",Roboto,
+                "Helvetica Neue",Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap { max-width:1080px; margin:0 auto; padding:0 24px; }
+  h1,h2,h3 { line-height:1.15; margin:0 0 14px; letter-spacing:-.02em; }
+  h1 { font-size:clamp(32px,5.4vw,50px); font-weight:900; }
+  h2 { font-size:clamp(24px,3.4vw,32px); font-weight:900; }
+  h3 { font-size:19px; font-weight:800; }
+  p { margin:0 0 14px; }
+  .muted { color:var(--muted); }
+  em { font-style:normal; color:var(--grape); }
+  a { color:var(--grape); text-decoration:none; font-weight:700; }
+  a:hover { color:var(--grape-dark); }
+
+  /* ---------- header ---------- */
+  .top { background:rgba(11,16,22,.92); border-bottom:1px solid var(--line); }
+  .nav { display:flex; align-items:center; justify-content:space-between; min-height:74px; gap:16px; flex-wrap:wrap; }
+  .brand { font-weight:900; display:flex; align-items:center; gap:11px; font-size:16px; letter-spacing:-.01em; color:var(--ink); }
+  .brand-logo { display:block; height:36px; width:auto; } /* our logo, docs/logo (2026-10-27) */
+  .top .contact-inline { font-size:14px; font-weight:700; color:var(--muted); }
+  .top .contact-inline a { margin-left:14px; }
+
+  /* ---------- buttons ---------- */
+  .btn {
+    display:inline-block; padding:14px 24px; border-radius:var(--r-btn); font-weight:800; font-size:15.5px;
+    border:1px solid rgba(var(--grape-rgb),.25); color:var(--grape); background:rgba(255,255,255,.05);
+    box-shadow:var(--sh-btn); transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .btn:hover { transform:translateY(-2px); box-shadow:0 14px 28px rgba(0,0,0,.45); color:var(--grape-dark); background:rgba(255,255,255,.09); }
+  .btn-accent {
+    background:linear-gradient(135deg,var(--fill),var(--fill-lite)); color:#fff !important;
+    border-color:transparent; box-shadow:0 12px 26px rgba(var(--grape-rgb),.32);
+  }
+  .btn-accent:hover { box-shadow:0 18px 34px rgba(var(--grape-rgb),.40); }
+
+  /* ---------- hero ---------- */
+  .hero { padding:64px 0 46px; }
+  .hero .wrap { display:grid; grid-template-columns:1.1fr .9fr; gap:46px; align-items:center; }
+  .hero .cta { display:flex; gap:12px; flex-wrap:wrap; margin:24px 0 12px; }
+  .hero small { color:var(--muted); font-weight:600; }
+  .pill {
+    display:inline-block; background:rgba(var(--grape-rgb),.10); color:var(--grape);
+    border-radius:999px; padding:6px 14px; font-size:13px; font-weight:800;
+    letter-spacing:.02em; margin-bottom:18px;
+  }
+
+  /* The mock app window — the same one the finished site uses, so the page is not empty
+     without being a stock photo. */
+  .win {
+    background:var(--solid); border-radius:var(--r-hero); box-shadow:var(--sh-hero);
+    border:1px solid var(--line); overflow:hidden;
+  }
+  .win .bar {
+    background:linear-gradient(135deg,#0E0E12,#26263a); color:#fff; padding:14px 18px;
+    font-weight:800; font-size:14px; letter-spacing:.01em;
+  }
+  .win .body { padding:22px; background:var(--solid); }
+  .win .req {
+    display:block; text-align:center; background:linear-gradient(135deg,var(--fill),var(--fill-lite));
+    color:#fff; font-weight:800; padding:14px; border-radius:var(--r-btn);
+    box-shadow:0 12px 26px rgba(var(--grape-rgb),.30);
+  }
+  .win .chat {
+    margin-top:16px; background:rgba(255,255,255,.04); border:1px solid var(--line); border-radius:16px;
+    padding:14px 16px; font-size:13.5px; color:var(--muted); line-height:1.65;
+  }
+  .win .dot { color:var(--green); font-weight:900; }
+
+  /* ---------- sections ---------- */
+  .section { padding:44px 0; }
+  .grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:22px; }
+  .card {
+    background:var(--card); border:1px solid var(--line); border-radius:var(--r-card);
+    padding:26px; box-shadow:var(--sh-card);
+  }
+  .card .icon {
+    width:44px; height:44px; border-radius:14px; display:flex; align-items:center; justify-content:center;
+    font-weight:900; color:#fff; margin-bottom:14px; font-size:17px;
+  }
+  /* The numeral sits ON these fills, so each one picks the text colour that survives it:
+     the deep purple carries white, the bright blue/green and orange/pink carry the dark ink.
+     White on #a78bfa is 2.1:1 and would be unreadable. */
+  .i1 { background:linear-gradient(135deg,var(--fill),var(--fill-lite)); }
+  .i2, .i3, .i4 { color:#0b1016; }
+  .i4 { background:linear-gradient(135deg,var(--purple),var(--blue)); }
+  .i2 { background:linear-gradient(135deg,var(--blue),var(--green)); }
+  .i3 { background:linear-gradient(135deg,var(--orange),var(--pink)); }
+  .card p { margin:0; font-size:15px; }
+
+  /* ---------- pricing ----------
+     One price, four regions. The region buttons swap the figures rather than the page showing
+     four price cards, because a buyer should see their own currency and nobody else's. */
+  /* The region bar sits above everything, so the currency is chosen before a word is read and
+     every figure further down - hero line included - is already the visitor's own. */
+  .region-bar { border-bottom:1px solid var(--line); padding:12px 0; background:rgba(255,255,255,.02); }
+  .region-bar .wrap { display:flex; gap:12px; align-items:center; justify-content:center; flex-wrap:wrap; }
+  .region-label { color:var(--muted); font-weight:700; font-size:13.5px; }
+  .regions { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; margin:0; }
+  .regions button {
+    font:800 14px/1 inherit; color:var(--muted); cursor:pointer;
+    background:rgba(255,255,255,.05); border:1px solid var(--line);
+    border-radius:999px; padding:10px 18px;
+  }
+  .regions button:hover { color:var(--ink); }
+  .regions button[aria-pressed="true"] {
+    background:linear-gradient(135deg,var(--fill),var(--fill-lite)); color:#fff;
+    border-color:transparent; box-shadow:0 8px 18px rgba(var(--grape-rgb),.30);
+  }
+  .regions button:focus-visible { outline:2px solid var(--grape); outline-offset:2px; }
+
+  .price-wrap { display:grid; grid-template-columns:1.05fr .95fr; gap:22px; align-items:stretch; }
+  .price-card {
+    background:var(--card); border:1px solid rgba(var(--grape-rgb),.30); border-radius:var(--r-card);
+    padding:30px; box-shadow:var(--sh-card); text-align:center;
+  }
+  .price-card .amount {
+    font-size:clamp(40px,7vw,58px); font-weight:900; line-height:1.05; letter-spacing:-.03em;
+    color:var(--grape); margin:6px 0 2px;
+  }
+  .price-card .per { color:var(--muted); font-weight:700; font-size:15px; }
+  .price-card .extra {
+    margin-top:18px; padding-top:18px; border-top:1px solid var(--line);
+    color:var(--muted); font-size:15px;
+  }
+  .price-card .extra b { color:var(--ink); }
+
+  /* What the R500 actually buys. Five seats, any role, and the owner on top - naming the roles
+     is the point, because "5 users" is what every competitor says and it hides the receptionist. */
+  .seats { list-style:none; margin:0; padding:0; display:grid; gap:10px; text-align:left; }
+  .seats li {
+    display:flex; align-items:flex-start; gap:13px;
+    background:rgba(255,255,255,.035); border:1px solid var(--line);
+    border-radius:16px; padding:14px 16px;
+  }
+  .seats .n {
+    flex:0 0 auto; width:30px; height:30px; border-radius:10px;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:900; font-size:14px; background:rgba(var(--grape-rgb),.16); color:var(--grape);
+  }
+  .seats .t { font-weight:800; display:block; font-size:15px; }
+  .seats .d { color:var(--muted); font-size:13.5px; display:block; margin-top:2px; }
+
+  .rollout {
+    margin-top:22px; border:1px solid rgba(var(--grape-rgb),.28);
+    background:rgba(var(--grape-rgb),.08); border-radius:var(--r-card);
+    padding:18px 22px; text-align:center; font-size:15px;
+  }
+  .rollout b { color:var(--grape); }
+
+  /* ---------- contact ---------- */
+  .contact {
+    background:var(--solid); border:1px solid var(--line); border-radius:var(--r-hero);
+    box-shadow:var(--sh-hero); padding:38px; text-align:center;
+  }
+  .contact h2 { margin-bottom:8px; }
+  .ways { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin-top:26px; }
+  .way {
+    display:flex; align-items:center; gap:12px; text-align:left;
+    border:1px solid var(--line); border-radius:var(--r-btn); padding:14px 20px;
+    background:var(--raised); min-width:230px; box-shadow:var(--sh-btn);
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .way:hover { transform:translateY(-2px); box-shadow:0 14px 28px rgba(0,0,0,.45); }
+  .way .ico { width:38px; height:38px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+  .way .ico svg { width:20px; height:20px; fill:#fff; }
+  /* The text half of a contact tile has to be allowed to shrink. A flex child defaults to
+     min-width:auto, so without this the email address - one unbreakable token - sets the tile's
+     width, and on a phone that pushed the whole page 102px wider than the screen. */
+  .way > span { min-width:0; }
+  .way .k { display:block; font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+  .way .v { display:block; font-size:16px; font-weight:800; color:var(--ink); overflow-wrap:anywhere; }
+  .ico-mail { background:linear-gradient(135deg,var(--grape),var(--grape-lite)); }
+  .ico-phone { background:linear-gradient(135deg,var(--blue),#3b82f6); }
+  .ico-wa { background:linear-gradient(135deg,#25D366,#128C7E); }
+
+  footer {
+    padding:34px 0 46px; border-top:1px solid var(--line); margin-top:34px;
+    color:var(--muted); font-size:14px; text-align:center;
+  }
+  footer strong { color:var(--ink); }
+  footer .legal-links { margin-top:6px; }
+
+  /* ---------- terms, refunds and privacy (2026-10-06, for PayFast) ----------
+     The words are written into the LEGAL block by `RemoteSupport.Platform landing-legal`, from the
+     same files signup shows. Folded, so the page stays a page; a footer link opens the right one. */
+  .legal h2 { text-align:center; }
+  .legal > .wrap > p.muted { text-align:center; font-size:14px; }
+  .legal-points { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin:22px 0; }
+  .legal-points div {
+    background:var(--card); border:1px solid var(--line); border-radius:16px; padding:14px 16px;
+    font-size:13.5px; color:var(--muted);
+  }
+  .legal-points b { display:block; color:var(--ink); font-size:15px; margin-bottom:4px; }
+  .legal-doc {
+    background:var(--card); border:1px solid var(--line); border-radius:var(--r-card);
+    margin-top:14px; box-shadow:var(--sh-card);
+  }
+  .legal-doc summary { cursor:pointer; padding:18px 22px; font-weight:900; font-size:18px; }
+  .legal-doc summary .muted { font-weight:600; font-size:14px; }
+  .legal-doc summary:focus-visible { outline:2px solid var(--grape); outline-offset:2px; border-radius:var(--r-card); }
+  .legal-body { padding:0 22px 22px; font-size:14.5px; overflow-wrap:anywhere; }
+  .legal-body h2 { font-size:18px; text-align:left; margin:22px 0 8px; }
+  .legal-body p { margin:0 0 10px; }
+  .legal-body ul { margin:0 0 12px; padding-left:22px; }
+  .legal-body li { margin:5px 0; }
+
+  @media (max-width:860px) {
+    .hero { padding:40px 0 30px; }
+    .hero .wrap { grid-template-columns:1fr; gap:32px; }
+    .grid3, .price-wrap { grid-template-columns:1fr; }
+    .top .contact-inline { display:none; }
+    .contact { padding:28px 20px; }
+    .way { min-width:0; width:100%; }
+    .legal-points { grid-template-columns:1fr 1fr; }
+    .legal-body { padding:0 16px 18px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap nav">
+    <span class="brand"><svg class="brand-logo" role="img" aria-label="The Remote Support Program" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 532 96" width="532" height="96"><g transform="scale(0.8)"><defs><linearGradient id="rsp3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#5b21b6"/></linearGradient></defs><rect width="120" height="120" rx="28" fill="url(#rsp3)"/><path d="M28.16 46.86 A30 30 0 0 1 54.86 20.16" fill="none" stroke="#d9ccfd" stroke-width="7.5" stroke-linecap="round"/><path d="M42.09 48.33 A16 16 0 0 1 56.33 34.09" fill="none" stroke="#ffffff" stroke-width="7.5" stroke-linecap="round"/><path d="M0 0 L0 17 L4.5 13 L7.5 20 L10.2 18.9 L7.4 12.3 L13 12.3 Z" transform="translate(58 50) scale(2.55)" fill="#fff" stroke="#fff" stroke-width="0.63" stroke-linejoin="round"/></g><path d="M132.56 48.63L126.20 48.63L126.20 23.62L118.45 23.62L118.45 18.08L140.18 18.08L140.18 23.62L132.56 23.62L132.56 48.63ZM149.04 48.63L142.89 48.63L142.89 17.59L149.04 17.59L149.04 28.33Q149.98 27.02 151.50 26.39Q153.01 25.75 154.90 25.75L154.90 25.75Q157.44 25.75 159.35 26.82Q161.25 27.88 162.32 29.79Q163.39 31.70 163.39 34.24L163.39 34.24L163.39 48.63L157.24 48.63L157.24 35.55Q157.24 33.62 156.09 32.45Q154.94 31.29 153.14 31.29L153.14 31.29Q151.33 31.29 150.19 32.45Q149.04 33.62 149.04 35.55L149.04 35.55L149.04 48.63ZM178.23 49.12L178.23 49.12Q174.66 49.12 172.04 47.54Q169.41 45.96 167.98 43.30Q166.54 40.63 166.54 37.39L166.54 37.39Q166.54 34.03 168.04 31.41Q169.54 28.78 172.08 27.27Q174.62 25.75 177.82 25.75L177.82 25.75Q181.39 25.75 183.85 27.23Q186.31 28.70 187.60 31.18Q188.89 33.66 188.89 36.78L188.89 36.78Q188.89 37.44 188.83 38.07Q188.77 38.71 188.60 39.16L188.60 39.16L172.94 39.16Q173.19 41.25 174.62 42.52Q176.06 43.79 178.31 43.79L178.31 43.79Q179.95 43.79 181.12 43.13Q182.29 42.48 182.94 41.33L182.94 41.33L187.86 43.67Q186.84 46.13 184.26 47.62Q181.67 49.12 178.23 49.12ZM177.82 30.67L177.82 30.67Q176.02 30.67 174.76 31.70Q173.51 32.72 173.06 34.65L173.06 34.65L182.37 34.65Q182.16 32.88 180.94 31.78Q179.71 30.67 177.82 30.67ZM206.68 48.63L200.33 48.63L200.33 18.08L212.01 18.08Q215.17 18.08 217.61 19.19Q220.05 20.30 221.44 22.47Q222.84 24.64 222.84 27.84L222.84 27.84Q222.84 30.96 221.40 33.15Q219.97 35.34 217.55 36.45L217.55 36.45L224.52 48.63L217.38 48.63L211.19 37.56L206.68 37.56L206.68 48.63ZM206.68 23.62L206.68 32.02L212.05 32.02Q214.06 32.02 215.27 30.88Q216.48 29.73 216.48 27.84L216.48 27.84Q216.48 25.91 215.27 24.77Q214.06 23.62 212.05 23.62L212.05 23.62L206.68 23.62ZM236.78 49.12L236.78 49.12Q233.21 49.12 230.59 47.54Q227.96 45.96 226.53 43.30Q225.09 40.63 225.09 37.39L225.09 37.39Q225.09 34.03 226.59 31.41Q228.09 28.78 230.63 27.27Q233.17 25.75 236.37 25.75L236.37 25.75Q239.93 25.75 242.39 27.23Q244.85 28.70 246.15 31.18Q247.44 33.66 247.44 36.78L247.44 36.78Q247.44 37.44 247.38 38.07Q247.31 38.71 247.15 39.16L247.15 39.16L231.49 39.16Q231.73 41.25 233.17 42.52Q234.60 43.79 236.86 43.79L236.86 43.79Q238.50 43.79 239.67 43.13Q240.84 42.48 241.49 41.33L241.49 41.33L246.41 43.67Q245.39 46.13 242.80 47.62Q240.22 49.12 236.78 49.12ZM236.37 30.67L236.37 30.67Q234.56 30.67 233.31 31.70Q232.06 32.72 231.61 34.65L231.61 34.65L240.92 34.65Q240.71 32.88 239.48 31.78Q238.25 30.67 236.37 30.67ZM257.20 48.63L251.05 48.63L251.05 26.24L256.79 26.24L256.79 28.99Q257.65 27.35 259.29 26.55Q260.93 25.75 263.06 25.75L263.06 25.75Q265.27 25.75 267.10 26.67Q268.92 27.60 269.86 29.19L269.86 29.19Q271.05 27.43 272.84 26.59Q274.62 25.75 276.79 25.75L276.79 25.75Q279.21 25.75 281.08 26.82Q282.94 27.88 284.01 29.79Q285.08 31.70 285.08 34.24L285.08 34.24L285.08 48.63L278.93 48.63L278.93 35.55Q278.93 33.62 277.88 32.45Q276.83 31.29 275.03 31.29L275.03 31.29Q273.23 31.29 272.18 32.45Q271.14 33.62 271.14 35.55L271.14 35.55L271.14 48.63L264.99 48.63L264.99 35.55Q264.99 33.62 263.94 32.45Q262.89 31.29 261.09 31.29L261.09 31.29Q259.29 31.29 258.24 32.45Q257.20 33.62 257.20 35.55L257.20 35.55L257.20 48.63ZM300.25 49.12L300.25 49.12Q296.92 49.12 294.20 47.60Q291.47 46.09 289.85 43.44Q288.23 40.80 288.23 37.44L288.23 37.44Q288.23 34.03 289.85 31.41Q291.47 28.78 294.20 27.27Q296.92 25.75 300.25 25.75L300.25 25.75Q303.57 25.75 306.27 27.27Q308.98 28.78 310.60 31.41Q312.22 34.03 312.22 37.44L312.22 37.44Q312.22 40.80 310.60 43.44Q308.98 46.09 306.27 47.60Q303.57 49.12 300.25 49.12ZM300.25 43.59L300.25 43.59Q302.75 43.59 304.30 41.86Q305.86 40.14 305.86 37.44L305.86 37.44Q305.86 34.77 304.30 33.03Q302.75 31.29 300.25 31.29L300.25 31.29Q297.74 31.29 296.17 33.03Q294.59 34.77 294.59 37.44L294.59 37.44Q294.59 40.14 296.17 41.86Q297.74 43.59 300.25 43.59ZM326.20 48.87L326.20 48.87Q322.14 48.87 319.90 46.68Q317.67 44.49 317.67 40.55L317.67 40.55L317.67 31.57L313.90 31.57L313.90 26.24L314.10 26.24Q317.67 26.24 317.67 22.80L317.67 22.80L317.67 21.16L323.82 21.16L323.82 26.24L329.07 26.24L329.07 31.57L323.82 31.57L323.82 40.14Q323.82 43.54 327.63 43.54L327.63 43.54Q328.21 43.54 329.07 43.42L329.07 43.42L329.07 48.63Q328.45 48.71 327.67 48.79Q326.90 48.87 326.20 48.87ZM343.46 49.12L343.46 49.12Q339.89 49.12 337.27 47.54Q334.64 45.96 333.21 43.30Q331.77 40.63 331.77 37.39L331.77 37.39Q331.77 34.03 333.27 31.41Q334.77 28.78 337.31 27.27Q339.85 25.75 343.05 25.75L343.05 25.75Q346.62 25.75 349.08 27.23Q351.54 28.70 352.83 31.18Q354.12 33.66 354.12 36.78L354.12 36.78Q354.12 37.44 354.06 38.07Q354.00 38.71 353.83 39.16L353.83 39.16L338.17 39.16Q338.42 41.25 339.85 42.52Q341.29 43.79 343.54 43.79L343.54 43.79Q345.18 43.79 346.35 43.13Q347.52 42.48 348.17 41.33L348.17 41.33L353.09 43.67Q352.07 46.13 349.49 47.62Q346.90 49.12 343.46 49.12ZM343.05 30.67L343.05 30.67Q341.25 30.67 339.99 31.70Q338.74 32.72 338.29 34.65L338.29 34.65L347.60 34.65Q347.40 32.88 346.17 31.78Q344.94 30.67 343.05 30.67ZM376.67 49.12L376.67 49.12Q373.80 49.12 371.28 48.08Q368.76 47.03 366.93 45.10Q365.11 43.18 364.21 40.55L364.21 40.55L369.41 38.21Q370.56 40.72 372.59 42.15Q374.62 43.59 377.08 43.59L377.08 43.59Q379.01 43.59 380.17 42.70Q381.34 41.82 381.34 40.35L381.34 40.35Q381.34 38.21 378.64 37.31L378.64 37.31L372.65 35.34Q365.31 32.93 365.31 26.69L365.31 26.69Q365.31 23.99 366.64 21.94Q367.98 19.89 370.38 18.74Q372.77 17.59 375.89 17.59L375.89 17.59Q380.03 17.59 383.17 19.66Q386.30 21.73 387.58 25.34L387.58 25.34L382.41 27.68Q381.55 25.55 379.83 24.34Q378.10 23.13 375.89 23.13L375.89 23.13Q373.96 23.13 372.77 24.05Q371.59 24.97 371.59 26.45L371.59 26.45Q371.59 28.62 374.37 29.56L374.37 29.56L380.24 31.45Q387.58 33.83 387.58 39.98L387.58 39.98Q387.58 42.64 386.18 44.71Q384.79 46.78 382.35 47.95Q379.91 49.12 376.67 49.12ZM399.67 49.12L399.67 49.12Q395.57 49.12 393.38 46.56Q391.18 44.00 391.18 39.81L391.18 39.81L391.18 26.24L397.33 26.24L397.33 39.32Q397.33 41.25 398.48 42.42Q399.63 43.59 401.43 43.59L401.43 43.59Q403.24 43.59 404.38 42.42Q405.53 41.25 405.53 39.32L405.53 39.32L405.53 26.24L411.68 26.24L411.68 48.63L405.94 48.63L405.94 45.88Q405.08 47.52 403.44 48.32Q401.80 49.12 399.67 49.12ZM422.34 56.83L416.19 56.83L416.19 26.24L421.93 26.24L421.93 28.58Q424.31 25.75 428.78 25.75L428.78 25.75Q431.98 25.75 434.56 27.31Q437.14 28.87 438.66 31.51Q440.18 34.16 440.18 37.44L440.18 37.44Q440.18 40.67 438.68 43.34Q437.19 46.00 434.60 47.56Q432.02 49.12 428.74 49.12L428.74 49.12Q426.85 49.12 425.19 48.57Q423.53 48.01 422.34 46.91L422.34 46.91L422.34 56.83ZM428.00 43.59L428.00 43.59Q430.54 43.59 432.18 41.86Q433.82 40.14 433.82 37.44L433.82 37.44Q433.82 34.77 432.18 33.03Q430.54 31.29 428.00 31.29L428.00 31.29Q425.50 31.29 423.92 33.01Q422.34 34.73 422.34 37.44L422.34 37.44Q422.34 40.18 423.92 41.88Q425.50 43.59 428.00 43.59ZM449.94 56.83L443.79 56.83L443.79 26.24L449.53 26.24L449.53 28.58Q451.90 25.75 456.37 25.75L456.37 25.75Q459.57 25.75 462.15 27.31Q464.74 28.87 466.25 31.51Q467.77 34.16 467.77 37.44L467.77 37.44Q467.77 40.67 466.27 43.34Q464.78 46.00 462.20 47.56Q459.61 49.12 456.33 49.12L456.33 49.12Q454.45 49.12 452.79 48.57Q451.13 48.01 449.94 46.91L449.94 46.91L449.94 56.83ZM455.59 43.59L455.59 43.59Q458.14 43.59 459.78 41.86Q461.42 40.14 461.42 37.44L461.42 37.44Q461.42 34.77 459.78 33.03Q458.14 31.29 455.59 31.29L455.59 31.29Q453.09 31.29 451.51 33.01Q449.94 34.73 449.94 37.44L449.94 37.44Q449.94 40.18 451.51 41.88Q453.09 43.59 455.59 43.59ZM482.49 49.12L482.49 49.12Q479.17 49.12 476.44 47.60Q473.72 46.09 472.10 43.44Q470.48 40.80 470.48 37.44L470.48 37.44Q470.48 34.03 472.10 31.41Q473.72 28.78 476.44 27.27Q479.17 25.75 482.49 25.75L482.49 25.75Q485.81 25.75 488.52 27.27Q491.22 28.78 492.84 31.41Q494.46 34.03 494.46 37.44L494.46 37.44Q494.46 40.80 492.84 43.44Q491.22 46.09 488.52 47.60Q485.81 49.12 482.49 49.12ZM482.49 43.59L482.49 43.59Q484.99 43.59 486.55 41.86Q488.11 40.14 488.11 37.44L488.11 37.44Q488.11 34.77 486.55 33.03Q484.99 31.29 482.49 31.29L482.49 31.29Q479.99 31.29 478.41 33.03Q476.83 34.77 476.83 37.44L476.83 37.44Q476.83 40.14 478.41 41.86Q479.99 43.59 482.49 43.59ZM504.22 48.63L498.07 48.63L498.07 26.24L503.81 26.24L503.81 29.60Q504.67 27.51 506.25 26.76Q507.83 26.00 509.88 26.00L509.88 26.00L511.19 26.00L511.19 31.33L509.26 31.33Q507.01 31.33 505.61 32.70Q504.22 34.07 504.22 36.57L504.22 36.57L504.22 48.63ZM525.50 48.87L525.50 48.87Q521.44 48.87 519.21 46.68Q516.97 44.49 516.97 40.55L516.97 40.55L516.97 31.57L513.20 31.57L513.20 26.24L513.40 26.24Q516.97 26.24 516.97 22.80L516.97 22.80L516.97 21.16L523.12 21.16L523.12 26.24L528.37 26.24L528.37 31.57L523.12 31.57L523.12 40.14Q523.12 43.54 526.93 43.54L526.93 43.54Q527.51 43.54 528.37 43.42L528.37 43.42L528.37 48.63Q527.75 48.71 526.98 48.79Q526.20 48.87 525.50 48.87Z" fill="#ffffff"/><path d="M122.06 77.92L119.40 77.92L119.40 63.39L124.83 63.39Q126.31 63.39 127.45 63.92Q128.59 64.46 129.23 65.48Q129.88 66.51 129.88 67.97L129.88 67.97Q129.88 69.43 129.22 70.46Q128.57 71.48 127.43 72.02Q126.29 72.55 124.83 72.55L124.83 72.55L122.06 72.55L122.06 77.92ZM122.06 65.73L122.06 70.21L124.86 70.21Q125.92 70.21 126.57 69.60Q127.22 68.99 127.22 67.97L127.22 67.97Q127.22 66.96 126.57 66.34Q125.92 65.73 124.86 65.73L124.86 65.73L122.06 65.73ZM146.78 77.92L144.13 77.92L144.13 63.39L149.53 63.39Q151.01 63.39 152.15 63.92Q153.29 64.46 153.94 65.48Q154.58 66.51 154.58 67.97L154.58 67.97Q154.58 69.49 153.87 70.55Q153.16 71.60 151.95 72.09L151.95 72.09L155.28 77.92L152.28 77.92L149.28 72.55L146.78 72.55L146.78 77.92ZM146.78 65.73L146.78 70.21L149.57 70.21Q150.64 70.21 151.29 69.60Q151.93 68.99 151.93 67.97L151.93 67.97Q151.93 66.96 151.29 66.34Q150.64 65.73 149.57 65.73L149.57 65.73L146.78 65.73ZM176.27 78.15L176.27 78.15Q174.65 78.15 173.27 77.58Q171.90 77.02 170.86 76.01Q169.83 74.99 169.26 73.63Q168.68 72.26 168.68 70.64L168.68 70.64Q168.68 69.02 169.25 67.66Q169.81 66.29 170.84 65.28Q171.88 64.27 173.26 63.71Q174.65 63.15 176.27 63.15L176.27 63.15Q177.88 63.15 179.27 63.72Q180.65 64.29 181.69 65.29Q182.72 66.29 183.30 67.66Q183.87 69.02 183.87 70.64L183.87 70.64Q183.87 72.26 183.29 73.63Q182.70 74.99 181.67 76.01Q180.63 77.02 179.26 77.58Q177.88 78.15 176.27 78.15ZM176.27 75.73L176.27 75.73Q177.69 75.73 178.80 75.07Q179.91 74.41 180.56 73.26Q181.20 72.11 181.20 70.64L181.20 70.64Q181.20 69.18 180.56 68.03Q179.91 66.88 178.80 66.23Q177.69 65.57 176.27 65.57L176.27 65.57Q174.84 65.57 173.73 66.23Q172.62 66.88 171.98 68.03Q171.33 69.18 171.33 70.64L171.33 70.64Q171.33 72.11 171.98 73.26Q172.62 74.41 173.74 75.07Q174.86 75.73 176.27 75.73ZM205.20 78.15L205.20 78.15Q203.64 78.15 202.31 77.59Q200.97 77.04 199.98 76.02Q198.98 75.01 198.44 73.64Q197.89 72.26 197.89 70.64L197.89 70.64Q197.89 69.02 198.43 67.66Q198.96 66.29 199.95 65.28Q200.93 64.27 202.26 63.71Q203.59 63.15 205.15 63.15L205.15 63.15Q206.69 63.15 207.93 63.68Q209.18 64.21 210.04 65.08Q210.90 65.94 211.27 66.98L211.27 66.98L208.91 68.11Q208.48 66.98 207.50 66.27Q206.53 65.57 205.15 65.57L205.15 65.57Q203.78 65.57 202.74 66.21Q201.69 66.84 201.12 67.99Q200.54 69.14 200.54 70.64L200.54 70.64Q200.54 72.16 201.14 73.31Q201.73 74.46 202.79 75.10Q203.84 75.73 205.20 75.73L205.20 75.73Q206.32 75.73 207.24 75.29Q208.17 74.85 208.74 74.05Q209.32 73.24 209.32 72.12L209.32 72.12L209.32 72.07L205.15 72.07L205.15 69.82L211.97 69.82L211.97 71.29Q211.97 72.98 211.40 74.26Q210.84 75.54 209.87 76.40Q208.91 77.27 207.70 77.71Q206.49 78.15 205.20 78.15ZM228.82 77.92L226.17 77.92L226.17 63.39L231.57 63.39Q233.05 63.39 234.19 63.92Q235.33 64.46 235.97 65.48Q236.62 66.51 236.62 67.97L236.62 67.97Q236.62 69.49 235.91 70.55Q235.19 71.60 233.99 72.09L233.99 72.09L237.32 77.92L234.32 77.92L231.31 72.55L228.82 72.55L228.82 77.92ZM228.82 65.73L228.82 70.21L231.61 70.21Q232.68 70.21 233.32 69.60Q233.97 68.99 233.97 67.97L233.97 67.97Q233.97 66.96 233.32 66.34Q232.68 65.73 231.61 65.73L231.61 65.73L228.82 65.73ZM252.82 77.92L249.96 77.92L254.97 63.39L258.40 63.39L263.41 77.92L260.53 77.92L259.49 74.80L253.88 74.80L252.82 77.92ZM256.68 66.33L254.64 72.46L258.73 72.46L256.68 66.33ZM279.77 77.92L277.12 77.92L277.12 63.39L279.66 63.39L284.47 69.94L289.21 63.39L291.75 63.39L291.75 77.92L289.07 77.92L289.07 68.05L284.59 74.02L284.28 74.02L279.77 67.87L279.77 77.92Z" fill="#a78bfa"/></svg></span>
+    <span class="contact-inline">
+      <a href="mailto:{{EMAIL}}">{{EMAIL}}</a>
+      <a href="tel:{{PHONE_E164}}">{{PHONE_DISPLAY}}</a>
+    </span>
+  </div>
+</header>
+
+<section class="region-bar">
+  <div class="wrap">
+    <span class="region-label">Prices shown in</span>
+    <div class="regions" role="group" aria-label="Choose your region">
+      <button type="button" data-region="za" aria-pressed="true">South Africa</button>
+      <button type="button" data-region="us" aria-pressed="false">United States &amp; Canada</button>
+      <button type="button" data-region="uk" aria-pressed="false">United Kingdom</button>
+      <button type="button" data-region="eu" aria-pressed="false">Europe</button>
+    </div>
+  </div>
+</section>
+
+<section class="hero">
+  <div class="wrap">
+    <div>
+      <span class="pill">Launching soon</span>
+      <h1>Remote support that carries <em>your</em> brand.</h1>
+      <p class="muted" style="font-size:18px">Give your customers a one-click support app with your
+      own logo and colours. Ring every technician until someone answers, share screens, transfer
+      files, run scripts, and reach machines unattended — all under your name, never ours.</p>
+      <div class="cta">
+        <a class="btn btn-accent" href="mailto:{{EMAIL}}?subject=The%20Remote%20Support%20Program%20%E2%80%94%20more%20information">Ask for more information</a>
+        <a class="btn" href="tel:{{PHONE_E164}}">Call {{PHONE_DISPLAY}}</a>
+      </div>
+      <small>Five seats for <a href="#pricing"><b id="hero-price">R500</b> a month</a>, everything included.
+      Opening in South Africa first — get in touch to join the next intake.</small>
+    </div>
+    <div>
+      <div class="win">
+        <div class="bar">Your Company — Support</div>
+        <div class="body">
+          <span class="req">Request Support</span>
+          <div class="chat">
+            <span class="dot">●</span> Connected — ready<br>
+            Technician: Hi, I can see your screen now. Let's sort this out.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <h2 style="text-align:center">Everything a support desk actually does</h2>
+    <p class="muted" style="text-align:center;margin-bottom:30px">Built for IT companies and managed service providers.</p>
+    <div class="grid3">
+      <div class="card">
+        <div class="icon i1">1</div>
+        <h3>On-demand support</h3>
+        <p>Your customer clicks <strong>Request Support</strong> in the branded app. Every signed-in
+        technician is rung until one accepts. The customer approves the connection and you are in.</p>
+      </div>
+      <div class="card">
+        <div class="icon i2">2</div>
+        <h3>Unattended access</h3>
+        <p>Install the background agent once, with the customer's permission, and connect to their
+        machines any time — even at the lock screen — without anyone at the keyboard.</p>
+      </div>
+      <div class="card">
+        <div class="icon i3">3</div>
+        <h3>Team support</h3>
+        <p>Several technicians can join one session at once. Chat with the customer before, during
+        and after. Hand a job over without dropping the connection.</p>
+      </div>
+    </div>
+
+    <div class="grid3" style="margin-top:22px">
+      <div class="card">
+        <div class="icon i4">4</div>
+        <h3>Jobs and ticketing, included</h3>
+        <p>Every session becomes a job record on its own. Log calls, assign them, track what is
+        open and what is waiting, and keep a history per customer — without paying for a second
+        product to do it.</p>
+      </div>
+      <div class="card">
+        <div class="icon i4">5</div>
+        <h3>Your customers and their machines</h3>
+        <p>Client records, contact details and a live inventory of every machine you look after —
+        processor, memory, disk, operating system — collected by the agent rather than typed in
+        by somebody.</p>
+      </div>
+      <div class="card">
+        <div class="icon i4">6</div>
+        <h3>Monthly health checks</h3>
+        <p>Each machine runs its own maintenance and reports back once a month. Turn up to a
+        client with a report instead of waiting for them to phone you when it breaks.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="pricing">
+  <div class="wrap">
+    <h2 style="text-align:center">One price, five seats</h2>
+    <p class="muted" style="text-align:center;margin-bottom:24px">
+      Everything above is included. No per-session fees, no charge per machine you look after.</p>
+
+    <div class="price-wrap">
+      <div class="price-card">
+        <span class="pill" style="margin-bottom:8px">Everything included</span>
+        <div class="amount" id="price">R500</div>
+        <div class="per">per month, for five seats — and the owner is free</div>
+        <div class="extra">
+          Five seats, the same price for everybody — and more on request.
+          Our aim is to make proper IT support software affordable for small IT companies.
+        </div>
+      </div>
+
+      <div class="price-card" style="text-align:left;border-color:var(--line)">
+        <h3 style="margin-bottom:14px">What the seats are</h3>
+        <ul class="seats">
+          <li>
+            <span class="n">1</span>
+            <span><span class="t">Owner — free</span>
+            <span class="d">Sets the branding, manages billing and the team. Free on top of the
+            five, unless they also work as one of the roles below.</span></span>
+          </li>
+          <li>
+            <span class="n">5</span>
+            <span><span class="t">Technicians, Supervisors, Office Administrators</span>
+            <span class="d">Any mix. Technicians take calls and run sessions; supervisors run the
+            team; office administrators book jobs in and invoice, with no remote access. One person
+            doing all three is still one seat.</span></span>
+          </li>
+          <li>
+            <span class="n">+</span>
+            <span><span class="t">More on request</span>
+            <span class="d">We built this for small IT companies, and priced it for them. Need
+            more than five? Ask us — if we agree, each extra seat is <span id="extra-price">R300</span> a month.</span></span>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="rollout">
+      <b>Opening in South Africa first.</b> We are onboarding South African IT companies now, with
+      the United States, Canada, United Kingdom and Europe to follow.
+      <span style="display:block;margin-top:10px"><b>Outside South Africa?</b> Get in touch and we
+      will put you at the front of the queue for your region!</span>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="contact">
+      <h2>Want to know more?</h2>
+      <p class="muted">Talk to Clint at Anywhere IT — the company that built it and uses it every day.</p>
+      <div class="ways">
+        <a class="way" href="mailto:{{EMAIL}}?subject=The%20Remote%20Support%20Program%20%E2%80%94%20more%20information">
+          <span class="ico ico-mail"><svg viewBox="0 0 24 24"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 4.24-8 4.99-8-4.99V6l8 5 8-5z"/></svg></span>
+          <span><span class="k">Email</span><span class="v">{{EMAIL}}</span></span>
+        </a>
+        <a class="way" href="tel:{{PHONE_E164}}">
+          <span class="ico ico-phone"><svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.24 11.4 11.4 0 0 0 3.6.58 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11.4 11.4 0 0 0 .57 3.6 1 1 0 0 1-.25 1z"/></svg></span>
+          <span><span class="k">Phone</span><span class="v">{{PHONE_DISPLAY}}</span></span>
+        </a>
+        <a class="way" href="https://wa.me/{{PHONE_WA}}?text=Hi%20Clint%2C%20I%27d%20like%20to%20know%20more%20about%20The%20Remote%20Support%20Program." target="_blank" rel="noopener">
+          <span class="ico ico-wa"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1 0 12 2zm5.8 14.1c-.2.7-1.2 1.3-1.9 1.4-.5.1-1.2.2-3.5-.7-2.9-1.2-4.8-4.2-5-4.4-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.3 0 .5l-.4.5c-.1.2-.3.3-.1.6.1.3.6 1.1 1.4 1.8 1 .9 1.8 1.1 2 1.2.3.1.4.1.6-.1l.8-1c.2-.2.4-.2.6-.1l2 .9c.2.1.4.2.4.3.1.2.1.8-.1 1.5z"/></svg></span>
+          <span><span class="k">WhatsApp</span><span class="v">{{PHONE_DISPLAY}}</span></span>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LEGAL:BEGIN — written by `RemoteSupport.Platform landing-legal landing/index.html` from src/RemoteSupport.Platform/Terms/ (version 2026-10-25). Do not edit by hand. -->
+<section class="section legal" id="legal">
+  <div class="wrap">
+    <h2>Terms, refunds and privacy</h2>
+    <p class="muted">The Remote Support Program (Pty) Ltd · Registration number 2026/737434/07<br>19 Tide Street, Knysna Central, Knysna, Western Cape, 6571, South Africa<br>
+      <a href="mailto:{{EMAIL}}">{{EMAIL}}</a> · <a href="tel:{{PHONE_E164}}">{{PHONE_DISPLAY}}</a></p>
+
+    <div class="legal-points" id="refunds">
+      <div><b>Cancel any time</b>Nothing more is charged; the service runs to the end of the month already paid.</div>
+      <div><b>Free 14-day trial</b>Nothing is charged before you have tried it.</div>
+      <div><b>No part-month refunds</b>You pay monthly in advance and can cancel before the next month.</div>
+      <div><b>Mistakes refunded</b>A payment taken in error is refunded in full within 30 days.</div>
+      <div><b>No VAT</b>We are not registered for VAT; the price is what you pay.</div>
+    </div>
+
+    <details class="legal-doc" id="terms">
+      <summary>Terms and conditions <span class="muted">— version 2026-10-25</span></summary>
+      <div class="legal-body">
+<h2>Terms of Service — South Africa</h2>
+<p>These terms are an agreement between <strong>The Remote Support Program (Pty) Ltd</strong> (registration number 2026/737434/07, &quot;we&quot;, &quot;us&quot;) and the company signing up (&quot;you&quot;). The person who ticks the box at signup confirms that they may bind that company to these terms.</p>
+<h2>1. What the service is</h2>
+<p>The Remote Support Program is software you use to support your own customers: remote control of their computers, file transfer, scripts, a monthly health check, tickets, chat and the other features described on our website. It is provided as a hosted service under your own company&#39;s name and branding.</p>
+<p>You decide which of your customers&#39; computers it is installed on, who in your company may use it, and what is done with it. We provide the tool; you provide the support.</p>
+<h2>2. Your trial, the price and paying</h2>
+<ul><li>A new company gets a free trial of 14 days. Nothing is charged during the trial.</li><li>After the trial the price is <strong>R500 a month</strong> for five seats, any mix of roles. One person holding only the owner role is free; everybody else who can sign in takes a seat, and one person takes one seat however many roles they hold. That free owner login sets the company up and oversees it: it sees every ticket, client and computer and may comment on tickets, but it does not work tickets or connect to computers.</li><li><strong>A company has five seats; more are on request.</strong> We built the service to make proper IT support software affordable for small IT companies, so every company starts with five. If you need more, an owner may ask us on the Billing page. Whether we agree, and how many seats we allow, is our decision. If we agree, each seat past five is <strong>R300 a month</strong>. It is added only when an owner adds somebody and accepts the new monthly price shown first, and it is charged from your next payment, with no part-month charges. Removing somebody brings the price down again from the payment after. Otherwise, to add somebody when your seats are all in use, remove a person or a role first.</li><li>Prices are in South African rand. No VAT is charged: we are not registered for VAT. If we register, we will tell you at least 30 days before VAT is added to your price.</li><li>You pay monthly in advance. If a payment is more than 14 days late we may suspend the service until it is paid, after telling you by email.</li><li>We may change our prices by telling you at least 30 days before the change takes effect. You may end the agreement before then if you do not accept the new price.</li></ul>
+<h2>3. What you must do</h2>
+<ul><li><strong>Have permission.</strong> You must have the permission of the owner and the user of every computer you install the software on or connect to, as the law where that computer is requires. The customer&#39;s own app asks them before each attended session; unattended access is something they switch on themselves. You are responsible for using these as your customers have agreed.</li><li><strong>Keep your logins safe.</strong> Every person must use their own login and the two-factor code. You are responsible for anything done with your company&#39;s logins, and you must tell us at once if you think one has been misused.</li><li><strong>Use it lawfully.</strong> You must not use the service to access a computer without authority, to spy on anyone, to spread malicious software, to break any law, or to harm our systems or anyone else&#39;s.</li><li><strong>Your customers&#39; data is yours to look after.</strong> You decide what of your customers&#39; information passes through the service, and you are responsible for having a lawful reason to process it.</li></ul>
+<h2>4. Your data and backups — we are not responsible for loss of data</h2>
+<p><strong>Remote support changes computers.</strong> Scripts, file transfers, installations, restarts and the work your technicians do can change, damage or delete data on your customers&#39; machines. <strong>You and your customers are responsible for keeping backups</strong> of everything that matters before work is done.</p>
+<p><strong>We are not responsible for any loss of, damage to, or corruption of data</strong> on any computer, whether caused by the use of the service, by a technician&#39;s action, by a script, by a fault in the software, by a failure of a computer or network, or by anything else, except where the law does not allow this to be excluded.</p>
+<p>We back up our own servers every night and take reasonable care of the information stored on them (your tickets, clients, settings and records). We do not promise that it can never be lost, and <strong>you should keep your own copies</strong> of anything you cannot do without — for example by exporting your client list.</p>
+<h2>5. Privacy and where your data is kept</h2>
+<p>This agreement follows the <strong>Protection of Personal Information Act 4 of 2013 (POPIA)</strong>.</p>
+<ul><li><strong>Your customers&#39; information.</strong> For the personal information of your customers and their staff that passes through the service (names, contact details, machine details, screens, files, chat, tickets), <strong>you are the responsible party and we are your operator</strong> under sections 20 and 21 of POPIA. We process it only to provide the service and on your instructions, treat it as confidential, secure it as section 19 requires, and tell you as soon as reasonably possible if we believe it has been accessed or acquired by an unauthorised person (section 22), so that you can notify the Information Regulator and the people affected.</li><li><strong>Your own information.</strong> For the information about your company and your staff that we need to run your account and bill you, we are the responsible party. We use it only for that, and we never sell it.</li><li><strong>Where it is kept.</strong> Your data is kept on servers in <strong>South Africa</strong>. We do not send it outside South Africa except as section 72 of POPIA allows, and we will tell you which other providers we use to run the service (for example our hosting provider) on request.</li><li><strong>People&#39;s rights.</strong> If one of your customers asks you to see, correct or delete their information, we will help you do it.</li><li><strong>Our Information Officer</strong> is our director, Clint, at queries@theremotesupportprogram.com or 19 Tide Street, Knysna Central, Knysna, 6571.</li><li>These terms are concluded electronically, as the <strong>Electronic Communications and Transactions Act 25 of 2002</strong> allows.</li></ul>
+<h2>6. Security</h2>
+<p>We protect the service with encryption on every connection, two-factor sign-in for every login, and the other measures described in our security documentation. No system is perfectly secure. If we learn of a breach that affects your data we will tell you without undue delay, and do what the law requires of us.</p>
+<h2>7. Availability and changes</h2>
+<p>We work to keep the service running at all times but <strong>we do not promise that it will always be available or free of faults</strong>. We may carry out maintenance, and will try to do it outside working hours. We may improve and change the service; if a change takes away something important you rely on, we will tell you in advance.</p>
+<h2>8. The service is provided as it is</h2>
+<p>Except where the law says otherwise, the service is provided &quot;as is&quot; and &quot;as available&quot;, <strong>without any warranty</strong> that it is fit for a particular purpose, will meet your needs, or will be uninterrupted or error-free.</p>
+<h2>9. Limits on our liability</h2>
+<ul><li>We are <strong>not liable for indirect or consequential loss</strong>, including loss of profit, revenue, business, goodwill or data, however it arises.</li><li>Our total liability to you for everything arising from this agreement in any twelve months is limited to <strong>the fees you paid us in those twelve months</strong>.</li><li>Nothing in these terms limits liability that cannot be limited by law, or rights you have under the Consumer Protection Act 68 of 2008 if it applies to you.</li></ul>
+<h2>10. Your responsibility to us</h2>
+<p>You will compensate us for claims made against us by your customers or anyone else that arise from how you used the service, from a breach of these terms, or from using it without the permission described in section 3.</p>
+<h2>11. Cancelling, refunds and ending the agreement</h2>
+<ul><li><strong>You may cancel at any time</strong>, by email to queries@theremotesupportprogram.com or by phone on 078 131 5618. Nothing more is charged after you cancel; the service carries on until the end of the month you have already paid for, and then stops.</li><li><strong>The free trial costs nothing</strong>, so there is nothing to refund if you cancel during it.</li><li><strong>We do not refund part of a month</strong> you have paid for, because you pay monthly in advance and may cancel before the next month starts.</li><li><strong>A payment taken in error</strong> — charged twice, charged after you cancelled, or the wrong amount — is refunded in full, to the card or account it came from, within 30 days of you telling us.</li><li>We may end the agreement by giving you 30 days&#39; notice, or at once if you seriously break these terms or do not pay.</li><li>When it ends, you can no longer sign in, and the software on your customers&#39; machines stops connecting. <strong>We delete your company&#39;s data 60 days after the agreement ends</strong>, except what the law requires us to keep. Ask us before then for an export of your data.</li></ul>
+<h2>12. Changes to these terms</h2>
+<p>We may change these terms. We will tell you by email at least 30 days before a change that matters takes effect, and you may end the agreement before then if you do not accept it. The version you accepted is kept on your account.</p>
+<h2>13. The law that applies</h2>
+<p>These terms are governed by the law of the <strong>Republic of South Africa</strong>. You and we agree to the jurisdiction of the Western Cape Division of the High Court, Cape Town, or a magistrate&#39;s court with jurisdiction over the claim.</p>
+<h2>14. Contact</h2>
+<p><strong>The Remote Support Program (Pty) Ltd</strong>, registration number 2026/737434/07<br>19 Tide Street, Knysna Central, Knysna, Western Cape, 6571, South Africa<br>queries@theremotesupportprogram.com &#183; 078 131 5618</p>
+
+      </div>
+    </details>
+
+    <details class="legal-doc" id="privacy">
+      <summary>Privacy policy <span class="muted">— POPIA</span></summary>
+      <div class="legal-body">
+<h2>Privacy policy</h2>
+<p>This version is dated <strong>14 October 2026</strong>.</p>
+<p>This policy explains what personal information <strong>The Remote Support Program (Pty) Ltd</strong> (registration number 2026/737434/07, &quot;we&quot;, &quot;us&quot;) collects, why, and what you can ask of us, as the <strong>Protection of Personal Information Act 4 of 2013 (POPIA)</strong> requires.</p>
+<p><strong>Our Information Officer</strong> is our director, Clint, at queries@theremotesupportprogram.com, 078 131 5618, or 19 Tide Street, Knysna Central, Knysna, Western Cape, 6571.</p>
+<h2>What we collect, and why</h2>
+<ul><li><strong>Visiting this website.</strong> We use <strong>no analytics, no trackers and no advertising</strong>, and this website loads nothing from any other website. The only <strong>cookies</strong> are the ones it cannot work without: one that keeps you signed in, a few that remember this browser so the sign-in code is asked only once a week and tell you if you were signed out from another computer, and one that stops a form (signing up, signing in, contacting us) being sent from another website. None of them follows you anywhere else, and none is used for marketing. Your browser also keeps a few choices for you alone — the currency you pick, light or dark, and, if you chat with us, the conversation, so that it carries on from page to page; we never see these. Like every web server, ours notes the internet address and time of each request, which we keep only as long as we need it to keep the site secure.</li><li><strong>When you contact us</strong> by email or phone, we keep what you tell us so that we can answer you.</li><li><strong>When your company signs up</strong>, we collect its name, the contact person&#39;s name, email address and phone number, its country and time zone, and the terms it accepted (with when, and from which internet address). Your password is never stored — only a one-way scrambled version of it — and your two-factor sign-in key is stored encrypted.</li><li><strong>When your staff use the service</strong>, we keep their names and email addresses, and a record of when and from which network they signed in, so that we can protect their accounts and warn them of a sign-in they did not make.</li><li><strong>Your customers&#39; information.</strong> What passes through the service about your own customers — their machines, screens, files, chats and tickets — is processed for you, as your <strong>operator</strong> under POPIA, as our Terms and Conditions (section 5) explain. You decide what that information is used for; we use it only to provide the service to you.</li><li><strong>Payments</strong> are made through <strong>PayFast</strong>. We never see or store your card or bank details; PayFast tells us only whether a payment succeeded, the amount and its reference.</li></ul>
+<p>We use personal information only to provide and secure the service, to bill for it, to answer you, and to meet our legal duties. <strong>We never sell it</strong>, and we never market to your customers.</p>
+<h2>Who else sees it</h2>
+<p>Only those we need to run the service, each bound to keep it confidential and secure:</p>
+<ul><li>our hosting provider, <strong>xneelo</strong>, whose servers in <strong>South Africa</strong> hold the service and its data;</li><li><strong>PayFast</strong>, for payments;</li><li>our email provider, to deliver the emails the service sends (invitations, reports, notices);</li><li>anyone the law requires us to give it to, such as a court order — and only what is required.</li></ul>
+<p>We do not send personal information outside South Africa, except where section 72 of POPIA allows it.</p>
+<h2>How long we keep it</h2>
+<ul><li>While your company&#39;s account is open, and for <strong>60 days</strong> after it ends, so that you can ask for an export; then it is deleted.</li><li>Invoices and payment records for <strong>five years</strong>, as South African tax law requires.</li><li>Email and phone enquiries for as long as they are useful to answer you, and no longer than a year if you do not become a customer.</li></ul>
+<h2>How we protect it</h2>
+<p>Every connection to the service is encrypted. Every sign-in needs a password, and a code from an authenticator app at least once a week on each computer. Passwords are stored only as a one-way scramble. Our servers are backed up every night, and the backups are encrypted.</p>
+<h2>What you can ask of us</h2>
+<p>Under POPIA you may ask us <strong>what personal information we hold about you</strong>, to <strong>correct or delete</strong> it, or <strong>object</strong> to how we use it. Write to our Information Officer at queries@theremotesupportprogram.com; we will answer within 30 days. If you are not satisfied, you may complain to the <strong>Information Regulator</strong> (www.inforegulator.org.za).</p>
+<h2>Changes to this policy</h2>
+<p>If we change this policy we will publish the new version here, with its date, and tell our customers by email of any change that matters to them.</p>
+
+      </div>
+    </details>
+  </div>
+</section>
+<!-- LEGAL:END -->
+
+<footer>
+  <div class="wrap">
+    <p><strong>The Remote Support Program</strong> — built and run by Anywhere IT.</p>
+    <p class="muted">The Remote Support Program (Pty) Ltd &middot; Reg. 2026/737434/07 &middot;
+      19 Tide Street, Knysna Central, Knysna, 6571 &middot;
+      <a href="mailto:{{EMAIL}}">{{EMAIL}}</a> &middot;
+      <a href="tel:{{PHONE_E164}}">{{PHONE_DISPLAY}}</a></p>
+    <!-- PayFast checks for a terms link on the home page; these open the folded section below. -->
+    <p class="legal-links"><a href="#terms">Terms and conditions</a> &middot;
+      <a href="#refunds">Refund policy</a> &middot; <a href="#privacy">Privacy policy</a></p>
+  </div>
+</footer>
+
+<script>
+  // The region switcher. Inline and tiny, like everything else here - no third-party requests.
+  // A visitor sees one currency, their own, rather than a table of four.
+  var PRICES = {
+    za: { price: 'R500', extra: 'R300' },
+    us: { price: '$49', extra: '$20' },
+    uk: { price: '£49', extra: '£20' },
+    eu: { price: '€49', extra: '€20' }
+  };
+  (function () {
+    var buttons = [].slice.call(document.querySelectorAll('.regions button'));
+    var price = document.getElementById('price');
+    var heroPrice = document.getElementById('hero-price');
+
+    function show(region) {
+      var p = PRICES[region] || PRICES.za;
+      price.textContent = p.price;
+      if (heroPrice) { heroPrice.textContent = p.price; }
+      var extraPrice = document.getElementById('extra-price');
+      if (extraPrice) { extraPrice.textContent = p.extra; }
+      buttons.forEach(function (b) {
+        b.setAttribute('aria-pressed', String(b.dataset.region === region));
+      });
+      try { localStorage.setItem('rsp-region', region); } catch (e) {}
+    }
+
+    buttons.forEach(function (b) {
+      b.addEventListener('click', function () { show(b.dataset.region); });
+    });
+
+    // SOUTH AFRICA IS ALWAYS THE DEFAULT. This used to guess from navigator.language, which got
+    // it wrong in the one market that matters: Windows in South Africa very commonly reports
+    // en-US, so a Johannesburg visitor was shown dollars. The locale is not evidence of where
+    // someone is, and this page opens in South Africa - so it opens in rand, and the visitor
+    // picks another region if they want one.
+    //
+    // A choice they made themselves is remembered, because that IS evidence.
+    var saved = null;
+    try { saved = localStorage.getItem('rsp-region'); } catch (e) {}
+    show(saved && PRICES[saved] ? saved : 'za');
+  })();
+
+  // The footer's Terms and Privacy links point at folded sections: open the one asked for, on
+  // arrival with #terms in the address and on a click, so the link never lands on a closed box.
+  (function () {
+    function open(hash) {
+      var el = hash ? document.getElementById(hash.slice(1)) : null;
+      if (el && el.tagName === 'DETAILS') { el.open = true; el.scrollIntoView(); }
+    }
+    open(location.hash);
+    window.addEventListener('hashchange', function () { open(location.hash); });
+    // And on the click itself, so it never depends on the address changing.
+    document.addEventListener('click', function (e) {
+      var a = e.target.closest ? e.target.closest('a[href^="#"]') : null;
+      if (a) open(a.getAttribute('href'));
+    });
+  })();
+</script>
+
+</body>
+</html>

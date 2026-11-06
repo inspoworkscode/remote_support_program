@@ -1,0 +1,85 @@
+@page "/portal/outsiders"
+@model RemoteSupport.Platform.Pages.Portal.OutsidersModel
+@using RemoteSupport.Platform.Services
+@using RemoteSupport.Shared
+@{ ViewData["Title"] = "Outside help"; ViewData["Section"] = "portal"; var t = Model.Tenant; }
+<section class="portal"><div class="wrap">
+    <h1>Outside help</h1>
+    <p class="muted" style="max-width:760px">
+        Sometimes one of your clients needs help from somebody outside your company — their accounting firm,
+        or another IT company that does something you do not. With this on, the person at the computer can
+        make a <strong>code</strong> in the support app and give it to them. The code lasts ten minutes and
+        works once, the person at the computer still has to press <strong>Allow</strong>, and your
+        technicians are told and can watch and end it. Never unattended.
+    </p>
+    @if (!string.IsNullOrEmpty(Model.Message)) { <div class="alert alert-ok">@Model.Message</div> }
+    @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad">@Model.Error</div> }
+
+    <form method="post" asp-page-handler="Company" class="form card" style="max-width:760px;margin-bottom:18px">
+        <label style="display:flex;gap:10px;align-items:center;font-weight:800">
+            <input type="checkbox" name="enabled" value="true" style="width:auto" checked="@t.OutsidersAllowed"> Let the people at our clients' computers give somebody outside a code
+        </label>
+        <p class="muted" style="margin:6px 0 0">Off by default. This is what every machine does unless it is set On or Off for itself below.</p>
+        <div class="actions"><button class="btn btn-accent" type="submit">Save</button></div>
+    </form>
+
+    <form method="post" asp-page-handler="Invites" class="form card" style="max-width:760px;margin-bottom:18px">
+        <label style="display:flex;gap:10px;align-items:center;font-weight:800">
+            <input type="checkbox" name="enabled" value="true" style="width:auto" checked="@t.TechnicianInvitesAllowed"> Let our technicians bring somebody in from outside during a session
+        </label>
+        <p class="muted" style="margin:6px 0 0">
+            On by default. In a session, <strong>Tools → Get outside help</strong> makes a code for that session only; the
+            technician lets the person in, and the person at the computer is told. They leave when your technicians do.
+            This does not depend on the switch above or the machines below — those are for your clients' own codes.
+        </p>
+        <div class="actions"><button class="btn btn-accent" type="submit">Save</button></div>
+    </form>
+
+    <div class="card" style="margin-bottom:18px">
+        <h3 style="margin-top:0">Each machine</h3>
+        @if (Model.Machines.Count == 0) { <p class="muted">No machines yet.</p> }
+        else
+        {
+            <div class="table-scroll"><table class="table" style="box-shadow:none">
+                <thead><tr><th>Machine</th><th>Whose</th><th>Setting</th><th>Can make a code</th></tr></thead>
+                <tbody>
+                @foreach (var m in Model.Machines)
+                {
+                    <tr>
+                        <td><strong>@m.Machine</strong></td>
+                        <td>@m.Who</td>
+                        <td>
+                            <form method="post" asp-page-handler="Machine" class="inline">
+                                <input type="hidden" name="deviceId" value="@m.DeviceId">
+                                <select name="mode" onchange="this.form.submit()" aria-label="Outside help on @m.Machine">
+                                    <option value="@OutsiderAccess.AsCompany" selected="@(m.Mode == OutsiderAccess.AsCompany)">As the company (@(t.OutsidersAllowed ? "on" : "off"))</option>
+                                    <option value="@OutsiderAccess.On" selected="@(m.Mode == OutsiderAccess.On)">On for this machine</option>
+                                    <option value="@OutsiderAccess.Off" selected="@(m.Mode == OutsiderAccess.Off)">Off for this machine</option>
+                                </select>
+                            </form>
+                        </td>
+                        <td>@if (m.Allowed) { <span class="pill pill-warn">yes</span> } else { <span class="pill pill-muted">no</span> }</td>
+                    </tr>
+                }
+                </tbody>
+            </table></div>
+        }
+    </div>
+
+    <div class="card">
+        <h3 style="margin-top:0">Codes made</h3>
+        @if (Model.Codes.Count == 0) { <p class="muted">None yet.</p> }
+        else
+        {
+            <div class="table-scroll"><table class="table" style="box-shadow:none">
+                <thead><tr><th>When</th><th>Machine</th><th>For</th><th>Made by</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var c in Model.Codes)
+                {
+                    <tr><td>@c.CreatedUtc.Local().ToString("d MMM yyyy, HH:mm")</td><td>@c.Machine</td><td>@c.For</td><td>@c.MadeBy</td><td>@c.State</td></tr>
+                }
+                </tbody>
+            </table></div>
+        }
+    </div>
+</div></section>

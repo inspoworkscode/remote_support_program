@@ -1,0 +1,8 @@
+@model SiteShot
+@* One screenshot (2026-10-14): its light and its dark picture, and the stylesheet shows the one the page is in. A link to the
+   picture itself, so it can be seen full size; the script in _Layout opens it over the page instead. Both lazy: a hidden one
+   is then never fetched at all. *@
+<a class="shot-frame" href="@Model.File("dark")" data-shot>
+    <img class="shot-dark" src="@Model.File("dark")" alt="@Model.Alt" width="@Model.Width" height="@Model.Height" loading="lazy" decoding="async">
+    <img class="shot-light" src="@Model.File("light")" alt="@Model.Alt" width="@Model.Width" height="@Model.Height" loading="lazy" decoding="async">
+</a>

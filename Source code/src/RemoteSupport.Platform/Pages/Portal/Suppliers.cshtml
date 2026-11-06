@@ -1,0 +1,234 @@
+@page "/portal/suppliers"
+@model RemoteSupport.Platform.Pages.Portal.SuppliersModel
+@{ ViewData["Title"] = "Suppliers"; ViewData["Section"] = "portal"; var own = QuoteService.OwnAddress(Model.Tenant); }
+<section class="portal"><div class="wrap">
+    <h1>Suppliers <span class="pill pill-muted">@Model.Suppliers.Count</span></h1>
+    <p class="muted">Who you ask for quotes. When a quote is requested, tick the suppliers wanted: one goes in To, and several all go in BCC so none sees the others.</p>
+    @if (!string.IsNullOrEmpty(Model.Message)) { <div class="alert alert-ok">@Model.Message</div> }
+    @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad">@Model.Error</div> }
+    @if (!Model.CanEdit) { <div class="alert alert-warn">The office administrator, a supervisor or the owner can change suppliers.</div> }
+
+    <div class="card form" style="margin-bottom:18px">
+        <div style="font-weight:700;font-size:17px">Every quote request</div>
+        @if (Model.CanEdit)
+        {
+            <form method="post" asp-page-handler="Settings" style="max-width:640px;margin-top:10px">
+                <label>Your own address — goes in To when several suppliers are asked</label>
+                <input name="quoteTo" type="email" value="@Model.Tenant.QuoteToAddress" placeholder="@(Model.Tenant.SupportEmail.Length > 0 ? Model.Tenant.SupportEmail : "e.g. accounts@yourcompany.co.za")">
+                <p class="muted" style="font-size:13px;margin:4px 0 0">@(Model.Tenant.QuoteToAddress.Length == 0 && Model.Tenant.SupportEmail.Length > 0 ? $"Left empty, your support address ({Model.Tenant.SupportEmail}) is used." : "An email with nothing in To is often treated as spam, so the suppliers go in BCC and this goes in To.")</p>
+                <label>Delivery address</label>
+                <textarea name="delivery" rows="4" placeholder="Where parts are delivered">@Model.Tenant.QuoteDeliveryAddress</textarea>
+                <p class="muted" style="font-size:13px;margin:4px 0 0">Every request asks what the delivery fee would be@(Model.Tenant.QuoteDeliveryAddress.Length > 0 ? ", for delivery to this address" : ""), whether each item is in stock, and the ETA — how soon each item can be delivered.</p>
+                <div class="actions"><button class="btn btn-accent" type="submit">Save</button></div>
+            </form>
+        }
+        else
+        {
+            <p>To, when several are asked: @(own.Length > 0 ? own : "not set")</p>
+            <p>Delivery address: @(Model.Tenant.QuoteDeliveryAddress.Length > 0 ? Model.Tenant.QuoteDeliveryAddress.Replace("\n", ", ") : "not set")</p>
+        }
+    </div>
+
+    @* Signatures (Clint, 2026-10-06): text, an image, or both; each line its own font, size and colour.
+       With more than one, Request quote asks which — the one the person used last ticked. *@
+    <div class="card form" id="signatures" style="margin-bottom:18px;max-width:none">
+        <div style="font-weight:700;font-size:17px">Signatures</div>
+        <p class="muted" style="font-size:13px;margin:4px 0 0">How a quote request is signed: text, an image, or both. With more than one, whoever requests a quote chooses theirs, and the one they used last is already ticked.</p>
+        @if (Model.Signatures.Count == 0 && Model.Editing == null)
+        {
+            <p style="margin-top:10px">No signatures yet. Requests are signed with the person's name and the company's.</p>
+        }
+        @foreach (var s in Model.Signatures)
+        {
+            <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+                <div style="min-width:160px;font-weight:700">@s.Name</div>
+                <div style="flex:1 1 300px;background:#fff;color:#222;padding:8px 10px;border-radius:8px;overflow:hidden">@Html.Raw(QuoteSignatures.Html(s, QuoteSignatures.ImagePath(s.ImageToken)))</div>
+                @if (Model.CanEdit)
+                {
+                    <div style="white-space:nowrap">
+                        <a class="btn btn-sm" href="/portal/suppliers?edit=@s.Id#signatures">Edit</a>
+                        <form method="post" asp-page-handler="RemoveSignature" class="inline" onsubmit="return confirm('Remove the signature @s.Name? Requests already signed with it stay as they were.')">
+                            <input type="hidden" name="signatureId" value="@s.Id"><button class="btn btn-sm btn-danger" type="submit">Remove</button></form>
+                    </div>
+                }
+            </div>
+        }
+        @if (Model.CanEdit && Model.Editing == null)
+        {
+            <p style="margin-top:14px"><a class="btn" href="/portal/suppliers?edit=0#signatures">Add a signature</a></p>
+        }
+        @if (Model.Editing is { } ed)
+        {
+            var hasImage = QuoteSignatures.HasImage(ed);
+            <form method="post" asp-page-handler="Signature" enctype="multipart/form-data" id="sigForm" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
+                <input type="hidden" name="signatureId" value="@ed.Id">
+                <div style="font-weight:700">@(ed.Id == 0 ? "A new signature" : $"Changing \"{ed.Name}\"")</div>
+                <label>Name — what the list shows when a quote is requested</label>
+                <input name="name" required maxlength="@QuoteSignatures.MaxNameLength" value="@ed.Name" placeholder="e.g. Clint — Accounts" style="max-width:420px">
+
+                <label>Text — each line its own font, size, colour and style. It is the whole closing of the email, so start with your sign-off, e.g. "Kind regards". Leave it empty for an image only.</label>
+                <div id="sigLines">
+                @for (int li = 0; li < Model.EditLines.Count; li++)
+                {
+                    var l = Model.EditLines[li];
+                    <div class="sig-line" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px">
+                        <input name="lineText" value="@l.Text" maxlength="@QuoteSignatures.MaxLineLength" placeholder="@(li == 0 ? "e.g. Kind regards" : "e.g. Clint Smith")" style="flex:1 1 220px;width:auto;padding:8px 10px">
+                        <select name="lineFont" title="Font" style="width:auto;padding:8px">
+                            @foreach (var f in QuoteSignatures.Fonts) { <option value="@f.name" selected="@(f.name == l.Font)" style="font-family:@f.stack">@f.name</option> }
+                        </select>
+                        <select name="lineSize" title="Size" style="width:auto;padding:8px">
+                            @foreach (var z in QuoteSignatures.Sizes) { <option value="@z" selected="@(z == l.Size)">@z px</option> }
+                        </select>
+                        <input type="color" name="lineColor" value="@l.Color" title="Colour" style="width:46px;height:38px">
+                        <select name="lineStyle" title="Style" style="width:auto;padding:8px">
+                            @foreach (var st in QuoteSignatures.Styles) { <option value="@st.value" selected="@(st.value == l.Style)">@st.label</option> }
+                        </select>
+                        <button type="button" class="btn btn-sm" title="Take this line out" onclick="sigDrop(this)">✕</button>
+                    </div>
+                }
+                </div>
+                <button type="button" class="btn btn-sm" id="sigAdd" onclick="sigAddLine()">Add a line</button>
+
+                <label>Image — a signature, a logo or a banner (PNG, JPEG or GIF, up to 1 MB)</label>
+                @if (hasImage)
+                {
+                    <div style="background:#fff;padding:6px;border-radius:8px;display:inline-block"><img src="@QuoteSignatures.ImagePath(ed.ImageToken)" alt="" style="max-width:300px;display:block"></div>
+                    <label style="font-weight:600;display:flex;gap:6px;align-items:center;margin-top:6px"><input type="checkbox" name="removeImage" value="true" id="sigRemoveImage"> Remove the image</label>
+                    <p class="muted" style="font-size:13px;margin:4px 0">Or upload another to replace it:</p>
+                }
+                <input type="file" name="image" id="sigImage" accept="image/png,image/jpeg,image/gif" style="max-width:420px">
+                <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end">
+                    <div><label>Width in the email (pixels)</label>
+                        <input type="number" name="imageWidth" id="sigWidth" min="@QuoteSignatures.MinImageWidth" max="@QuoteSignatures.MaxImageWidth" value="@(ed.ImageWidth > 0 ? ed.ImageWidth.ToString() : "")" placeholder="as it is, up to @QuoteSignatures.DefaultImageWidth" style="width:220px"></div>
+                    <div style="padding-bottom:10px">
+                        <label style="font-weight:600;display:inline-flex;gap:6px;align-items:center;margin:0 12px 0 0"><input type="radio" name="imagePlace" value="below" checked="@(!ed.ImageFirst)" style="width:auto"> Below the text</label>
+                        <label style="font-weight:600;display:inline-flex;gap:6px;align-items:center;margin:0"><input type="radio" name="imagePlace" value="above" checked="@ed.ImageFirst" style="width:auto"> Above the text</label>
+                    </div>
+                </div>
+
+                <label>How it will look</label>
+                <div id="sigPreview" style="background:#fff;color:#222;padding:10px 12px;border-radius:8px;min-height:30px;overflow:hidden">@Html.Raw(QuoteSignatures.Html(ed, QuoteSignatures.ImagePath(ed.ImageToken)))</div>
+                <div class="actions">
+                    <button class="btn btn-accent" type="submit">Save signature</button>
+                    <a class="btn" href="/portal/suppliers#signatures">Cancel</a>
+                </div>
+            </form>
+            <script>
+            (function(){
+              var fonts = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(QuoteSignatures.Fonts.ToDictionary(f => f.name, f => f.stack)));
+              var form = document.getElementById('sigForm'), lines = document.getElementById('sigLines'), prev = document.getElementById('sigPreview');
+              var existing = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(hasImage ? QuoteSignatures.ImagePath(ed.ImageToken) : ""));
+              var picked = '';
+              window.sigAddLine = function(){
+                var rows = lines.querySelectorAll('.sig-line');
+                if (rows.length >= @QuoteSignatures.MaxLines) return;
+                var last = rows[rows.length - 1], row = last.cloneNode(true);
+                var t = row.querySelector('input[name=lineText]'); t.value = ''; t.placeholder = 'e.g. Clint Smith';
+                // A new line starts plain, in the last line's font and colour — a name is bold, what follows usually is not.
+                row.querySelector('select[name=lineStyle]').value = 'normal';
+                row.querySelector('select[name=lineFont]').value = last.querySelector('select[name=lineFont]').value;
+                row.querySelector('select[name=lineSize]').value = last.querySelector('select[name=lineSize]').value;
+                lines.appendChild(row); t.focus(); draw();
+              };
+              window.sigDrop = function(b){
+                var rows = lines.querySelectorAll('.sig-line');
+                if (rows.length > 1) b.closest('.sig-line').remove();
+                else { var t = b.closest('.sig-line').querySelector('input[name=lineText]'); t.value = ''; }
+                draw();
+              };
+              function esc(s){ var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+              function draw(){
+                var html = '', img = '';
+                var removed = document.getElementById('sigRemoveImage');
+                var src = picked || ((removed && removed.checked) ? '' : existing);
+                if (src) {
+                  var w = parseInt(document.getElementById('sigWidth').value, 10) || 0;
+                  img = '<img src="' + src + '" style="display:block;border:0;' + (w ? 'width:' + Math.min(Math.max(w, @QuoteSignatures.MinImageWidth), @QuoteSignatures.MaxImageWidth) + 'px;' : 'max-width:@(QuoteSignatures.DefaultImageWidth)px;') + 'max-width:100%;height:auto;margin:6px 0">';
+                }
+                var rows = Array.prototype.slice.call(lines.querySelectorAll('.sig-line'));
+                while (rows.length && !rows[rows.length - 1].querySelector('input[name=lineText]').value.trim()) rows.pop();
+                rows.forEach(function(r){
+                  var st = r.querySelector('select[name=lineStyle]').value, text = r.querySelector('input[name=lineText]').value;
+                  html += '<div style="margin:0;line-height:1.3;font-family:' + fonts[r.querySelector('select[name=lineFont]').value]
+                    + ';font-size:' + r.querySelector('select[name=lineSize]').value + 'px;color:' + r.querySelector('input[name=lineColor]').value
+                    + (st.indexOf('bold') >= 0 ? ';font-weight:bold' : '') + (st.indexOf('italic') >= 0 ? ';font-style:italic' : '')
+                    + '">' + (text.trim() ? esc(text) : '&nbsp;') + '</div>';
+                });
+                var above = form.querySelector('input[name=imagePlace][value=above]').checked;
+                prev.innerHTML = (above ? img + html : html + img) || '<span style="color:#888">Nothing yet — type a line or choose an image.</span>';
+              }
+              document.getElementById('sigImage').addEventListener('change', function(){
+                if (picked) URL.revokeObjectURL(picked);
+                picked = this.files && this.files[0] ? URL.createObjectURL(this.files[0]) : '';
+                draw();
+              });
+              form.addEventListener('input', draw);
+              form.addEventListener('change', draw);
+              draw();
+            })();
+            </script>
+        }
+    </div>
+
+    @if (Model.CanEdit)
+    {
+        <details class="card form" style="margin-bottom:18px" open="@(Model.Suppliers.Count == 0 || Model.Pending.Name.Length > 0)">
+            <summary style="cursor:pointer;font-weight:700;font-size:17px">Add a supplier</summary>
+            @if (Model.Similar.Count > 0)
+            {
+                <div class="alert alert-warn">
+                    <strong>"@Model.Pending.Name"</strong> looks like a supplier already on the list:
+                    @foreach (var s in Model.Similar) { <div>@s.Name — @s.Email</div> }
+                    <form method="post" asp-page-handler="Add" style="margin-top:8px">
+                        <input type="hidden" name="confirmNew" value="true">
+                        <input type="hidden" name="name" value="@Model.Pending.Name"><input type="hidden" name="email" value="@Model.Pending.Email">
+                        <input type="hidden" name="contactPerson" value="@Model.Pending.ContactPerson"><input type="hidden" name="phone" value="@Model.Pending.Phone">
+                        <button class="btn btn-sm btn-accent" type="submit">No — it is different. Add "@Model.Pending.Name"</button>
+                    </form>
+                </div>
+            }
+            <form method="post" asp-page-handler="Add" style="max-width:640px;margin-top:10px">
+                <div class="row">
+                    <div><label>Name</label><input name="name" required value="@Model.Pending.Name"></div>
+                    <div><label>Email address</label><input name="email" type="email" required value="@Model.Pending.Email"></div>
+                </div>
+                <div class="row">
+                    <div><label>Contact person (optional)</label><input name="contactPerson" value="@Model.Pending.ContactPerson"></div>
+                    <div><label>Phone (optional)</label><input name="phone" value="@Model.Pending.Phone"></div>
+                </div>
+                <div class="actions"><button class="btn btn-accent" type="submit">Add supplier</button></div>
+            </form>
+            <p class="muted" style="font-size:13px;margin-top:10px">The same name in another order, or the same address, is never added twice.</p>
+        </details>
+    }
+
+    @if (Model.Suppliers.Count == 0) { <div class="card">No suppliers yet.@(Model.CanEdit ? " Add the first one above." : "")</div> }
+    else
+    {
+        <table>
+            <tr><th>Name</th><th>Email address</th><th>Contact person</th><th>Phone</th>@if (Model.CanEdit) { <th></th> }</tr>
+            @foreach (var s in Model.Suppliers)
+            {
+                if (Model.CanEdit)
+                {
+                    var f = $"sup{s.Id}";
+                    <tr>
+                        <td><input form="@f" name="name" value="@s.Name" required style="width:100%;min-width:140px;padding:6px;border:1px solid var(--line);border-radius:8px"></td>
+                        <td><input form="@f" name="email" type="email" value="@s.Email" required style="width:100%;min-width:180px;padding:6px;border:1px solid var(--line);border-radius:8px"></td>
+                        <td><input form="@f" name="contactPerson" value="@s.ContactPerson" style="width:100%;min-width:120px;padding:6px;border:1px solid var(--line);border-radius:8px"></td>
+                        <td><input form="@f" name="phone" value="@s.Phone" style="width:100%;min-width:110px;padding:6px;border:1px solid var(--line);border-radius:8px"></td>
+                        <td style="white-space:nowrap">
+                            <form method="post" asp-page-handler="Save" id="@f" class="inline"><input type="hidden" name="supplierId" value="@s.Id"><button class="btn btn-sm" type="submit">Save</button></form>
+                            <form method="post" asp-page-handler="Remove" class="inline" onsubmit="return confirm('Take @s.Name off the list? Tickets that asked them keep saying so.')">
+                                <input type="hidden" name="supplierId" value="@s.Id"><button class="btn btn-sm btn-danger" type="submit">Remove</button></form>
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    <tr><td><strong>@s.Name</strong></td><td>@s.Email</td><td>@(s.ContactPerson.Length > 0 ? s.ContactPerson : "—")</td><td>@(s.Phone.Length > 0 ? s.Phone : "—")</td></tr>
+                }
+            }
+        </table>
+    }
+</div></section>

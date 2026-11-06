@@ -1,0 +1,30 @@
+@model RemoteSupport.Platform.Pages.Portal.TicketModel
+@using RemoteSupport.Platform.Data
+@using RemoteSupport.Platform.Services
+@{
+    // Under one comment, in BOTH layouts (2026-10-09): each time it was emailed to the client — or why it was
+    // not — and "Email to the client" for a comment that may be sent, so a comment posted internal first can
+    // still go out. A customer's own reply says it is theirs.
+    var n = (TicketNote)ViewData["note"]!;
+    var sends = Model.Emailed.TryGetValue(n.Id, out var rows) ? rows : new List<TicketClientUpdate>();
+}
+@if (n.FromCustomer)
+{
+    <div class="tk-sys" style="margin-top:6px">✉ Their reply, by email</div>
+}
+@foreach (var u in sends)
+{
+    <div class="tk-sys" style="margin-top:6px;@(u.Sent ? "" : "color:var(--bad)")">@(u.Sent ? "✉ " : "⚠ ")@ClientUpdateService.Marker(u)</div>
+}
+@if (ClientUpdateService.Sendable(n, Model.Files.ContainsKey(n.Id)) && Model.ClientOffer.Ready && Model.WorksTickets)
+{
+    <details class="ec-later" style="margin-top:6px">
+        <summary class="tk-sys" style="cursor:pointer;display:inline">@(sends.Any(s => s.Sent) ? "Email it again…" : "Email to the client…")</summary>
+        <form method="post" asp-page-handler="EmailNote" style="margin-top:8px">
+            <input type="hidden" name="noteId" value="@n.Id">
+            @await Html.PartialAsync("_EmailTo", Model, new Microsoft.AspNetCore.Mvc.ViewFeatures.ViewDataDictionary(ViewData) { ["chosen"] = Model.ClientOffer.Default })
+            <p class="tk-sys" style="margin:6px 0">They get the fault the ticket was opened for and this @(ClientUpdateService.IsDamageReport(n) ? "damage report and its comments" : "comment"), with @n.Author's name on it@(Model.Files.ContainsKey(n.Id) ? " and its files attached" : "") — nothing else.</p>
+            <button class="btn btn-sm btn-accent" type="submit">Send</button>
+        </form>
+    </details>
+}

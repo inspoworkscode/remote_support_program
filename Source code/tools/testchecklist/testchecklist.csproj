@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The internal-testing checklist. Not part of the product: it lives on the office shared drive
+    beside checks.md (a copy of docs/TEST-3.6.md) and a data folder, and every tester runs it from
+    there. Publish-TestChecklist.ps1 builds it and puts it on the share.
+  -->
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <AssemblyName>TestChecklist</AssemblyName>
+    <RootNamespace>TestChecklist</RootNamespace>
+    <Product>Test Checklist</Product>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>bridgewire</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The console's REAL SessionLink (handshake, sealing, SendSealed); Shared holds the protocol and BridgeSeal. -->
+    <ProjectReference Include="..\..\src\RemoteSupport.Shared\RemoteSupport.Shared.csproj" />
+    <ProjectReference Include="..\..\src\RemoteSupport.Technician\RemoteSupport.Technician.csproj" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.13" />
+    <PackageReference Include="Npgsql" Version="10.0.3" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Which database its throwaway platform runs on: SQLite, or PostgreSQL with RSP_TEST_DB=postgres (HANDOVER 118). -->
+    <Compile Include="..\Common\HarnessDb.cs" />
+    <Compile Include="..\Common\HarnessDb.Sql.cs" />
+    <Compile Include="..\Common\TestPostgres.cs" />
+  </ItemGroup>
+</Project>

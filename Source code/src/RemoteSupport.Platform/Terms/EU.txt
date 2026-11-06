@@ -1,0 +1,13 @@
+Country: the European Union
+Tax: VAT is [to be confirmed before we open in Europe] (for a business with a valid VAT number, under the reverse-charge rules).
+LiabilityExtra: , including liability for death or personal injury caused by negligence, for gross negligence or wilful misconduct, or for fraud
+---PRIVACY---
+This agreement follows the **General Data Protection Regulation (EU) 2016/679 (GDPR)** and the data protection law of your country.
+
+- **Your customers' information.** For the personal data of your customers and their staff that passes through the service, **you are the controller and we are your processor**. As Article 28 of the GDPR requires, we: process it only on your documented instructions (these terms and your use of the service); make sure everyone who handles it is bound to confidentiality; protect it with appropriate technical and organisational measures (Article 32); use other processors (such as our hosting provider) only under the same obligations, and tell you before we add or replace one so that you can object; help you answer people who exercise their rights; tell you without undue delay about a personal data breach; delete or return it when the agreement ends; and give you the information you need to show that these obligations are met, including audits.
+- **Your own information.** For the information about your company and your staff that we need to run your account and bill you, we are the controller. We use it only for that, and we never sell it.
+- **Where it is kept.** Your data is kept on servers in **the European Union**. It is not transferred outside the European Economic Area except with the safeguards Chapter V of the GDPR requires, such as the European Commission's standard contractual clauses.
+- **Our representative.** Because we are established outside the EU, our representative under Article 27 of the GDPR is [name and address — to be appointed].
+- **Complaints.** You and the people whose data is processed may complain to the data protection authority of your country.
+---LAW---
+These terms are governed by the law of [Ireland — to be confirmed], and its courts have jurisdiction, without taking away any protection the law of your own country gives you that cannot be excluded.

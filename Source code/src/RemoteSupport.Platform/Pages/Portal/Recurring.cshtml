@@ -1,0 +1,38 @@
+@page "/portal/recurring"
+@model RemoteSupport.Platform.Pages.Portal.RecurringModel
+@using RemoteSupport.Platform.Services
+@{ ViewData["Title"] = "Recurring tasks"; ViewData["Section"] = "portal"; }
+<section class="portal"><div class="wrap">
+    <p><a href="/portal/tickets">← Tickets</a></p>
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <h1 style="margin-right:auto">Recurring tasks <span class="pill pill-muted">@Model.Rows.Count(r => r.Task.CancelledUtc == null)</span></h1>
+        @if (Model.WorksTickets) { <a class="btn btn-accent" href="/portal/r/new">New recurring task</a> }
+    </div>
+    <p class="muted">Maintenance, billing, readings — anything done daily, weekly or monthly. Set it up once and a ticket opens for its people on the morning it is due.</p>
+    @if (!string.IsNullOrEmpty(Model.Message)) { <div class="alert alert-ok">@Model.Message</div> }
+
+    @if (Model.Rows.Count == 0)
+    {
+        <div class="card">@(Permissions.CanSeeAllTickets(Model.MyRole) ? "No recurring tasks yet." : "None of the company's recurring tasks are yours yet.")
+            @if (Model.WorksTickets) { <a href="/portal/r/new">Set up a new one.</a> }</div>
+    }
+    else
+    {
+        <table>
+            <tr><th>Task</th><th>Type</th><th>Repeats</th><th>Next</th><th>People</th><th>Open now</th></tr>
+            @foreach (var row in Model.Rows)
+            {
+                var r = row.Task;
+                <tr style="@(r.CancelledUtc != null ? "opacity:.6" : "")">
+                    <td><a href="@PortalAddresses.Recurring(r.Number)"><strong>@r.Title</strong></a>
+                        @if (row.ClientName.Length > 0) { <br><span class="muted" style="font-size:13px">@row.ClientName</span> }</td>
+                    <td>@r.Kind</td>
+                    <td>@row.Repeats</td>
+                    <td>@if (r.CancelledUtc != null) { <span class="pill pill-muted">Cancelled</span> } else { @RecurringTaskService.Day(r.NextDue) }</td>
+                    <td>@(r.AssignedTo.Length > 0 ? r.AssignedTo : "—")</td>
+                    <td>@row.StillOpen</td>
+                </tr>
+            }
+        </table>
+    }
+</div></section>

@@ -1,0 +1,142 @@
+@model RemoteSupport.Platform.Pages.Portal.TicketModel
+@using RemoteSupport.Platform.Services
+@{
+    // Edit the ticket (Clint, 2026-10-13): its subject, its description, its category and its appointment — anybody
+    // who can see it. Drawn on both ticket pages, the story and the plain one; every rule is TicketService.EditAsync,
+    // which this page only offers the same choices as. A refused save comes back with what was typed (Edit*).
+    var t = Model.Ticket!;
+    bool closed = Model.Stage?.Lane == WorkLane.Done || t.Status is TicketStatus.Closed or TicketStatus.Resolved;
+    int cat = Model.EditCategory ?? (int)t.Category;
+    var at = t.AppointmentUtc?.Local();
+    // The appointment is a call out's; a ticket that has one keeps the boxes whatever its category.
+    bool apptShown = cat == (int)TicketCategory.CallOut || t.AppointmentUtc.HasValue || !string.IsNullOrEmpty(Model.EditDate);
+    // A recurring task is set up on its own page; a ticket that IS one may still be moved off it.
+    // And only the categories the company uses now (Job types) — the ticket's own stays, whatever has been switched off.
+    var offered = RemoteSupport.Shared.TicketSummary.CategoryOrder.Where(v => v != (int)TicketCategory.Recurring || t.Category == TicketCategory.Recurring)
+        .Where(v => v == (int)t.Category || JobTypes.CategoryOn(Model.Tenant.JobTypesOff, (TicketCategory)v)).ToList();
+    string FirstLabel(int v) => Workflow.Label(Workflow.FirstFor((TicketCategory)v));
+}
+<style>
+.te-f{display:block;font-weight:800;font-size:13px;margin:12px 0 4px}
+.te-in{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font:inherit}
+.te-note{font-size:13px;color:var(--muted);margin:6px 0 0}
+.te-warn{font-size:13px;margin:8px 0 0;padding:8px 10px;border-radius:10px;background:var(--warn-bg,rgba(245,158,11,.14));color:var(--ink)}
+.te-edit .cat-pick{margin-bottom:0;gap:8px}.te-edit .cat-pick button{padding:7px 14px;font-size:13px}
+</style>
+<div class="card te-edit" id="edit" style="grid-column:1/-1">
+    <h3>Edit the ticket</h3>
+    <form method="post" asp-page-handler="Edit">
+        <input type="hidden" name="tab" value="details">
+        <label class="te-f" for="teSubject">Subject</label>
+        <input class="te-in" id="teSubject" name="subject" required maxlength="@TicketService.SubjectMax" value="@(Model.EditSubject ?? t.Subject)">
+
+        <label class="te-f">Type of job</label>
+        @if (closed)
+        {
+            <p class="te-note">@TicketService.CategoryName(t.Category) — the job is closed, so its type and appointment stay as they are.</p>
+        }
+        else
+        {
+            @* Each in its colour, as on New ticket (§124); the VALUE is what is sent, never the position. *@
+            <div class="cat-pick" role="radiogroup" aria-label="Type of job">
+                @foreach (var v in offered)
+                {
+                    var (fill, onDark) = RemoteSupport.Shared.TicketSummary.CategoryColors[v];
+                    <button type="button" class="@(cat == v ? "on" : "")" data-cat="@v" data-first="@FirstLabel(v)" onclick="teCat(@v)"
+                            role="radio" aria-checked="@(cat == v ? "true" : "false")" style="--c:@fill;--cd:@onDark">@RemoteSupport.Shared.TicketSummary.CategoryNames[v]</button>
+                }
+            </div>
+            <input type="hidden" name="category" id="teCategory" value="@cat">
+            <div class="te-warn" id="teCatWarn" style="display:@(cat != (int)t.Category ? "block" : "none")">
+                ⚠ It starts again at <strong id="teFirst">@FirstLabel(cat)</strong>, the first stage of that type of job.
+                Everything done so far stays in the story below.
+            </div>
+            @if (t.Category != TicketCategory.Workshop)
+            {
+                // The two things a workshop booking needs, BEFORE it can become one (TicketService.EditAsync).
+                <div class="te-warn" id="teWorkshop" style="display:@(cat == (int)TicketCategory.Workshop ? "block" : "none")">
+                    @if (Model.PhotosRequired > 0)
+                    {
+                        <text>A workshop job needs a technician on it (People on it, below) and at least @Model.PhotosRequired photos of the
+                        machine as it arrived — @Model.Before.Count added so far.</text>
+                    }
+                    else
+                    {
+                        <text>A workshop job needs a technician on it (People on it, below). Photos of the machine are not asked for, but you
+                        can add some — @Model.Before.Count added so far.</text>
+                    }
+                    <input type="file" accept="image/*" multiple capture="environment" onchange="teUpload(this)" style="display:block;padding:8px 0 0">
+                    <span class="te-note"></span>
+                </div>
+            }
+            <div id="teAppt" style="display:@(apptShown ? "block" : "none")">
+                <label class="te-f">Appointment</label>
+                <input type="hidden" name="appointmentShown" id="teApptShown" value="@(apptShown ? "true" : "false")">
+                <div style="display:flex;gap:10px;flex-wrap:wrap">
+                    <input class="te-in" style="flex:1;min-width:150px" type="date" name="appointmentDate" value="@(Model.EditDate ?? at?.ToString("yyyy-MM-dd"))">
+                    <input class="te-in" style="flex:1;min-width:110px" type="time" name="appointmentTime" value="@(Model.EditTime ?? at?.ToString("HH:mm") ?? "09:00")">
+                </div>
+                <p class="te-note">@(at.HasValue ? $"Booked for {TicketService.Appointment(t.AppointmentUtc!.Value)}." : "Not scheduled.") Empty the date for no appointment.</p>
+            </div>
+        }
+
+        @* When it is due (2026-10-26, HANDOVER §165) — any type of job. Empty is none. *@
+        <label class="te-f" for="teDue">Due date</label>
+        @if (closed)
+        {
+            <p class="te-note">@(t.DueDate is DateTime d0 ? "Was due " + TicketDue.Say(d0) + "." : "No due date.") The job is closed, so it stays as it is.</p>
+        }
+        else
+        {
+            <input type="hidden" name="dueShown" value="true">
+            <input class="te-in" style="max-width:220px" id="teDue" type="date" name="dueDate" value="@(Model.EditDue ?? t.DueDate?.ToString("yyyy-MM-dd"))">
+            <p class="te-note">@(t.DueDate is DateTime d1 ? "Due " + TicketDue.Say(d1) + (TicketDue.IsOverdue(t) ? " — overdue." : ".") : "No due date.") Empty it for none.</p>
+        }
+
+        <label class="te-f" for="teDesc">Description — the fault as it was booked</label>
+        <textarea class="te-in" id="teDesc" name="description" rows="3">@(Model.EditDescription ?? t.Description)</textarea>
+
+        <button class="btn btn-accent" type="submit" style="margin-top:12px">Save changes</button>
+        <p class="te-note">Every change goes into the ticket's story, with what it was before.</p>
+    </form>
+</div>
+<script>
+function teCat(v){
+  var was = @((int)t.Category);
+  document.getElementById('teCategory').value = v;
+  var first = '';
+  document.querySelectorAll('.te-edit .cat-pick button').forEach(function(b){
+    var on = b.dataset.cat == v; b.classList.toggle('on', on); b.setAttribute('aria-checked', on);
+    if (on) first = b.dataset.first;
+  });
+  document.getElementById('teFirst').textContent = first;
+  document.getElementById('teCatWarn').style.display = v == was ? 'none' : 'block';
+  var ws = document.getElementById('teWorkshop'); if (ws) ws.style.display = v == 2 ? 'block' : 'none';
+  // A call out has an appointment; one already booked keeps its boxes whatever the type.
+  var show = v == 3 || @(t.AppointmentUtc.HasValue ? "true" : "false");
+  document.getElementById('teAppt').style.display = show ? 'block' : 'none';
+  document.getElementById('teApptShown').value = show ? 'true' : 'false';
+}
+// The arrival photos a workshop job needs, one per upload and made smaller first, as everywhere else (§62). Its own
+// copy, because the plain ticket page has none of the story page's; back on the Details tab once they are up.
+async function teUpload(input){
+  if (!input.files.length) return;
+  var note = input.parentElement.querySelector('.te-note');
+  var files = Array.from(input.files), done = 0, problems = [];
+  for (var i = 0; i < files.length; i++) {
+    note.textContent = 'Uploading ' + (i + 1) + ' of ' + files.length + '…';
+    var form = new FormData();
+    form.append('kind', 'before'); form.append('ticketNumber', '@t.Number');
+    form.append('files', window.shrinkPhoto ? await shrinkPhoto(files[i]) : files[i]);
+    try {
+      var res = await fetch('/api/portal/photos', { method: 'POST', body: form });
+      var body = await res.json();
+      if (!res.ok && body.error) problems.push(files[i].name + ': ' + body.error);
+      (body.photos || []).forEach(function(p){ if (p.error) problems.push(p.error); else done++; });
+    } catch (e) { problems.push(files[i].name + ': did not upload'); }
+  }
+  input.value = '';
+  if (!problems.length) { location.href = location.pathname + '?tab=details#edit'; return; }
+  note.textContent = done + ' of ' + files.length + ' added. ' + problems.join(' ');
+}
+</script>

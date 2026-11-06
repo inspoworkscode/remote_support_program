@@ -1,0 +1,166 @@
+@page "/portal/branding"
+@model RemoteSupport.Platform.Pages.Portal.BrandingModel
+@{ ViewData["Title"] = "Branding"; ViewData["Section"] = "portal"; var t = Model.Tenant; }
+<section class="portal"><div class="wrap">
+    <h1>Branding</h1>
+    <p class="muted">What your customers see in the support app, the consent prompt and your download page. Changes apply to new downloads immediately.</p>
+    @if (!string.IsNullOrEmpty(Model.Message)) { <div class="alert alert-ok">@Model.Message</div> }
+    @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad">@Model.Error</div> }
+    <div class="grid2">
+        <div>
+            <form method="post" enctype="multipart/form-data" class="form card">
+                <h3>Identity</h3>
+                <label>Company name</label><input name="CompanyName" value="@t.CompanyName" required>
+                <label>Product name (shown in window titles)</label><input name="ProductName" value="@t.ProductName" required>
+                <label>Welcome message</label><textarea name="WelcomeText" rows="3">@t.WelcomeText</textarea>
+                <div class="row">
+                    <div><label>Support email</label><input name="SupportEmail" value="@t.SupportEmail"></div>
+                    <div><label>Support phone</label><input name="SupportPhone" value="@t.SupportPhone"></div>
+                </div>
+                @* The company's own clock (2026-10-05): every time on the portal is shown in it. Its region's zones first. *@
+                <label>Time zone</label>
+                <select name="TimeZone" id="companyZone">
+                    @foreach (var z in CompanyClock.Zones.OrderBy(z => z.Region == t.Region ? 0 : 1)) { <option value="@z.Id" selected="@(z.Id == t.TimeZone)">@z.Label</option> }
+                </select>
+                <p class="muted" style="font-size:13px;margin:4px 0 0">Every time on this website is shown in it.</p>
+                <h3 style="margin-top:22px">Colours</h3>
+                <div class="row">
+                    <div><label>Primary (banners)</label><input name="PrimaryColor" type="color" value="@t.PrimaryColor" oninput="pv()"></div>
+                    <div><label>Accent (buttons)</label><input name="AccentColor" type="color" value="@t.AccentColor" oninput="pv()"></div>
+                </div>
+                <h3 style="margin-top:22px">Appearance</h3>
+                <p class="muted" style="font-size:13px;margin:0 0 6px">
+                    Set separately, because they are different audiences: the console is what your
+                    technicians look at all day, the support app is what your customer sees.
+                    On a dark background your accent colour becomes the signature.
+                </p>
+                <div class="row">
+                    <div>
+                        <label>Technician console</label>
+                        <select name="TechnicianTheme" id="thTech" onchange="pv()">
+                            <option value="light" selected="@(t.TechnicianTheme != "dark")">Light</option>
+                            <option value="dark" selected="@(t.TechnicianTheme == "dark")">Dark</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Customer support app</label>
+                        <select name="ClientTheme" id="thClient" onchange="pv()">
+                            <option value="light" selected="@(t.ClientTheme != "dark")">Light</option>
+                            <option value="dark" selected="@(t.ClientTheme == "dark")">Dark</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="alert alert-warn" id="contrastWarn" style="display:none"></div>
+
+                <h3 style="margin-top:22px">Logo</h3>
+                <input type="file" name="Logo" accept=".png,.jpg,.jpeg">
+                <p class="muted" style="font-size:13px">PNG with a transparent background works best, about 400×120 px.</p>
+                <h3 style="margin-top:22px">Customer consent</h3>
+                <label><input type="checkbox" name="RequireConsent" value="true" checked="@t.RequireConsent" style="width:auto"> Ask the customer to allow each attended session</label>
+                <label><input type="checkbox" name="UnattendedRequireConsent" value="true" checked="@t.UnattendedRequireConsent" style="width:auto"> Also ask for unattended sessions</label>
+                <label>Consent prompt auto-declines after (seconds)</label><input name="ConsentTimeoutSeconds" type="number" min="10" max="600" value="@t.ConsentTimeoutSeconds">
+                <div class="actions"><button class="btn btn-accent" type="submit">Save branding</button></div>
+            </form>
+        </div>
+        <div>
+            <h3>Preview</h3>
+            <p class="muted" style="font-size:13px;margin:0 0 14px">
+                Roughly how the two apps will look. Changes here apply to the next download —
+                machines already installed keep the look they were installed with.
+            </p>
+
+            <h4 style="font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 8px">Customer support app</h4>
+            <div class="preview" id="pv">
+                <div class="banner" id="pvb" style="background:@t.PrimaryColor">
+                    @if (!string.IsNullOrEmpty(t.LogoFile)) { <img src="/logo/@t.Slug?v=@DateTime.UtcNow.Ticks" alt=""> } else { <span id="pvName">@t.CompanyName</span> }
+                </div>
+                <div class="pbody" id="pvBody">
+                    <p style="font-size:13px" id="pvWelcome">@t.WelcomeText</p>
+                    <span class="pbtn" id="pva" style="background:@t.AccentColor">Request Support</span>
+                    <p style="font-size:12px;margin-top:10px" id="pvStatus">● Connected — ready</p>
+                </div>
+            </div>
+
+            <h4 style="font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:22px 0 8px">Technician console</h4>
+            <div class="preview" id="pv2">
+                <div class="banner" id="pvb2" style="background:@t.PrimaryColor">
+                    @if (!string.IsNullOrEmpty(t.LogoFile)) { <img src="/logo/@t.Slug?v=@DateTime.UtcNow.Ticks" alt=""> } else { <span>@t.CompanyName</span> }
+                </div>
+                <div class="pbody" id="pvBody2">
+                    <p style="font-size:12px;font-weight:800;margin:0 0 7px" id="pvHead2">Incoming calls</p>
+                    <div id="pvRow2" style="font-size:12px;padding:7px 9px;border-radius:8px">Mrs Adams &middot; RECEPTION-01 &middot; 12s</div>
+                    <span class="pbtn" id="pva2" style="background:@t.AccentColor;margin-top:10px">Accept Call</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div></section>
+<script>
+// The preview, and the warning that goes with it.
+//
+// The contrast maths below mirrors Theme.Contrast / Theme.Readable in RemoteSupport.UI, which is
+// what the installed apps actually use. It is duplicated here rather than shared because the
+// platform targets Linux and cannot reference the WinForms UI project. If one changes, change
+// both — the numbers are the standard WCAG 2.1 formula, so they should not need to.
+const DARK_GROUND = '#0b1016', DARK_PANEL = '#121a23', DARK_PANEL_HI = '#1b2633',
+      DARK_INK = '#eef3f8', DARK_MUTED = '#93a4b6',
+      LIGHT_PANEL = '#ffffff', LIGHT_INK = '#182235', LIGHT_MUTED = '#64748b';
+
+function rgb(hex){ const h=hex.replace('#',''); return [0,2,4].map(i=>parseInt(h.substr(i,2),16)); }
+function lum(hex){
+  return rgb(hex).map(v=>{ const s=v/255; return s<=0.03928 ? s/12.92 : Math.pow((s+0.055)/1.055,2.4); })
+    .reduce((a,c,i)=>a+c*[0.2126,0.7152,0.0722][i],0);
+}
+function contrast(a,b){ const la=lum(a), lb=lum(b); const hi=Math.max(la,lb), lo=Math.min(la,lb); return (hi+0.05)/(lo+0.05); }
+function onColor(hex){ return lum(hex) > 0.36 ? '#182235' : '#ffffff'; }
+
+function paint(ids, dark, primary, accent){
+  const panel = dark ? DARK_PANEL : LIGHT_PANEL;
+  const ink   = dark ? DARK_INK   : LIGHT_INK;
+  const muted = dark ? DARK_MUTED : LIGHT_MUTED;
+  document.getElementById(ids.banner).style.background = primary;
+  const body = document.getElementById(ids.body);
+  body.style.background = panel; body.style.color = ink;
+  ids.muted.forEach(id => { const el = document.getElementById(id); if (el) el.style.color = muted; });
+  const btn = document.getElementById(ids.btn);
+  btn.style.background = accent; btn.style.color = onColor(accent);
+  if (ids.row) {
+    const row = document.getElementById(ids.row);
+    row.style.background = dark ? DARK_PANEL_HI : '#eef2ff';
+    row.style.color = ink;
+  }
+}
+
+function pv(){
+  const primary = document.querySelector('[name=PrimaryColor]').value;
+  const accent  = document.querySelector('[name=AccentColor]').value;
+  const techDark   = document.getElementById('thTech').value === 'dark';
+  const clientDark = document.getElementById('thClient').value === 'dark';
+
+  paint({ banner:'pvb',  body:'pvBody',  btn:'pva',  muted:['pvWelcome','pvStatus'] }, clientDark, primary, accent);
+  paint({ banner:'pvb2', body:'pvBody2', btn:'pva2', muted:['pvHead2'], row:'pvRow2' }, techDark, primary, accent);
+
+  // Warn about the one thing we cannot fix for them: their own primary colour is what the banner
+  // is painted with, and a near-black primary on a near-black background stops reading as a
+  // banner at all. We do not silently substitute a different colour — it is their brand.
+  const problems = [];
+  const onDark = [];
+  if (clientDark) onDark.push('the support app');
+  if (techDark) onDark.push('the console');
+
+  if (onDark.length) {
+    const c = contrast(primary, DARK_GROUND);
+    if (c < 1.6) problems.push(
+      'Your primary colour ' + primary.toUpperCase() + ' is almost the same darkness as the dark background, so the banner in ' +
+      onDark.join(' and ') + ' will barely be visible. A lighter primary, or the light setting, will show your brand better.');
+  }
+  const ca = contrast(accent, DARK_GROUND);
+  if (onDark.length && ca < 3) problems.push(
+    'Your accent ' + accent.toUpperCase() + ' is dark for a dark background. Buttons will still work, but links and headings using it are lightened automatically so they stay readable.');
+
+  const warn = document.getElementById('contrastWarn');
+  warn.style.display = problems.length ? 'block' : 'none';
+  warn.textContent = problems.join(' ');
+}
+pv();
+</script>

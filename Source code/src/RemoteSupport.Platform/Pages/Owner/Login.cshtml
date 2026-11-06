@@ -1,0 +1,58 @@
+@page "/owner/login"
+@model RemoteSupport.Platform.Pages.Owner.LoginModel
+@{ ViewData["Title"] = "Admin sign in"; }
+<section class="section"><div class="wrap" style="max-width:480px">
+    <h1>Platform admin</h1>
+    @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad">@Model.Error</div> }
+    @if (!Model.UseKey)
+    {
+        if (Model.Pending.Length == 0)
+        {
+            <form method="post" class="form" id="adminSignIn">
+                <label>Email</label><input name="Email" type="email" value="@Model.Email" required autofocus autocomplete="username">
+                <label>Password</label><input name="Password" type="password" required autocomplete="current-password">
+                <div class="actions"><button class="btn btn-accent" type="submit">Next</button></div>
+            </form>
+            <p class="muted" style="font-size:13px;margin-top:18px"><a href="/owner/login?usekey=true">Use the admin key instead</a></p>
+        }
+        else
+        {
+            <form method="post" class="form" id="adminCode">
+                <input type="hidden" name="Pending" value="@Model.Pending">
+                <p class="muted">Enter the six-digit code from your authenticator app. This browser will not ask for it again for a week.</p>
+                <label>Code</label><input name="Code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required autofocus>
+                <div class="actions"><button class="btn btn-accent" type="submit">Sign in</button></div>
+            </form>
+        }
+    }
+    else if (Model.Pending.Length == 0)
+    {
+        <p class="muted">@(Model.NoAdmins ? "No admins have been added yet. Sign in with the admin key from the server's settings, then add yourself on the Admins page." : "Sign in with the admin key from the server's settings.")</p>
+        <form method="post" class="form" id="keySignIn">
+            <input type="hidden" name="UseKey" value="true">
+            <label>Admin key</label><input name="Key" type="password" required autofocus autocomplete="current-password">
+            <div class="actions"><button class="btn btn-accent" type="submit">Next</button></div>
+        </form>
+        @if (!Model.NoAdmins) { <p class="muted" style="font-size:13px;margin-top:18px"><a href="/owner/login">Sign in with your email instead</a></p> }
+    }
+    else
+    {
+        <form method="post" class="form" id="keyCode">
+            <input type="hidden" name="UseKey" value="true">
+            <input type="hidden" name="Pending" value="@Model.Pending">
+            @if (Model.Qr.Length > 0)
+            {
+                <p><strong>Set up your authenticator app.</strong> From now on the admin key also needs a code.
+                   Scan this with Microsoft Authenticator, Google Authenticator or similar:</p>
+                <p style="text-align:center"><img src="@Model.Qr" alt="QR code" width="220" height="220" style="background:#fff;padding:8px;border-radius:6px"></p>
+                <p class="muted" style="font-size:13px">Can't scan? Type this key into the app instead: <code style="user-select:all">@RemoteSupport.Shared.Totp.Grouped(Model.Secret)</code></p>
+            }
+            else
+            {
+                <p class="muted">Enter the six-digit code from your authenticator app.</p>
+            }
+            <label>Code</label><input name="Code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required autofocus>
+            <div class="actions"><button class="btn btn-accent" type="submit">Sign in</button></div>
+        </form>
+    }
+</div></section>

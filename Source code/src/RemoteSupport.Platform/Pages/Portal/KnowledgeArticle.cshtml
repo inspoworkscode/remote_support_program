@@ -1,0 +1,103 @@
+@page "/portal/a/{number:int}"
+@model RemoteSupport.Platform.Pages.Portal.KnowledgeArticleModel
+@{ ViewData["Title"] = Model.Article == null ? "Knowledge base" : Model.Title; ViewData["Section"] = "portal"; var a = Model.Article; }
+<section class="portal"><div class="wrap">
+    @if (a == null)
+    {
+        <p><a href="/portal/kb">← Knowledge base</a></p>
+        <div class="card">That article is not in the knowledge base — it may have been deleted.</div>
+    }
+    else
+    {
+        @* Where it lives: Knowledge base › General › Printers › HP (2026-10-06, folders). *@
+        <nav class="kb-crumbs" aria-label="Where it is">
+            <a href="/portal/kb">Knowledge base</a>
+            <span aria-hidden="true">›</span>
+            <a href="@Model.SectionAddress">@Model.SectionName</a>
+            @foreach (var f in Model.FolderPath)
+            {
+                <span aria-hidden="true">›</span>
+                <a href="/portal/kb?folder=@f.Id">@f.Name</a>
+            }
+        </nav>
+        <h1 style="margin-bottom:4px">@Model.Title</h1>
+        <p class="muted" style="margin-top:0">
+            @(a.ClientId != null ? $"For {a.Client?.Name}" : "General")
+            · written by @a.CreatedBy on @RemoteSupport.Platform.Pages.Portal.KnowledgeArticleModel.When(a.CreatedUtc)
+            @if (a.Version > 1) { <text> · updated by @a.UpdatedBy on @RemoteSupport.Platform.Pages.Portal.KnowledgeArticleModel.When(a.UpdatedUtc)</text> }
+            @if (a.FromTicketId != null && a.FromTicketNumber > 0) { <text> · from ticket </text><a href="@(PortalAddresses.Ticket(a.FromTicketNumber))">#@a.FromTicketNumber</a> }
+        </p>
+
+        @if (!string.IsNullOrEmpty(Model.Message)) { <div class="alert alert-ok">@Model.Message</div> }
+        @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad">@Model.Error</div> }
+        @if (Model.PasswordLine.Length > 0)
+        {
+            @* Clint's answer 6: never a password. A nudge every time anybody opens it, until it is gone. *@
+            <div class="alert alert-warn" id="kbPassword">
+                This article looks as if it has a password in it — <span style="font-weight:500">“@Model.PasswordLine”</span>.
+                Everybody at the company can read the knowledge base. Edit it and take the password out; say where it is kept instead.
+            </div>
+        }
+
+        @if (Model.Old != null)
+        {
+            <div class="alert alert-warn">
+                You are looking at <strong>version @Model.Old.Version</strong> of @a.Version, saved by @Model.Old.SavedBy on @RemoteSupport.Platform.Pages.Portal.KnowledgeArticleModel.When(Model.Old.SavedUtc).
+                <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+                    @if (Model.CanWrite)
+                    {
+                        <form method="post" asp-page-handler="Restore" class="inline" onsubmit="return confirm('Put version @Model.Old.Version back? The current words stay in the history.')">
+                            <input type="hidden" name="version" value="@Model.Old.Version">
+                            <button class="btn btn-sm btn-accent" type="submit">Put this version back</button>
+                        </form>
+                    }
+                    <a class="btn btn-sm" href="@(PortalAddresses.Article(a.Number))">Back to the current version</a>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 18px">
+                @if (Model.CanWrite) { <a class="btn btn-accent" href="@(PortalAddresses.ArticleEdit(a.Number))">Edit</a> }
+                <a class="btn" href="#history" onclick="document.getElementById('history').open = true">History (@Model.History.Count)</a>
+                @if (Model.CanWrite && Model.FolderChoices.Count > 0)
+                {
+                    @* Into another of its section's folders. A different client is the editor's job. *@
+                    <form method="post" asp-page-handler="Move" class="inline kb-inline" style="margin:0">
+                        <label class="kb-note" style="margin:0" for="kbMove">Folder</label>
+                        <select id="kbMove" name="folderId" onchange="this.form.requestSubmit ? this.form.requestSubmit() : this.form.submit()">
+                            <option value="0" selected="@(a.FolderId == null)">@Model.SectionName — at the top</option>
+                            @foreach (var (fid, label) in Model.FolderChoices) { <option value="@fid" selected="@(a.FolderId == fid)">@label</option> }
+                        </select>
+                        <noscript><button class="btn btn-sm" type="submit">Move</button></noscript>
+                    </form>
+                }
+                @if (Model.CanDelete)
+                {
+                    <form method="post" asp-page-handler="Delete" class="inline" data-confirm="Delete “@a.Title” for everybody?" onsubmit="return confirm(this.dataset.confirm)">
+                        <button class="btn btn-danger" type="submit">Delete</button>
+                    </form>
+                }
+            </div>
+        }
+
+        <article class="card kb-body" id="kbArticle">@Html.Raw(Model.Html)</article>
+
+        <details class="card" id="history" style="margin-top:18px">
+            <summary style="cursor:pointer;font-weight:700;font-size:17px">History — @Model.History.Count version@(Model.History.Count == 1 ? "" : "s")</summary>
+            <p class="muted" style="font-size:13px">Every save is kept. Open an older one to read it, and put it back if an edit went wrong.</p>
+            <table>
+                <tr><th>Version</th><th>Saved by</th><th>When</th><th></th></tr>
+                @foreach (var r in Model.History)
+                {
+                    <tr>
+                        <td>@r.Version@(r.Version == a.Version ? " (current)" : "")</td>
+                        <td>@r.SavedBy</td>
+                        <td>@RemoteSupport.Platform.Pages.Portal.KnowledgeArticleModel.When(r.SavedUtc)@(r.Note.Length > 0 ? " · " + r.Note : "")</td>
+                        <td>@if (r.Version != a.Version) { <a class="btn btn-sm" href="@(PortalAddresses.Article(a.Number))?version=@r.Version">View</a> }</td>
+                    </tr>
+                }
+            </table>
+        </details>
+    }
+</div></section>

@@ -1,0 +1,350 @@
+@page
+@model SignupModel
+@{ ViewData["Title"] = !Model.SignupsEnabled ? "Invitation only" : Model.Free ? RemoteSupport.Shared.FreePlan.FullName : Model.Step == "plan" ? "Sign up" : "Start your free trial"; var c = Model.Chosen; }
+@if (!Model.SignupsEnabled)
+{
+    <section class="section">
+        <div class="wrap" style="max-width:640px;text-align:center">
+            <h1>Invitation only, for now</h1>
+            <p class="muted" style="font-size:17px">We're working closely with a small group of IT companies while we finish the product. Public signups are closed at the moment.</p>
+            <div class="card" style="margin-top:24px;text-align:left">
+                <h3>Interested?</h3>
+                <p>Tell us about your company and we'll add you to the list for the next intake.</p>
+                <p><a class="btn btn-accent btn-lg" href="/support">Get in touch</a></p>
+            </div>
+            <p class="muted" style="margin-top:20px">Already have an account? <a href="/login">Sign in to your portal</a>.</p>
+        </div>
+    </section>
+    return;
+}
+<section class="section">
+    <div class="wrap" style="max-width:860px">
+        <h1 id="signupHeading">@(Model.Free ? RemoteSupport.Shared.FreePlan.FullNameOf(Model.Plan) : Model.Step == "plan" ? "Sign up" : "Start your 14-day free trial")</h1>
+        @if (c != null && Model.Step != "done")
+        {
+            @if (Model.FreeVersion)
+            {
+                <p class="muted">@c.Name · nothing to pay, for your own computer · <a href="/signup?region=@c.Code" id="changePlan">Change</a></p>
+            }
+            else if (Model.Free)
+            {
+                <p class="muted">@c.Name · @Pricing.Money(c, c.Basic) a month after a 14-day free trial, for your own computers · <a href="/signup?region=@c.Code" id="changePlan">Change</a></p>
+            }
+            else if (Model.Step == "plan")
+            {
+                <p class="muted">@c.Name · <a href="/signup" id="changeRegion">Change</a></p>
+            }
+            else
+            {
+                <p class="muted">@c.Name · @Pricing.Money(c, c.Package) a month after the trial, in @c.Currency · <a href="/signup" id="changeRegion">Change</a></p>
+            }
+        }
+        @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad" id="signupError">@Model.Error</div> }
+
+        @if (Model.Step == "region")
+        {
+            @* Step 1: where. The price follows from it, and so does the server the company lives on. *@
+            <p class="muted" style="font-size:17px">First, where is your company? It decides your price and currency, and which of our servers holds your data — always one in your own region.</p>
+            <div class="region-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;margin-top:18px">
+                @foreach (var r in Pricing.Regions)
+                {
+                    var (place, _) = Model.Regions.Where(r.Code);
+                    <a class="card region-card" href="/signup?region=@r.Code" id="region-@r.Code" style="display:block;text-decoration:none;color:inherit">
+                        <h3 style="margin:0 0 6px">@r.Name</h3>
+                        <div><strong style="font-size:22px">@Pricing.Money(r, r.Package)</strong> a month for @Pricing.IncludedSeats seats</div>
+                        <div class="muted" style="font-size:13px">Any mix of roles · @r.Currency</div>
+                        @if (place == RegionServers.Place.NotYet) { <div style="margin-top:8px"><span class="pill pill-muted">Coming soon — join the list</span></div> }
+                    </a>
+                }
+            </div>
+            <p class="muted" style="margin-top:20px">Already have an account? <a href="/login">Sign in to your portal</a>.</p>
+        }
+        else if (Model.Step == "elsewhere")
+        {
+            <div class="card">
+                <h3>Companies in @c!.In sign up on our @c.Name server</h3>
+                <p>Your company's data is kept in your own region, so your account is made there.</p>
+                <p><a class="btn btn-accent btn-lg" href="@Model.ElsewhereUrl">Continue to the @c.Name signup</a></p>
+            </div>
+        }
+        else if (Model.Step == "waiting")
+        {
+            <div class="card" style="max-width:560px">
+                @if (Model.Message.Length > 0)
+                {
+                    <div class="alert alert-ok" id="waitingDone">@Model.Message</div>
+                }
+                else
+                {
+                    <h3>We are not open in @c!.In yet</h3>
+                    <p>We are opening one region at a time, each with a server of its own, so your data never leaves your region. Leave your details and we will email you the day we open in @c.In — we keep only what is needed to do that.</p>
+                    <form method="post" asp-page-handler="Wait" class="form">
+                        <input type="hidden" name="Region" value="@c.Code">
+                        @if (c.Code == "EU")
+                        {
+                            <label>Country</label>
+                            <select name="Country">@foreach (var k in Pricing.EuropeanCountries) { <option selected="@(k == Model.Country)">@k</option> }</select>
+                        }
+                        <label>Company name</label><input name="CompanyName" value="@Model.CompanyName" required>
+                        <label>Your name</label><input name="ContactName" value="@Model.ContactName" required>
+                        <label>Email</label><input name="Email" type="email" value="@Model.Email" required>
+                        <label>Phone (optional)</label><input name="ContactNumber" value="@Model.ContactNumber">
+                        <div class="actions"><button class="btn btn-accent" type="submit" id="joinWaiting">Tell me when you open</button></div>
+                    </form>
+                }
+            </div>
+        }
+        else if (Model.Step == "full")
+        {
+            @* Five companies at a time (2026-10-22, OpenPlaces): the full version waits its turn. *@
+            <div class="card" style="max-width:600px" id="placesFull">
+                @if (Model.Message.Length > 0)
+                {
+                    <div class="alert alert-ok" id="waitingDone">@Model.Message</div>
+                }
+                else
+                {
+                    <h3>Every place is taken right now</h3>
+                    @if (Model.PlaceProblem.Length > 0) { <div class="alert alert-warn" id="placeProblem">@Model.PlaceProblem</div> }
+                    <p>@OpenPlaces.FullWords(Model.Places)</p>
+                    <p class="muted" style="font-size:14px">@Pricing.WhyFive We keep only what is needed to tell you when your place is ready.</p>
+                    <form method="post" asp-page-handler="Wait" class="form">
+                        <input type="hidden" name="Region" value="@c!.Code">
+                        <input type="hidden" name="Plan" value="full">
+                        <label>Company name</label><input name="CompanyName" value="@Model.CompanyName" required>
+                        <label>Your name</label><input name="ContactName" value="@Model.ContactName" required>
+                        <label>Email</label><input name="Email" type="email" value="@Model.Email" required>
+                        <label>Phone (optional)</label><input name="ContactNumber" value="@Model.ContactNumber">
+                        <div class="actions"><button class="btn btn-accent" type="submit" id="joinWaiting">Put me on the waiting list</button></div>
+                    </form>
+                    <p class="muted" style="font-size:13px;margin-top:12px">Just reaching a few computers of your own? <a href="/signup?region=@c.Code&plan=basic">The Basic version for remote workers</a>, or the Free version for one computer, has no waiting list.</p>
+                }
+            </div>
+        }
+        else if (Model.Step == "plan")
+        {
+            @* Free, Basic or full (2026-10-06; three since 2026-10-25, §163). Asked before the terms, because each has its own. *@
+            <p class="muted" style="font-size:17px">Which do you need?</p>
+            <div class="plan-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-top:18px">
+                <a class="card plan-card" href="/signup?region=@c!.Code&plan=full@(Model.Place.Length > 0 ? "&place=" + Model.Place : "")" id="plan-full" style="display:block;text-decoration:none;color:inherit">
+                    <h3 style="margin:0 0 6px">The full version</h3>
+                    <div><strong style="font-size:22px">@Pricing.Money(c, c.Package)</strong> a month for @Pricing.IncludedSeats seats, after a 14-day free trial</div>
+                    <ul class="muted" style="font-size:14px;padding-left:18px;margin:10px 0 0;line-height:1.7">
+                        <li>For small IT companies supporting their customers</li>
+                        <li>Attended and unattended support, as many computers as you look after</li>
+                        <li>Tickets, your own branding, a team of up to five</li>
+                    </ul>
+                    @if (Model.Places.Full && Model.Place.Length == 0) { <div style="margin-top:10px"><span class="pill pill-warn" id="planFull">All places taken — join the waiting list</span></div> }
+                    else if (Model.Places.Limited) { <div style="margin-top:10px"><span class="pill pill-muted">@Model.Places.Limit companies at a time</span></div> }
+                </a>
+                <a class="card plan-card" href="/signup?region=@c.Code&plan=@RemoteSupport.Shared.FreePlan.BasicName" id="plan-basic" style="display:block;text-decoration:none;color:inherit">
+                    <h3 style="margin:0 0 6px">@RemoteSupport.Shared.FreePlan.FullName</h3>
+                    <div><strong style="font-size:22px">@Pricing.Money(c, c.Basic)</strong> a month, after a 14-day free trial</div>
+                    <ul class="muted" style="font-size:14px;padding-left:18px;margin:10px 0 0;line-height:1.7">
+                        <li>For reaching your own computers — the one at the office, your branch offices</li>
+                        <li>One person, @RemoteSupport.Shared.FreePlan.MaxMachines computers — more at @Pricing.Money(c, c.ExtraMachine) a month each, up to @RemoteSupport.Shared.FreePlan.MostMachines</li>
+                        <li>Unattended with a password, or attended — the person there allows you in</li>
+                        <li>Remote control, files, copy and paste, printing</li>
+                    </ul>
+                </a>
+                <a class="card plan-card" href="/signup?region=@c.Code&plan=@RemoteSupport.Shared.FreePlan.Name" id="plan-free" style="display:block;text-decoration:none;color:inherit">
+                    <h3 style="margin:0 0 6px">@RemoteSupport.Shared.FreePlan.FreeFullName</h3>
+                    <div><strong style="font-size:22px">Nothing to pay</strong></div>
+                    <ul class="muted" style="font-size:14px;padding-left:18px;margin:10px 0 0;line-height:1.7">
+                        <li>For reaching one computer of your own — the one at the office</li>
+                        <li>One person, @RemoteSupport.Shared.FreePlan.FreeMachines computer, unattended with its password</li>
+                        <li>Remote control, files, copy and paste, printing — upgrade any time</li>
+                    </ul>
+                </a>
+            </div>
+        }
+        else if (Model.Step == "terms")
+        {
+            var tt = Model.TermsText!;
+            @* Step 2: the terms for this region, read and accepted before anything is made. *@
+            <h2 style="margin-top:8px">Our terms for @(Model.Free ? RemoteSupport.Shared.FreePlan.TheNameOf(Model.Plan) + " in " : "")@c!.In</h2>
+            @if (Model.Free)
+            {
+                <p class="muted">Please read these. @(Model.FreeVersion ? "The Free version" : "The Basic version") is for <strong>your own computers, or ones whose owner lets you reach them</strong>, and <strong>we are not responsible for loss of data</strong> — keep backups.</p>
+            }
+            else
+            {
+                <p class="muted">Please read these. They include how your customers' data is protected under the law that applies to you, and that <strong>we are not responsible for loss of data</strong> — keep backups.</p>
+            }
+            @if (tt.Draft)
+            {
+                <div class="alert alert-warn" id="termsDraft"><strong>DRAFT</strong> — these terms have not yet been approved by our lawyers and may change before we open. Version @tt.Version.</div>
+            }
+            else
+            {
+                <p class="muted" style="font-size:13px" id="termsVersion">Version @tt.Version — a copy of exactly what you accept is kept on your account.</p>
+            }
+            <div class="card kb-body terms-text" id="termsText" style="max-height:440px;overflow:auto;font-size:14px">@Html.Raw(tt.Html)</div>
+            <form method="post" asp-page-handler="Terms" class="form" style="margin-top:14px">
+                <input type="hidden" name="Region" value="@c.Code">
+                <input type="hidden" name="Plan" value="@Model.Plan">
+                <input type="hidden" name="Place" value="@Model.Place">
+                <input type="hidden" name="TermsSha" value="@tt.Sha256">
+                <label class="check" style="display:flex;gap:10px;align-items:flex-start;font-weight:600">
+                    <input type="checkbox" name="Accept" value="true" id="acceptTerms" style="margin-top:4px;width:auto">
+                    <span>@(Model.Free ? "I have read these terms and I accept them." : "I have read these terms and I accept them on behalf of my company.")</span>
+                </label>
+                <div class="actions"><button class="btn btn-accent btn-lg" type="submit" id="termsContinue">Continue</button></div>
+            </form>
+        }
+        else if (Model.Step == "details")
+        {
+            @* Step 3: the company. The password is typed here only, and the account made on this post. *@
+            <div class="grid2">
+                @* Its own handler: with none, it posts to the address the terms step left in the bar (?handler=Terms) and
+                   runs the terms step again for ever — found walking it in the browser. *@
+                <form method="post" asp-page-handler="Create" class="form">
+                    <input type="hidden" name="Region" value="@c!.Code">
+                    <input type="hidden" name="TermsSha" value="@Model.TermsSha">
+                    <input type="hidden" name="Accept" value="true">
+                    <input type="hidden" name="Plan" value="@Model.Plan">
+                    <input type="hidden" name="Place" value="@Model.Place">
+                    @if (Model.Free)
+                    {
+                        @* Optional on the Free and Basic versions (Clint): left blank, the person's own name is used. *@
+                        <label>Company name <span class="muted">(optional)</span></label>
+                        <input name="CompanyName" value="@Model.CompanyName" placeholder="Leave blank to use your own name" id="freeCompany">
+                    }
+                    else
+                    {
+                        <label>Company name</label>
+                        <input name="CompanyName" value="@Model.CompanyName" required placeholder="Acme IT Services">
+                    }
+                    @if (c.Code == "EU")
+                    {
+                        <label>Country</label>
+                        <select name="Country" required>
+                            <option value="">Select…</option>
+                            @foreach (var k in Pricing.EuropeanCountries) { <option selected="@(k == Model.Country)">@k</option> }
+                        </select>
+                    }
+                    @* The time zone, chosen here where the region has several (Clint, 2026-10-05). Every time on the
+                       portal is shown in it — the server's own clock is UTC. *@
+                    @if (CompanyClock.MustChoose(c.Code))
+                    {
+                        <label>Time zone</label>
+                        <select name="TimeZone" required id="signupZone">
+                            <option value="">Select…</option>
+                            @foreach (var z in CompanyClock.For(c.Code)) { <option value="@z.Id" selected="@(z.Id == Model.TimeZone)">@z.Label</option> }
+                        </select>
+                        <p class="muted" style="font-size:13px;margin:4px 0 0">Every time in your portal is shown in this zone. You can change it later@(Model.Free ? " in the portal" : " on Branding").</p>
+                    }
+                    else
+                    {
+                        <p class="muted" style="font-size:13px;margin:8px 0 0" id="signupZone">Time zone: <strong>@CompanyClock.For(c.Code).First().Label</strong> — you can change it later@(Model.Free ? " in the portal" : " on Branding").</p>
+                    }
+                    <div class="row">
+                        <div><label>Your name</label><input name="ContactName" value="@Model.ContactName" required placeholder="Jane Smith"></div>
+                        @if (Model.Free)
+                        {
+                            <div><label>Contact number <span class="muted">(optional)</span></label><input name="ContactNumber" value="@Model.ContactNumber"></div>
+                        }
+                        else
+                        {
+                            <div><label>Contact number</label><input name="ContactNumber" value="@Model.ContactNumber" required></div>
+                        }
+                    </div>
+                    <div class="row">
+                        <div><label>Work email (your login)</label><input name="Email" type="email" value="@Model.Email" required placeholder="jane@acme-it.com"></div>
+                        <div><label>Password (8+ characters)</label><input name="Password" type="password" required minlength="8" autocomplete="new-password"></div>
+                    </div>
+                    @if (!Model.Free)
+                    {
+                        @* The Basic version asks no logo or colours (Clint): our own, light and dark. *@
+                        <div class="row">
+                            <div><label>Primary colour</label><input name="Primary" type="color" value="@(string.IsNullOrEmpty(Model.Primary) ? "#1F4E79" : Model.Primary)"></div>
+                            <div><label>Accent colour</label><input name="Accent" type="color" value="@(string.IsNullOrEmpty(Model.Accent) ? "#2E9BFF" : Model.Accent)"></div>
+                        </div>
+                        <p class="muted" style="margin-top:10px;font-size:13px">You can upload your logo and fine-tune colours in the portal after approval.</p>
+                        @* The ticket email address (Clint, 2026-10-09): where customers write in, and what ticket updates go out
+                           from. Asked here so it is there from day one; finished in the portal, where it needs the mailbox's
+                           own password — never typed into a signup form. *@
+                        <label style="margin-top:12px">Ticket email address <span class="muted">(optional)</span></label>
+                        <input name="TicketEmail" type="email" value="@Model.TicketEmail" placeholder="support@acme-it.com" id="ticketEmail">
+                        <p class="muted" style="font-size:13px;margin:4px 0 0">The address your customers email for support. Emails become tickets, updates to a customer go out from it, and their replies come back onto the same ticket. You finish setting it up in the portal, under Tickets by email.</p>
+                    }
+                    <div class="actions"><button class="btn btn-accent btn-lg" type="submit" id="createAccount">Create my account</button></div>
+                    <p class="muted" style="font-size:13px;margin-top:12px">You accepted our <a href="/terms/@c.Code@(Model.Free ? "?plan=" + Model.Plan : "")" target="_blank">terms for @(Model.Free ? RemoteSupport.Shared.FreePlan.TheNameOf(Model.Plan) + " in " : "")@c.In</a>. A copy is kept on your account.</p>
+                </form>
+                @if (Model.FreeVersion)
+                {
+                    <div class="card">
+                        <h3>What happens next</h3>
+                        <ol style="padding-left:18px;line-height:1.9">
+                            <li>We approve your account and email you — nothing to pay, no card.</li>
+                            <li>Sign in to the portal and download the console.</li>
+                            <li>Install the support program on your computer, choosing its password.</li>
+                            <li>Connect from the console. The password is asked once, then remembered for you.</li>
+                        </ol>
+                        <p class="muted" style="font-size:13px">More computers, or connecting with somebody there? <a href="/signup?region=@c.Code&plan=@RemoteSupport.Shared.FreePlan.BasicName">@RemoteSupport.Shared.FreePlan.FullName</a> — and the Free version can be upgraded later.</p>
+                    </div>
+                }
+                else if (Model.Free)
+                {
+                    <div class="card">
+                        <h3>What happens next</h3>
+                        <ol style="padding-left:18px;line-height:1.9">
+                            <li>Add your card at PayFast — nothing is charged for 14 days, then @Pricing.Money(c, c.Basic) a month. Cancel any time.</li>
+                            <li>Sign in to the portal and download the console.</li>
+                            <li>Install the support program on your computers (@RemoteSupport.Shared.FreePlan.MaxMachines in the price; pay for more on Billing) — with a password to connect with nobody there, or without, and the person there allows you in.</li>
+                            <li>Connect from the console. The password is asked once, then remembered for you.</li>
+                        </ol>
+                        <p class="muted" style="font-size:13px">Supporting customers? <a href="/signup?region=@c.Code&plan=full">The full version</a> has a 14-day free trial, and the Basic version can be upgraded later.</p>
+                    </div>
+                }
+                else
+                {
+                <div class="card">
+                    <h3>What happens next</h3>
+                    <ol style="padding-left:18px;line-height:1.9">
+                        <li>We approve your account (usually same day).</li>
+                        <li>Your 14-day trial starts. Sign in to the portal.</li>
+                        <li>Upload your logo and add your people — @Pricing.IncludedSeats seats, any mix of roles.</li>
+                        <li>Install the technician console.</li>
+                        <li>Set up your ticket email address under Tickets by email — so customers can email in, and you can update them from a ticket.</li>
+                        <li>Share your branded download link with customers.</li>
+                    </ol>
+                    <h3 style="margin-top:20px">Your price after the trial</h3>
+                    <p><strong>@Pricing.Money(c, c.Package) a month</strong> for @Pricing.IncludedSeats seats. No contract.</p>
+                    <p class="muted" style="font-size:13px">@Pricing.WhyFive</p>
+                </div>
+                }
+            </div>
+        }
+        else if (Model.Step == "pay" && Model.Checkout is { } co)
+        {
+            @* On to PayFast for the card (stage B). action= written out: no antiforgery token, which would fall outside
+               PayFast's signature. *@
+            <div class="card" id="signupPay">
+                <h3>One last step: your card</h3>
+                <p>Thanks, @Model.CompanyName. PayFast now takes your card. <strong>Nothing is charged for 14 days</strong>; then
+                    it is @Pricing.Money(c!, co.Subscription.AmountCents / 100m) a month, from @co.Subscription.BillingDate. Your account
+                    is ready the moment PayFast confirms the card.</p>
+                <form id="toPayfast" method="post" action="@co.Action">
+                    @foreach (var f in co.Fields)
+                    {
+                        <input type="hidden" name="@f.Key" value="@f.Value">
+                    }
+                    <button class="btn btn-accent btn-lg" type="submit">Continue to PayFast</button>
+                </form>
+                <script>document.getElementById('toPayfast').submit();</script>
+            </div>
+        }
+        else if (Model.Step == "done")
+        {
+            @if (Model.Free)
+            {
+                <div class="alert alert-ok" id="signupDone"><strong>Thanks, @(string.IsNullOrWhiteSpace(Model.CompanyName) ? Model.ContactName : Model.CompanyName)!</strong> Your signup for @RemoteSupport.Shared.FreePlan.TheNameOf(Model.Plan) is in. We'll email <strong>@Model.Email</strong> as soon as your account is approved. You can <a href="/login">sign in</a> once approved.</div>
+            }
+            else
+            {
+                <div class="alert alert-ok" id="signupDone"><strong>Thanks, @Model.CompanyName!</strong> Your signup is in. We'll email <strong>@Model.Email</strong> as soon as your account is approved and your trial starts. You can <a href="/login">sign in</a> once approved.</div>
+            }
+        }
+    </div>
+</section>

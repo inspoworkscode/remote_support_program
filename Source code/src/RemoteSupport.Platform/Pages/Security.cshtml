@@ -1,0 +1,54 @@
+@page "/security"
+@{
+    ViewData["Title"] = "Remote support security and POPIA";
+    ViewData["Description"] = "End-to-end encrypted remote sessions, two-factor sign-in for everybody, customer consent and unattended passwords, and data kept in South Africa under POPIA.";
+}
+<section class="page-head">
+    <div class="wrap">
+        <h1>Security and POPIA</h1>
+        <p class="lede">Remote support software can reach every computer you look after. That is why it is built to be hard to misuse —
+            by an outsider, and by anyone who should not be on a particular computer.</p>
+    </div>
+</section>
+
+<section class="section">
+    <div class="wrap">
+        <h2>The sessions</h2>
+        <div class="facts" style="margin-top:18px">
+            <div class="card fact"><h3>Encrypted end to end</h3><p>A session's screen, keystrokes, files and chat are sealed between the technician's console and the customer's computer (P-256 key agreement, AES-GCM). Our servers pass them on and cannot read them.</p></div>
+            <div class="card fact"><h3>Each computer proves who it is</h3><p>Every computer has its own key. If a computer you know turns up with a different one, the console stops and asks before going on.</p></div>
+            <div class="card fact"><h3>The customer decides</h3><p>Attended connections need the customer's yes. Unattended access is their switch, with an optional password of their own that nobody — owner included — can get round.</p></div>
+            <div class="card fact"><h3>Everything is on the record</h3><p>Every session is its own ticket: who connected, to which computer, when and for how long. A recording is kept only when a technician chooses to make one.</p></div>
+        </div>
+    </div>
+</section>
+
+<section class="section alt">
+    <div class="wrap">
+        <h2>Signing in</h2>
+        <ul class="feature-list" style="margin-top:18px">
+            <li>A code from an authenticator app for every person, at every sign-in</li>
+            <li>A trusted computer is asked once a week, not every time</li>
+            <li>One sign-in at a time: a second computer signs the first out</li>
+            <li>Remove a person and they are signed out at once, everywhere</li>
+            <li>Accounts lock after repeated wrong passwords</li>
+            <li>Passwords are never stored — only a slow one-way hash</li>
+        </ul>
+    </div>
+</section>
+
+<section class="section">
+    <div class="wrap grid2">
+        <div>
+            <h2>Your data, in South Africa</h2>
+            <p>Your company's data is kept on servers in South Africa, encrypted on the way there (TLS 1.3) and backed up encrypted every
+                night. Each company's data is kept apart from every other's.</p>
+        </div>
+        <div>
+            <h2>POPIA</h2>
+            <p>For your customers' information you are the responsible party and we are your operator, as POPIA describes; we use it only to
+                provide the service to you. Our <a href="/privacy">privacy policy</a> and <a href="/terms/ZA">terms</a> say exactly what we
+                keep and why. The website uses no analytics and no trackers, and no cookies beyond those that make signing in and its forms work.</p>
+        </div>
+    </div>
+</section>

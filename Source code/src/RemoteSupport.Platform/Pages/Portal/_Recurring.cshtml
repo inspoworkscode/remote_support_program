@@ -1,0 +1,22 @@
+@model RemoteSupport.Platform.Pages.Portal.TicketModel
+@using RemoteSupport.Platform.Services
+@* A recurring task's ticket (2026-10-07) says which schedule opened it, the day it was due, whether
+   that has passed, and where to change or cancel the schedule — drawn by BOTH the story page and the
+   classic page, as everything shown on a ticket must be (§61). *@
+@{
+    var r = Model.Recurring;
+    var t = Model.Ticket!;
+}
+@if (r != null)
+{
+    <div class="kb-ticket" id="recurringTicket">
+        <span>🔁 <strong>Recurring task</strong> · @r.Kind · @r.Repeats</span>
+        @if (t.DueOn.HasValue)
+        {
+            <span class="muted">Due @RecurringTaskService.Day(t.DueOn.Value)</span>
+            @if (RecurringTaskService.IsOverdue(t)) { <span class="pill pill-bad">Overdue</span> }
+        }
+        <span class="muted">@r.Next</span>
+        <a class="btn btn-sm" href="@(PortalAddresses.Recurring(r.TaskNumber))">@(r.MayChange ? "Change or cancel the task" : "See the task")</a>
+    </div>
+}

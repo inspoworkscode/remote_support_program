@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Portal credentials helper, shared by the harnesses; keeps the password out of the repo. -->
+    <Compile Include="..\Common\RsCredentials.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\RemoteSupport.Shared\RemoteSupport.Shared.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The diagnostic scripts live together in tools/hostinfo and are linked here rather than
+         copied, so there is only ever one of each. -->
+    <None Include="..\hostinfo\*.ps1" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

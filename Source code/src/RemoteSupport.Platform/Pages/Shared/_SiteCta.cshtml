@@ -1,0 +1,12 @@
+@inject RemoteSupport.Platform.Services.SitePreview Preview
+@* The one call to action on every public page (2026-10-14, stage E): the trial when signups are open, else a word with us. *@
+@if (Preview.SignupsOn(Context))
+{
+    <a class="btn btn-accent btn-lg" href="/signup">Start your 14-day free trial</a>
+    <a class="btn btn-lg" href="/pricing">See the price</a>
+}
+else
+{
+    <a class="btn btn-accent btn-lg" href="/about#contact">Talk to us</a>
+    <a class="btn btn-lg" href="/pricing">See the price</a>
+}

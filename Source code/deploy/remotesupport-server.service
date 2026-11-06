@@ -1,0 +1,19 @@
+[Unit]
+Description=Remote Support Server
+After=network.target
+
+[Service]
+Type=notify
+# Adjust WorkingDirectory/ExecStart to where you copied the server files.
+WorkingDirectory=/opt/remotesupport
+ExecStart=/opt/remotesupport/RemoteSupport.Server run
+Restart=always
+RestartSec=5
+KillSignal=SIGINT
+# Run as an unprivileged account you create (see install-server-linux.sh).
+User=remotesupport
+Group=remotesupport
+Environment=DOTNET_CLI_TELEMETRY_OPTOUT=1
+
+[Install]
+WantedBy=multi-user.target

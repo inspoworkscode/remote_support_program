@@ -1,0 +1,3 @@
+# The seed file holds the test server's company keys and the pretend technicians' password; the
+# Linux build and the results are output. None of it belongs in git.
+out/

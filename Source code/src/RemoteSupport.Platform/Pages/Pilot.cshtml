@@ -1,0 +1,85 @@
+@page "/pilot/{token}"
+@model PilotModel
+@{ ViewData["Title"] = "Your pilot account"; var c = Model.Chosen; var tt = Model.TermsText; }
+<section class="section">
+    <div class="wrap" style="max-width:860px">
+        <h1 id="pilotHeading">Your pilot account</h1>
+        @if (Model.Step != "refused" && Model.Step != "done")
+        {
+            <p class="muted" style="font-size:17px">You are one of our pilot companies: <strong>five seats free while you are a pilot</strong> —
+                five is the most any company has. No trial and no card — your account is ready as soon as you finish here.</p>
+        }
+        @if (Model.Error.Length > 0 && Model.Step != "refused") { <div class="alert alert-bad" id="pilotError">@Model.Error</div> }
+
+        @if (Model.Step == "refused")
+        {
+            <div class="alert alert-bad" id="pilotRefused">@Model.Error</div>
+            <p class="muted">Already signed up? <a href="/login">Sign in to your portal</a>.</p>
+        }
+        else if (Model.Step == "terms")
+        {
+            <h2 style="margin-top:8px">Our terms for pilot companies in @c.In</h2>
+            <p class="muted">Please read these. The pilot agreement comes first; the rest are our terms for everybody, including how your customers'
+                data is protected and that <strong>we are not responsible for loss of data</strong> — keep backups.</p>
+            <p class="muted" style="font-size:13px" id="termsVersion">Version @tt.Version — a copy of exactly what you accept is kept on your account.</p>
+            <div class="card kb-body terms-text" id="termsText" style="max-height:440px;overflow:auto;font-size:14px">@Html.Raw(tt.Html)</div>
+            <form method="post" asp-page-handler="Terms" class="form" style="margin-top:14px">
+                <input type="hidden" name="TermsSha" value="@tt.Sha256">
+                <input type="hidden" name="CompanyName" value="@Model.CompanyName">
+                <input type="hidden" name="Email" value="@Model.Email">
+                <label class="check" style="display:flex;gap:10px;align-items:flex-start;font-weight:600">
+                    <input type="checkbox" name="Accept" value="true" id="acceptTerms" style="margin-top:4px;width:auto">
+                    <span>I have read these terms and I accept them on behalf of my company.</span>
+                </label>
+                <div class="actions"><button class="btn btn-accent btn-lg" type="submit" id="termsContinue">Continue</button></div>
+            </form>
+        }
+        else if (Model.Step == "details")
+        {
+            <div class="grid2">
+                <form method="post" asp-page-handler="Create" class="form">
+                    <input type="hidden" name="TermsSha" value="@Model.TermsSha">
+                    <input type="hidden" name="Accept" value="true">
+                    <label>Company name</label>
+                    <input name="CompanyName" value="@Model.CompanyName" required placeholder="Acme IT Services">
+                    <p class="muted" style="font-size:13px;margin:8px 0 0">Time zone: <strong>@CompanyClock.For(c.Code).First().Label</strong> — you can change it later on Branding.</p>
+                    <div class="row">
+                        <div><label>Your name</label><input name="ContactName" value="@Model.ContactName" required placeholder="Jane Smith"></div>
+                        <div><label>Contact number</label><input name="ContactNumber" value="@Model.ContactNumber" required></div>
+                    </div>
+                    <div class="row">
+                        <div><label>Work email (your login)</label><input name="Email" type="email" value="@Model.Email" required placeholder="jane@acme-it.com"></div>
+                        <div><label>Password (8+ characters)</label><input name="Password" type="password" required minlength="8" autocomplete="new-password"></div>
+                    </div>
+                    <div class="row">
+                        <div><label>Primary colour</label><input name="Primary" type="color" value="@(string.IsNullOrEmpty(Model.Primary) ? "#1F4E79" : Model.Primary)"></div>
+                        <div><label>Accent colour</label><input name="Accent" type="color" value="@(string.IsNullOrEmpty(Model.Accent) ? "#2E9BFF" : Model.Accent)"></div>
+                    </div>
+                    <label style="margin-top:12px">Ticket email address <span class="muted">(optional)</span></label>
+                    <input name="TicketEmail" type="email" value="@Model.TicketEmail" placeholder="support@acme-it.com" id="ticketEmail">
+                    <p class="muted" style="font-size:13px;margin:4px 0 0">The address your customers email for support. You finish setting it up in the portal, under Tickets by email.</p>
+                    <div class="actions"><button class="btn btn-accent btn-lg" type="submit" id="createAccount">Create my account</button></div>
+                    <p class="muted" style="font-size:13px;margin-top:12px">You accepted our terms for pilot companies. A copy is kept on your account, on Billing.</p>
+                </form>
+                <div class="card">
+                    <h3>What happens next</h3>
+                    <ol style="padding-left:18px;line-height:1.9">
+                        <li>Sign in to the portal straight away and set up two-factor sign-in.</li>
+                        <li>Upload your logo and add your people — five seats, free.</li>
+                        <li>Install the technician console.</li>
+                        <li>Share your branded download link with customers.</li>
+                    </ol>
+                    <h3 style="margin-top:20px">Your price</h3>
+                    <p><strong>Nothing</strong> for five seats, while you are a pilot company. Five is the most any company has.</p>
+                    <p class="muted" style="font-size:13px">You — the person signing up — are the owner, and you take one of the five seats, because you can
+                        also work tickets and connect to computers. One owner login that only oversees the company is free on top.</p>
+                </div>
+            </div>
+        }
+        else if (Model.Step == "done")
+        {
+            <div class="alert alert-ok" id="pilotDone"><strong>Welcome, @Model.CompanyName!</strong> Your account is ready.
+                <a href="/login">Sign in to your portal</a> with @Model.Email — you will set up two-factor sign-in the first time.</div>
+        }
+    </div>
+</section>

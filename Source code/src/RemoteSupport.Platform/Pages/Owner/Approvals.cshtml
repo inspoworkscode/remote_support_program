@@ -1,0 +1,119 @@
+@page "/owner/approvals"
+@model RemoteSupport.Platform.Pages.Owner.ApprovalsModel
+@{
+    ViewData["Title"] = "Approvals"; ViewData["Section"] = "owner";
+    var pending = Model.Fleet.Where(v => v.Report != null).SelectMany(v => v.Report!.Companies.Where(c => c.Status == "Pending").Select(c => (v, c))).OrderBy(x => x.c.CreatedUtc).ToList();
+    var waiting = Model.Fleet.Where(v => v.Report != null).SelectMany(v => v.Report!.Waiting.Select(w => (v, w))).OrderBy(x => x.w.CreatedUtc).ToList();
+    var silent = Model.Fleet.Where(v => v.Report == null).ToList();
+    var seatAsks = Model.Fleet.Where(v => v.Report != null).SelectMany(v => v.Report!.Companies.Where(c => c.SeatsAskedFor > 0).Select(c => (v, c))).OrderBy(x => x.c.SeatsAskedUtc).ToList();
+}
+<section class="portal"><div class="wrap">
+    @if (Model.Message.Length > 0) { <div class="alert alert-ok">@Model.Message</div> }
+    @if (Model.Problem.Length > 0) { <div class="alert alert-bad">@Model.Problem</div> }
+    @* Five companies at a time (2026-10-22, OpenPlaces): each server's places, and the number. *@
+    <h1>Open places</h1>
+    <p class="muted">Paying companies let in at a time — not Anywhere IT, pilots or the Basic version. When every place is taken, a full-version
+        signup is offered the waiting list instead, and the website says so. A signup waiting for its card holds a place for @OpenPlaces.PendingDays days;
+        a place offered from the waiting list holds one for @OpenPlaces.OfferDays days.</p>
+    <div class="grid2" id="openPlaces" style="margin-bottom:30px">
+        @foreach (var v in Model.Fleet.Where(v => v.Report?.Places != null))
+        {
+            var p = v.Report!.Places!;
+            <div class="card" data-places-server="@v.Row.Id">
+                <h3 style="margin-top:0">@(Model.Several ? v.Row.Name : "This server")</h3>
+                <p style="font-size:20px;margin:4px 0"><strong id="placesTaken">@p.Taken</strong> of @(p.Limited ? p.Limit.ToString() : "unlimited") places taken
+                    @if (p.Full) { <span class="pill pill-warn">Full</span> } else if (p.Limited) { <span class="pill pill-ok">@p.Left open</span> }</p>
+                <p class="muted" style="font-size:13px">@p.Companies compan@(p.Companies == 1 ? "y" : "ies") · @p.Offers place@(p.Offers == 1 ? "" : "s") offered and not yet used</p>
+                @if (Model.CanManage)
+                {
+                    <form method="post" asp-page-handler="Act" class="inline"><input type="hidden" name="server" value="@v.Row.Id"><input type="hidden" name="id" value="0"><input type="hidden" name="act" value="places">
+                        <span class="muted" style="font-size:13px">Places</span> <input name="places" type="number" min="0" value="@p.Limit" style="width:70px;padding:4px"> <button class="btn btn-sm">Set</button>
+                        <span class="muted" style="font-size:12px">0 = no limit</span></form>
+                }
+            </div>
+        }
+    </div>
+    @* More seats, on request (2026-10-25): every company starts with five; one that asks is listed here until we answer. *@
+    <h1>More seats asked for <span class="pill @(seatAsks.Count > 0 ? "pill-warn" : "pill-muted")">@seatAsks.Count</span></h1>
+    <p class="muted">Allowing changes no price by itself: their owner is shown the new monthly price and must accept it when adding each person past
+        the package — @Pricing.Money(Pricing.For("ZA"), Pricing.For("ZA").ExtraSeat) a month each in South Africa — and PayFast takes the new amount from their next payment.
+        A pilot's extra seats are invoiced by us. To change the number later, or take it back, use All companies.</p>
+    @if (seatAsks.Count == 0) { <div class="card" style="margin-bottom:30px">Nobody is asking. 🎉</div> }
+    else
+    {
+        <table id="seatAsks" style="margin-bottom:30px">
+            <tr><th>Company</th>@if (Model.Several) { <th>Server</th> }<th>Asks for</th><th>Their reason</th><th>Asked</th><th></th></tr>
+            @foreach (var (v, t) in seatAsks)
+            {
+                <tr data-seat-ask="@t.Slug">
+                    <td><strong>@t.Name</strong><br><span class="muted">/@t.Slug</span>@if (t.Pilot) { <br><span class="pill pill-muted">Pilot</span> }</td>
+                    @if (Model.Several) { <td>@v.Row.Name</td> }
+                    <td><strong>@t.SeatsAskedFor seats</strong><div class="muted" style="font-size:13px">may have @Math.Max(t.MostSeats, t.Seats) now · @t.InSeats in use · @t.PriceLabel</div></td>
+                    <td style="max-width:320px;overflow-wrap:anywhere">@(t.SeatsAskedNote.Length > 0 ? t.SeatsAskedNote : "—")</td>
+                    <td>@t.SeatsAskedUtc?.ToString("yyyy-MM-dd HH:mm") UTC<div class="muted" style="font-size:13px;overflow-wrap:anywhere">@t.SeatsAskedBy</div></td>
+                    <td style="white-space:nowrap">@if (Model.CanManage)
+                        {
+                            <form method="post" asp-page-handler="Act" class="inline"><input type="hidden" name="server" value="@v.Row.Id"><input type="hidden" name="id" value="@t.Id"><input type="hidden" name="act" value="allow-seats">
+                                <span class="muted" style="font-size:13px">Allow up to</span> <input name="most" type="number" min="@t.Seats" max="@Pricing.MostAllowed" value="@t.SeatsAskedFor" style="width:60px;padding:4px">
+                                <button class="btn btn-sm btn-accent">Allow</button></form>
+                            <form method="post" asp-page-handler="Act" style="margin-top:6px" onsubmit="return confirm('Decline @t.Name\'s request? Their owners are emailed.')"><input type="hidden" name="server" value="@v.Row.Id"><input type="hidden" name="id" value="@t.Id"><input type="hidden" name="act" value="decline-seats">
+                                <input name="reason" placeholder="Reason for them (optional)" maxlength="1000" style="width:200px;padding:4px"> <button class="btn btn-sm">Decline</button></form>
+                        }</td>
+                </tr>
+            }
+        </table>
+    }
+    <h1>Pending signups <span class="pill pill-warn">@pending.Count</span></h1>
+    <p class="muted">Approving starts the company's 14-day trial and lets its technicians sign in.</p>
+    @foreach (var s in silent) { <div class="alert alert-bad">@s.Row.Name is not answering, so its signups are not shown: @s.Error</div> }
+    @if (pending.Count == 0) { <div class="card">Nothing waiting. 🎉</div> }
+    else
+    {
+        <table id="pendingList">
+            <tr><th>Company</th>@if (Model.Several) { <th>Server</th> }<th>Contact</th><th>Email</th><th>Phone</th><th>Country</th><th>Price after trial</th><th>Signed up</th><th></th></tr>
+            @foreach (var (v, t) in pending)
+            {
+                <tr data-slug="@t.Slug">
+                    <td><strong>@t.Name</strong><br><span class="muted">/@t.Slug</span>@if (t.Free) { <br><span class="pill pill-muted">@(t.PlanName.Length > 0 ? t.PlanName : "Basic")</span> }</td>
+                    @if (Model.Several) { <td>@v.Row.Name</td> }
+                    <td>@t.ContactName</td><td>@t.SupportEmail</td><td>@t.ContactNumber</td><td>@t.Country</td><td>@t.PriceLabel</td>
+                    <td>@t.CreatedUtc.ToString("yyyy-MM-dd HH:mm") UTC</td>
+                    <td style="white-space:nowrap">
+                        @if (t.CardAtPayfast) { <span class="pill pill-warn" title="PayFast's notice switches it on by itself">Waiting for the card at PayFast</span> }
+                        @if (Model.CanManage)
+                        {
+                            if (!t.CardAtPayfast) { <form method="post" asp-page-handler="Act" class="inline"><input type="hidden" name="server" value="@v.Row.Id"><input type="hidden" name="id" value="@t.Id"><input type="hidden" name="act" value="approve"><button class="btn btn-sm btn-accent">Approve</button></form> }
+                            <form method="post" asp-page-handler="Act" class="inline" onsubmit="return confirm('Reject @t.Name?')"><input type="hidden" name="server" value="@v.Row.Id"><input type="hidden" name="id" value="@t.Id"><input type="hidden" name="act" value="reject"><button class="btn btn-sm btn-danger">Reject</button></form>
+                        }
+                    </td>
+                </tr>
+            }
+        </table>
+    }
+    <h2 style="margin-top:40px">Waiting list <span class="pill pill-muted">@waiting.Count</span></h2>
+    <p class="muted">Companies that found every place taken — offer the next one a place when one opens: they are emailed a link that works once and
+        holds the place for @OpenPlaces.OfferDays days — and companies in a region with no server yet: email them when it opens, then remove them.</p>
+    @if (waiting.Count > 0)
+    {
+        <table id="waitingList">
+            <tr><th>Region</th><th>Company</th><th>Contact</th><th>Email</th><th>Phone</th><th>Asked</th><th>Waiting for</th><th></th></tr>
+            @foreach (var (v, w) in waiting)
+            {
+                var here = v.Report?.Region == w.Region;
+                <tr data-waiting="@w.Id">
+                    <td>@Pricing.For(w.Region).Name@(w.Region == "EU" ? $" ({w.Country})" : "")</td><td>@w.CompanyName</td><td>@w.ContactName</td>
+                    <td><a href="mailto:@w.Email">@w.Email</a></td><td>@w.Phone</td><td>@w.CreatedUtc.ToString("yyyy-MM-dd")</td>
+                    <td>@if (w.PlaceUsed) { <span class="pill pill-ok">Signed up</span> }
+                        else if (w.PlaceUntilUtc is { } until && until > DateTime.UtcNow) { <span class="pill pill-warn">Place offered</span><div class="muted" style="font-size:12px">held until @until.ToString("yyyy-MM-dd")</div> }
+                        else if (w.Full) { <span>A place</span>@if (w.PlaceUntilUtc != null) { <div class="muted" style="font-size:12px">last offer ran out</div> } }
+                        else { <span class="muted">Their region</span> }</td>
+                    <td style="white-space:nowrap">@if (Model.CanManage)
+                        {
+                            if (here && !w.PlaceUsed) { <form method="post" asp-page-handler="Act" class="inline" onsubmit="return confirm('Offer this company a place? They are emailed a link that works once.')"><input type="hidden" name="server" value="@v.Row.Id"><input type="hidden" name="id" value="@w.Id"><input type="hidden" name="act" value="offer-place"><button class="btn btn-sm btn-accent">@(w.PlaceUntilUtc != null ? "Offer again" : "Offer a place")</button></form> }
+                            <form method="post" asp-page-handler="Act" class="inline"><input type="hidden" name="server" value="@v.Row.Id"><input type="hidden" name="id" value="@w.Id"><input type="hidden" name="act" value="remove-waiting"><button class="btn btn-sm">Remove</button></form>
+                        }</td>
+                </tr>
+            }
+        </table>
+    }
+</div></section>

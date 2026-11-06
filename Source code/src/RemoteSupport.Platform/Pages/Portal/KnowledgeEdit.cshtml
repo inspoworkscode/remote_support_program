@@ -1,0 +1,270 @@
+@page "/portal/a/{number:int}/edit"
+@model RemoteSupport.Platform.Pages.Portal.KnowledgeEditModel
+@{ ViewData["Title"] = Model.Heading; ViewData["Section"] = "portal"; }
+<section class="portal"><div class="wrap">
+    <p><a href="@Model.CancelTo">← Back</a></p>
+    @if (Model.Missing)
+    {
+        <div class="card">That article is not in the knowledge base — it may have been deleted.
+            @if (Model.BodyText.Length > 0)
+            {
+                <p class="muted" style="margin-top:10px">What you typed:</p>
+                <textarea readonly rows="12" style="width:100%">@Model.BodyText</textarea>
+            }
+        </div>
+    }
+    else
+    {
+    <h1>@Model.Heading</h1>
+    @if (Model.FromTicketNumber > 0 && Model.IsNew)
+    {
+        <p class="muted">From ticket <a href="@(PortalAddresses.Ticket(Model.FromTicketNumber))">#@Model.FromTicketNumber</a>. Its words are below — word them so the next person can follow them: one step to a line.</p>
+    }
+    @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad">@Model.Error</div> }
+
+    @* asp-antiforgery: with an action written out, the form tag helper does NOT add the token by
+       itself — and the first walk in a real browser found Save refused for want of it. *@
+    <form method="post" action="@Model.Action" asp-antiforgery="true" class="form kb-edit" id="kbForm">
+        <input type="hidden" name="version" value="@Model.Version">
+        <input type="hidden" name="fromTicketNumber" value="@Model.FromTicketNumber">
+
+        <label for="kbTitle">Title</label>
+        <input id="kbTitle" name="title" required maxlength="@RemoteSupport.Platform.Services.KnowledgeBaseService.MaxTitle" value="@Model.TitleText"
+               placeholder="What it is for — e.g. Adding a new user">
+
+        <label for="kbClient">Client — leave it empty for General</label>
+        <div class="cpick" data-mode="id">
+            <input type="hidden" name="clientId" value="@Model.ClientId">
+            <input class="cpick-in" id="kbClient" value="@Model.ClientLabel" placeholder="General — or type a client's name">
+            <div class="cpick-list" role="listbox" hidden></div>
+        </div>
+
+        @* The folder, from the chosen section's own — General's for General, the client's for a client.
+           Choosing another client offers theirs (kbFolders below). *@
+        <label for="kbFolder">Folder</label>
+        <select id="kbFolder" name="folderId" class="kb-folder-pick">
+            <option value="0">None — at the top</option>
+            @foreach (var (fid, label) in Model.FolderChoices) { <option value="@fid" selected="@(fid == Model.FolderId)">@label</option> }
+        </select>
+
+        <label for="kbBody">The steps</label>
+        <div class="kb-tools" role="toolbar" aria-label="Formatting">
+            <button type="button" class="btn btn-sm" onclick="kbLines('step')" title="Number the selected lines as steps">1. Step</button>
+            <button type="button" class="btn btn-sm" onclick="kbLines('bullet')" title="Make the selected lines a bulleted list">• Bullet</button>
+            <button type="button" class="btn btn-sm" onclick="kbLines('heading')" title="Make the line a heading">Heading</button>
+            <button type="button" class="btn btn-sm" onclick="kbWrap('**')" title="Bold"><strong>Bold</strong></button>
+            <button type="button" class="btn btn-sm" onclick="kbCommands()" title="Keep commands exactly as typed">Commands</button>
+            <button type="button" class="btn btn-sm" onclick="kbLinkOpen()" title="A button that opens a web address — the address itself stays out of sight">Link button</button>
+            <label class="btn btn-sm" style="margin:0;font-weight:700;font-size:13px">Add a picture
+                <input type="file" accept="image/*" multiple hidden onchange="kbFiles(this.files); this.value=''"></label>
+            <button type="button" class="btn btn-sm" id="kbPreviewBtn" onclick="kbPreview()">Preview</button>
+        </div>
+        @* Link button (2026-10-06): the address and the words on the button, written into the text as
+           [button: words | address]. Not a form of its own — it sits inside the article's. *@
+        <div class="kb-link card" id="kbLink" hidden>
+            <label for="kbLinkUrl" style="margin-top:0">The web address</label>
+            <input id="kbLinkUrl" type="text" inputmode="url" placeholder="https://… — paste it, however long" autocomplete="off">
+            <label for="kbLinkWords">The words on the button</label>
+            <input id="kbLinkWords" maxlength="80" placeholder="e.g. Download the printer driver — or leave it empty for “Open” and the site's name" autocomplete="off">
+            <p class="kb-note" id="kbLinkProblem" role="alert"></p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+                <button type="button" class="btn btn-sm btn-accent" onclick="kbLinkAdd()">Add the button</button>
+                <button type="button" class="btn btn-sm" onclick="kbLinkClose()">Cancel</button>
+            </div>
+        </div>
+        <textarea id="kbBody" data-autogrow="off" name="body" rows="20" required>@Model.BodyText</textarea>
+        <p class="kb-note">One step to a line, starting <code>1.</code> — a line starting <code>#</code> is a heading — <code>```</code> on a line above and below keeps commands exactly as typed.
+            A web address on a line of its own shows as a button; <strong>Link button</strong> puts your own words on one.
+            Paste or drop a screenshot straight into the box. <strong>Never a password</strong>: everybody at the company can read this — say where the password is kept instead.</p>
+        <p class="kb-note" id="kbStatus" aria-live="polite"></p>
+        <div class="alert alert-warn" id="kbPw" hidden></div>
+        <div class="kb-preview kb-body" id="kbPreview" hidden></div>
+
+        <div class="actions" style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-accent" type="submit">Save</button>
+            <a class="btn" href="@Model.CancelTo">Cancel</a>
+        </div>
+    </form>
+    }
+</div></section>
+
+<script src="/photos.js?v=@RemoteSupport.Platform.Services.BuildStamp.Value"></script>
+<script>
+(function () {
+  var box = document.getElementById('kbBody');
+  var form = document.getElementById('kbForm');
+  if (!box || !form) return;
+  var status = document.getElementById('kbStatus');
+  var start = box.value + '|' + document.getElementById('kbTitle').value;
+  var leaving = false;
+
+  // ---- never lose words: a warning before leaving with changes unsaved ----
+  // A submit the client box stops ("pick one from the list") is not leaving.
+  form.addEventListener('submit', function (e) { leaving = true; setTimeout(function () { if (e.defaultPrevented) leaving = false; }, 0); });
+  window.addEventListener('beforeunload', function (e) {
+    if (leaving || box.value + '|' + document.getElementById('kbTitle').value === start) return;
+    e.preventDefault(); e.returnValue = '';
+  });
+
+  // ---- the Folder box follows the client: their folders, or General's ----
+  var folderBox = document.getElementById('kbFolder');
+  var clientHidden = form.querySelector('.cpick input[type=hidden]');
+  if (folderBox && clientHidden) clientHidden.addEventListener('change', async function () {
+    var keep = folderBox.value, mine = (folderBox.dataset.seq = (+folderBox.dataset.seq || 0) + 1);
+    try {
+      var res = await fetch('/api/portal/kb/folders?client=' + encodeURIComponent(clientHidden.value || '0'), { credentials: 'same-origin' });
+      if (!res.ok || +folderBox.dataset.seq !== mine) return;
+      var list = await res.json();
+      folderBox.length = 1;                               // "None — at the top" stays
+      list.forEach(function (f) { folderBox.add(new Option(f.label, f.id)); });
+      folderBox.value = list.some(function (f) { return String(f.id) === keep; }) ? keep : '0';
+    } catch (e) { folderBox.length = 1; folderBox.value = '0'; }
+  });
+
+  // The selected lines, whole: from the start of the first to the end of the last.
+  function lineRange() {
+    var v = box.value, s = box.selectionStart, e = box.selectionEnd;
+    var a = v.lastIndexOf('\n', s - 1) + 1;
+    var b = v.indexOf('\n', e > s && v[e - 1] === '\n' ? e - 1 : e); if (b < 0) b = v.length;
+    return { a: a, b: b };
+  }
+  function replace(a, b, text, selectAll) {
+    box.focus();
+    box.setSelectionRange(a, b);
+    // execCommand keeps the browser's own undo working; setRangeText is the fallback.
+    if (!document.execCommand('insertText', false, text)) box.setRangeText(text, a, b, 'end');
+    if (selectAll) box.setSelectionRange(a, a + text.length);
+  }
+
+  window.kbLines = function (kind) {
+    var r = lineRange();
+    var lines = box.value.slice(r.a, r.b).split('\n');
+    var strip = function (l) { return l.replace(/^\s*(\d{1,4}[.)]|[-*•]|#{1,3})\s+/, ''); };
+    var n = 1;
+    if (kind === 'step') {
+      // Carry on from a numbered step just above, so adding step 5 says 5.
+      var before = box.value.slice(0, r.a).replace(/\n+$/, '').split('\n').pop();
+      var m = /^\s*(\d{1,4})[.)]\s/.exec(before || '');
+      if (m) n = +m[1] + 1;
+    }
+    var out = lines.map(function (l) {
+      if (kind === 'heading') return '# ' + strip(l);
+      if (l.trim() === '' && lines.length > 1) return l;
+      return (kind === 'step' ? (n++) + '. ' : '- ') + strip(l);
+    }).join('\n');
+    replace(r.a, r.b, out, lines.length > 1);
+  };
+
+  window.kbWrap = function (mark) {
+    var s = box.selectionStart, e = box.selectionEnd;
+    var t = box.value.slice(s, e) || 'bold words';
+    replace(s, e, mark + t + mark, true);
+  };
+
+  window.kbCommands = function () {
+    var r = lineRange();
+    var t = box.value.slice(r.a, r.b) || 'the command';
+    replace(r.a, r.b, '```\n' + t + '\n```', false);
+  };
+
+  // ---- link buttons: [button: words | address], on a line of its own where the caret was ----
+  var link = document.getElementById('kbLink'), linkAt = 0;
+  window.kbLinkOpen = function () {
+    linkAt = box.selectionStart;
+    var picked = box.value.slice(box.selectionStart, box.selectionEnd).trim();
+    document.getElementById('kbLinkUrl').value = /^https?:\/\/\S+$/i.test(picked) ? picked : '';
+    document.getElementById('kbLinkWords').value = picked && !/^https?:\/\//i.test(picked) ? picked.slice(0, 80) : '';
+    document.getElementById('kbLinkProblem').textContent = '';
+    link.hidden = false;
+    document.getElementById(document.getElementById('kbLinkUrl').value ? 'kbLinkWords' : 'kbLinkUrl').focus();
+  };
+  window.kbLinkClose = function () { link.hidden = true; box.focus(); };
+  window.kbLinkAdd = function () {
+    var url = document.getElementById('kbLinkUrl').value.trim();
+    var words = document.getElementById('kbLinkWords').value.trim().replace(/\|/g, '/').replace(/\]/g, ')');
+    if (url && !/^https?:\/\//i.test(url) && /^[\w-]+(\.[\w-]+)+/.test(url)) url = 'https://' + url;   // "hp.com/drivers"
+    if (!/^https?:\/\/\S+$/i.test(url)) {
+      document.getElementById('kbLinkProblem').textContent = 'That does not look like a web address. It should start with https://';
+      document.getElementById('kbLinkUrl').focus();
+      return;
+    }
+    var tag = '[button: ' + words + ' | ' + url + ']';
+    var v = box.value, at = Math.min(linkAt, v.length);
+    // If the caret was inside a selection of the address or the words, that text is replaced.
+    var end = box.selectionEnd > at ? box.selectionEnd : at;
+    var pre = at === 0 || v[at - 1] === '\n' ? '' : '\n';
+    var post = v[end] === '\n' ? '' : '\n';
+    link.hidden = true;
+    replace(at, end, pre + tag + post, false);
+    box.dispatchEvent(new Event('input'));
+  };
+  ['kbLinkUrl', 'kbLinkWords'].forEach(function (id) {
+    document.getElementById(id).addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); kbLinkAdd(); }       // never submits the article
+      else if (e.key === 'Escape') { e.preventDefault(); kbLinkClose(); }
+    });
+  });
+
+  // ---- pictures: pasted, dropped or picked; each goes up at once and lands where the caret was ----
+  async function upload(file, at) {
+    if (!file || !file.type || file.type.indexOf('image/') !== 0) return;
+    status.textContent = 'Adding the picture…';
+    try {
+      var small = window.shrinkPhoto ? await shrinkPhoto(file) : file;
+      var fd = new FormData();
+      fd.append('file', small, small.name || 'screenshot.png');
+      var res = await fetch('/api/portal/kb/images', { method: 'POST', body: fd, headers: { 'X-Kb': '1' }, credentials: 'same-origin' });
+      var j = await res.json().catch(function () { return {}; });
+      if (!res.ok || !j.tag) { status.textContent = j.error || 'That picture could not be added.'; return; }
+      // On a line of its own: a blank line before and after unless there already is one.
+      var v = box.value; at = Math.min(at, v.length);
+      var pre = at === 0 || v[at - 1] === '\n' ? '' : '\n';
+      var post = v[at] === '\n' ? '\n' : '\n\n';
+      replace(at, at, pre + j.tag + post, false);
+      status.textContent = 'Picture added. It shows in Preview and on the article.';
+    } catch (e) { status.textContent = 'That picture could not be added.'; }
+  }
+  window.kbFiles = async function (files) {
+    var at = box.selectionStart;
+    for (var i = 0; i < files.length; i++) { await upload(files[i], at); at = box.selectionStart; }
+  };
+  box.addEventListener('paste', function (e) {
+    var files = Array.prototype.slice.call((e.clipboardData && e.clipboardData.files) || []).filter(function (f) { return f.type.indexOf('image/') === 0; });
+    if (!files.length) return;
+    e.preventDefault();
+    kbFiles(files);
+  });
+  box.addEventListener('dragover', function (e) { if (e.dataTransfer && Array.prototype.some.call(e.dataTransfer.types, function (t) { return t === 'Files'; })) { e.preventDefault(); box.classList.add('drop'); } });
+  box.addEventListener('dragleave', function () { box.classList.remove('drop'); });
+  box.addEventListener('drop', function (e) {
+    box.classList.remove('drop');
+    if (!e.dataTransfer || !e.dataTransfer.files.length) return;
+    e.preventDefault();
+    box.focus();
+    kbFiles(e.dataTransfer.files);
+  });
+
+  // ---- Preview, and the password warning: both asked of the server's own renderer ----
+  var pv = document.getElementById('kbPreview'), pw = document.getElementById('kbPw'), seq = 0, timer = 0;
+  async function ask(show) {
+    var mine = ++seq;
+    try {
+      var res = await fetch('/api/portal/kb/preview', { method: 'POST', body: box.value, headers: { 'X-Kb': '1', 'Content-Type': 'text/plain' }, credentials: 'same-origin' });
+      if (!res.ok || mine !== seq) return;
+      var j = await res.json();
+      if (j.password) {
+        pw.textContent = 'This looks as if it has a password in it — “' + j.password + '”. Everybody at the company can read the knowledge base: take it out, and say where it is kept instead.';
+        pw.hidden = false;
+      } else pw.hidden = true;
+      if (show || !pv.hidden) { pv.innerHTML = j.html || '<p class="muted">Nothing to show yet.</p>'; }
+    } catch (e) { }
+  }
+  window.kbPreview = function () {
+    if (!pv.hidden) { pv.hidden = true; document.getElementById('kbPreviewBtn').textContent = 'Preview'; return; }
+    pv.hidden = false; document.getElementById('kbPreviewBtn').textContent = 'Hide preview';
+    ask(true);
+  };
+  box.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(function () { ask(false); }, 900); });
+  if (box.value.trim()) ask(false);
+})();
+</script>

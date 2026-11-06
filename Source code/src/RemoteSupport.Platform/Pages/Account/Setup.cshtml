@@ -1,0 +1,72 @@
+@page "/account/setup"
+@model RemoteSupport.Platform.Pages.Account.SetupModel
+@{ ViewData["Title"] = Model.IsInvite ? "Set up your account" : "Choose a new password"; }
+<section class="section">
+    <div class="wrap" style="max-width:520px">
+        @if (Model.Step.Mode.Length > 0)
+        {
+            <h1>@(Model.Step.Mode == "saved" ? "You're set up" : Model.Step.Mode == "enrol" ? "One more step" : "Your code")</h1>
+            @if (Model.Step.Error.Length > 0) { <div class="alert alert-bad">@Model.Step.Error</div> }
+            <partial name="_TwoFactorStep" model="Model.Step" />
+        }
+        else if (Model.LinkError.Length > 0 && Model.Who == null)
+        {
+            <h1>This link cannot be used</h1>
+            <div class="alert alert-warn">@Model.LinkError</div>
+            <p><a href="/login">Sign in</a> &middot; <a href="/forgot">Forgot password?</a></p>
+        }
+        else if (Model.Step.Error.Length > 0)
+        {
+            <h1>Sign in</h1>
+            <div class="alert alert-bad">@Model.Step.Error</div>
+            <p>Your password is saved. <a href="/login">Sign in</a> with it.</p>
+        }
+        else if (Model.Who != null)
+        {
+            <h1>@(Model.IsInvite ? "Set up your account" : "Choose a new password")</h1>
+            <p class="muted">
+                @if (Model.IsInvite && RemoteSupport.Platform.Services.FreeCompanies.IsTheirFirstInvite(Model.Who, RemoteSupport.Platform.Data.AccountTokenPurpose.Invite))
+                {
+                    @* A Free or Basic account made by us (FreeCompanies): the company is the person, so nobody "added" them. A Basic one's card comes after (2026-10-25). *@
+                    var basicRegion = Pricing.For(Model.Who.Tenant);
+                    @:Welcome, @Model.Who.DisplayName. Your remote support account is ready. @(Model.TermsDue != null ? "Read and accept the terms, then choose" : "Choose") your password — then you'll set up two-factor sign-in with an authenticator app on your phone.
+                    @if (RemoteSupport.Shared.FreePlan.IsBasic(Model.Who.Tenant.Plan))
+                    {
+                        @:Once you are signed in, add your card on Billing: the first 14 days are free, then it is @Pricing.Money(basicRegion, basicRegion.Basic) a month.
+                    }
+                    else
+                    {
+                        @:It is @RemoteSupport.Shared.FreePlan.FreeTheName: nothing to pay.
+                    }
+                }
+                else if (Model.IsInvite)
+                {
+                    @:Welcome, @Model.Who.DisplayName. @Model.Who.Tenant.CompanyName has added you. Choose your password — then you'll set up two-factor sign-in with an authenticator app on your phone.
+                }
+                else
+                {
+                    @:@Model.Who.DisplayName, choose a new password for your @Model.Who.Tenant.CompanyName account. You'll need the code from your authenticator app straight after.
+                }
+            </p>
+            @if (Model.Error.Length > 0) { <div class="alert alert-bad">@Model.Error</div> }
+            <form method="post" class="form">
+                <input type="hidden" name="T" value="@Model.T">
+                @if (Model.TermsDue is { } tt)
+                {
+                    <h2 style="margin-top:8px;font-size:20px">Our terms for @RemoteSupport.Shared.FreePlan.TheNameOf(Model.Who.Tenant.Plan)</h2>
+                    <p class="muted" style="font-size:13px" id="termsVersion">Please read these first. Version @tt.Version — a copy of exactly what you accept is kept on your account.</p>
+                    <div class="card kb-body terms-text" id="termsText" style="max-height:360px;overflow:auto;font-size:14px">@Html.Raw(tt.Html)</div>
+                    <input type="hidden" name="TermsSha" value="@tt.Sha256">
+                    <label class="check" style="display:flex;gap:10px;align-items:flex-start;font-weight:600;margin:12px 0">
+                        <input type="checkbox" name="Accept" value="true" id="acceptTerms" style="margin-top:4px;width:auto" checked="@Model.Accept">
+                        <span>I have read these terms and I accept them.</span>
+                    </label>
+                }
+                <label>Email</label><input value="@Model.Who.Email" disabled autocomplete="username">
+                <label>New password (8 or more characters)</label><input name="Password" type="password" required minlength="8" autofocus="@(Model.TermsDue == null)" autocomplete="new-password">
+                <label>The same again</label><input name="Again" type="password" required minlength="8" autocomplete="new-password">
+                <div class="actions"><button class="btn btn-accent btn-lg" type="submit">@(Model.IsInvite ? "Continue" : "Save and continue")</button></div>
+            </form>
+        }
+    </div>
+</section>

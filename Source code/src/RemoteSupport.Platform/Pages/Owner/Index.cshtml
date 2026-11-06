@@ -1,0 +1,87 @@
+@page "/owner"
+@model RemoteSupport.Platform.Pages.Owner.IndexModel
+@using RemoteSupport.Platform.Services
+@{
+    ViewData["Title"] = "Dashboard"; ViewData["Section"] = "owner";
+    var answering = Model.Fleet.Where(v => v.Report != null).ToList();
+    var companies = answering.SelectMany(v => v.Report!.Companies.Select(c => (v, c))).ToList();
+    var pending = companies.Count(x => x.c.Status == "Pending");
+    var waiting = answering.Sum(v => v.Report!.Waiting.Count);
+    string Cls(ServerCapacity.Level l) => l switch { ServerCapacity.Level.Green => "", ServerCapacity.Level.Amber => "amber", ServerCapacity.Level.Red => "red", _ => "down" };
+    string Meter(double p) => p >= ServerCapacity.Red ? "red" : p >= ServerCapacity.Amber ? "amber" : "";
+    string Up(DateTime started) { var d = DateTime.UtcNow - started; return d.TotalDays >= 1 ? $"up {(int)d.TotalDays} day{((int)d.TotalDays == 1 ? "" : "s")}" : d.TotalHours >= 1 ? $"up {(int)d.TotalHours} h" : $"up {(int)Math.Max(1, d.TotalMinutes)} min"; }
+}
+<section class="portal"><div class="wrap">
+    <h1>Dashboard</h1>
+    <div class="stats">
+        <div class="stat"><div class="n">@Model.Fleet.Count</div><div class="l">Server@(Model.Fleet.Count == 1 ? "" : "s")</div></div>
+        <div class="stat"><div class="n">@companies.Count(x => x.c.ServiceOn)</div><div class="l">Companies using it (@companies.Count in all)</div></div>
+        <div class="stat"><div class="n">@companies.Sum(x => x.c.People)</div><div class="l">People, @companies.Sum(x => x.c.Technicians) of them technicians</div></div>
+        <div class="stat"><div class="n">@companies.Sum(x => x.c.Machines).ToString("N0")</div><div class="l">Machines, @companies.Sum(x => x.c.MachinesOnline).ToString("N0") online now</div></div>
+    </div>
+    @if (pending + waiting > 0)
+    {
+        <div class="alert alert-warn" id="needsYou"><a href="/owner/approvals"><strong>@pending signup@(pending == 1 ? "" : "s") waiting for approval</strong>@(waiting > 0 ? $", {waiting} on the waiting list" : "")</a></div>
+    }
+
+    <h2>Servers</h2>
+    <div class="servers" id="serverCards">
+        @foreach (var v in Model.Fleet)
+        {
+            var r = v.Report; var a = v.Assessment;
+            <div class="card server-card" data-server="@v.Row.Name" data-level="@v.Level">
+                <h2><span class="dot @Cls(v.Level)"></span>@v.Row.Name
+                    <span class="pill @(v.Level == ServerCapacity.Level.Green ? "pill-ok" : v.Level == ServerCapacity.Level.Amber ? "pill-warn" : "pill-bad")">@ServerCapacity.Label(v.Level)</span></h2>
+                @if (r == null)
+                {
+                    <p class="spec">@(v.Row.Address)@(v.Row.LastReportUtc != null ? $" · last answered {v.Row.LastReportUtc:yyyy-MM-dd HH:mm} UTC" : "")</p>
+                    <div class="advice down">@v.Error</div>
+                    continue;
+                }
+                <p class="spec">@Pricing.For(r.Region).Name · @(r.Address.Length > 0 ? r.Address : "this server") · @r.Cores cores · @((r.MemoryTotalMb / 1024.0).ToString("0.0")) GB memory · @r.DiskTotalGb.ToString("0") GB disk · @r.Database · @Up(r.StartedUtc)@(v.Row.TakingNewCompanies ? "" : " · NOT taking new companies")</p>
+                @foreach (var m in a!.Measures)
+                {
+                    <div class="meter @Meter(m.Percent)" data-measure="@m.Name" data-percent="@m.Percent.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                        <div class="mrow"><span>@m.Name @m.Percent.ToString("0")%</span><span class="d">@m.Detail</span></div>
+                        <div class="bar"><i style="width:@(Math.Min(100, m.Percent).ToString("0", System.Globalization.CultureInfo.InvariantCulture))%"></i></div>
+                    </div>
+                }
+                <div class="server-counts">
+                    <div><b>@r.Companies.Count(c => c.ServiceOn)</b><span>companies</span></div>
+                    <div><b>@r.Companies.Sum(c => c.People)</b><span>people</span></div>
+                    <div><b>@r.Companies.Sum(c => c.Technicians)</b><span>technicians</span></div>
+                    <div><b>@r.Companies.Sum(c => c.Machines).ToString("N0")</b><span>machines</span></div>
+                    <div><b>@r.SessionsNow</b><span>sessions now</span></div>
+                </div>
+                @* Which build this server hands out, and how many of its machines run it (2026-10-16, auto-update stage A).
+                   A server older than this sends no AppVersion, and then nothing is said. *@
+                @if (r.AppVersion.Length > 0)
+                {
+                    var onIt = r.MachineVersions.Where(x => RemoteSupport.Shared.AppVersion.Compare(x.Version, r.AppVersion) >= 0).Sum(x => x.Machines);
+                    var older = r.MachineVersions.Sum(x => x.Machines) - onIt;
+                    var oldest = r.MachineVersions.Count > 0 ? r.MachineVersions[^1].Version : "";
+                    <p class="spec" data-versions data-app="@r.AppVersion" data-on="@onIt" data-older="@older">Apps version @RemoteSupport.Shared.AppVersion.Label(r.AppVersion) · @onIt.ToString("N0") machine@(onIt == 1 ? "" : "s") on it · @older.ToString("N0") older@(older > 0 ? $" (the oldest {RemoteSupport.Shared.AppVersion.Label(oldest)})" : "")</p>
+                }
+                <div class="advice @Cls(v.Level)">@a.Advice</div>
+            </div>
+        }
+    </div>
+
+    <h2>Companies</h2>
+    <p class="muted">Everybody on each company's People page, and how many are ticked Technician. Change a company on <a href="/owner/tenants">All companies</a>.</p>
+    <table id="headcount">
+        <tr><th>Company</th>@if (Model.Several) { <th>Server</th> }<th>Status</th><th>People</th><th>Technicians</th><th>Console users</th><th>Machines</th><th>Online now</th></tr>
+        @foreach (var (v, c) in companies.OrderBy(x => x.v.Row.IsLocal ? 0 : 1).ThenBy(x => x.v.Row.Name).ThenBy(x => x.c.Name))
+        {
+            <tr data-slug="@c.Slug">
+                <td><strong>@c.Name</strong>@if (c.Free) { <span class="pill pill-muted">@(c.PlanName.Length > 0 ? c.PlanName : "Basic")</span> }</td>
+                @if (Model.Several) { <td>@v.Row.Name</td> }
+                <td><span class="pill @(c.Status == "Active" ? "pill-ok" : c.Status == "Trial" ? (c.TrialExpired ? "pill-bad" : "pill-warn") : c.Status == "Pending" ? "pill-muted" : "pill-bad")">@c.StatusText</span></td>
+                <td>@c.People</td><td>@c.Technicians</td><td>@c.ConsoleUsers</td><td>@c.Machines.ToString("N0")</td><td>@c.MachinesOnline.ToString("N0")</td>
+            </tr>
+        }
+    </table>
+    <p class="muted" style="font-size:13px;margin-top:12px">Capacity is from the load test of 12–13 October: about 18,500 connections on a 4-core, 8 GB server, more in
+       proportion to memory on a bigger one. <strong>Planned</strong> counts what the companies on a server would hold on a busy day: each console user
+       three, each machine two. Amber at 70%, red at 85%; Full admins and Owners are emailed when a server crosses either.</p>
+</div></section>

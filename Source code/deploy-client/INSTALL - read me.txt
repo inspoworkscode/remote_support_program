@@ -1,0 +1,53 @@
+Anywhere IT Remote Support - client install
+===========================================
+
+Easiest way
+-----------
+1. BEFORE unzipping: right-click the .zip you downloaded, choose Properties, tick
+   "Unblock" at the bottom, and click OK.
+
+   This is worth the ten seconds. Windows marks everything downloaded from the
+   internet, and without unblocking it warns "The publisher could not be verified"
+   when you start the installer. Unblocking the zip clears the mark from every file
+   inside it. (The warning goes away for good once the apps are code-signed.)
+
+2. Unzip this folder anywhere (Desktop is fine).
+3. Double-click ONE of these:
+
+       Install-Client-Unattended.bat   - technicians can connect with nobody at the keyboard
+       Install-Client.bat              - the normal install; someone must accept each session
+
+   Both install the same software. The difference is only whether unattended access
+   starts switched ON. Either way the person at the computer can change it afterwards,
+   with the "Allow unattended access" tick box on the support app's icon menu, next to
+   the clock.
+
+4. Say Yes to the "Do you want to allow this app to make changes?" prompt.
+   That prompt is Windows asking for administrator rights; the installer needs them
+   to install into Program Files and register the background service.
+
+To remove: double-click Uninstall-Client.bat and confirm.
+
+From a terminal instead
+-----------------------
+Right-click Start > "Terminal (Admin)", cd into this folder, then:
+
+       powershell -ExecutionPolicy Bypass -File .\Install-Client.ps1 -Unattended
+
+Leave off -Unattended for the normal install. The PowerShell script also takes
+-NoAutoStart (do not start the tray app at logon) and -InstallDir; the batch files do not
+forward extra options, so use the script directly for those.
+
+To remove:
+       powershell -ExecutionPolicy Bypass -File .\Uninstall-Client.ps1
+
+If Windows blocks it
+--------------------
+"An Application Control policy has blocked this file" = Smart App Control.
+Turn it off in Windows Security > App & browser control > Smart App Control.
+This is one-way and stops being needed once the apps are code-signed.
+
+If it installs but never connects
+---------------------------------
+The client talks to the address in branding\brand.json.
+Both machines must be on the same network and the server must be running.

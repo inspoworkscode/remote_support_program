@@ -1,0 +1,129 @@
+@page "/portal/healthchecks"
+@model RemoteSupport.Platform.Pages.Portal.HealthChecksModel
+@{ ViewData["Title"] = "Health check results"; ViewData["Section"] = "portal"; var t = Model.Tenant; }
+<section class="portal"><div class="wrap">
+    <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between">
+        <h1 style="margin-bottom:0">Health check results</h1>
+        <a class="btn btn-sm" href="/portal/healthcheck">Settings</a>
+    </div>
+    <p class="muted">
+        What each machine's monthly check found, newest first. The wording is the same as the
+        customer's report, so anything here is safe to read out on the phone.
+    </p>
+
+    @if (!t.HealthCheckEnabled)
+    {
+        <div class="alert alert-warn">
+            The monthly check is switched off, so nothing new will arrive.
+            <a href="/portal/healthcheck">Turn it on</a>.
+        </div>
+    }
+
+    @if (Model.Rows.Count == 0)
+    {
+        <div class="card">
+            <h3>Nothing has come in yet</h3>
+            <p class="muted" style="margin-bottom:0">
+                Machines report once a month, on the day chosen when they were installed, so the first
+                results appear up to a month after an install. Only machines installed since the check
+                was switched on take part &mdash; existing installs are not affected until they are
+                reinstalled.
+            </p>
+        </div>
+    }
+    else
+    {
+        @foreach (var row in Model.Rows)
+        {
+            var r = row.Run;
+            <div class="card" style="margin-bottom:14px">
+                <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;justify-content:space-between">
+                    <div>
+                        <strong style="font-size:16px">@r.MachineName</strong>
+                        @if (!string.IsNullOrEmpty(row.ClientName))
+                        {
+                            <span class="muted"> &middot; @row.ClientName</span>
+                        }
+                        else
+                        {
+                            <span class="muted"> &middot; not linked to a customer</span>
+                        }
+                        <div class="muted" style="font-size:13px">
+                            Ran @r.RunUtc.Local().ToString("ddd d MMM yyyy, HH:mm")
+                            @if (r.MaintenanceRan)
+                            {
+                                <text>&middot; maintenance done@(r.RestorePointMade ? ", restore point made" : "")</text>
+                            }
+                            else
+                            {
+                                @* Not a failure. Maintenance never runs without a restore point, and
+                                   Windows Server has no System Restore, so it always skips there. *@
+                                <text>&middot; inspection only, nothing changed</text>
+                            }
+                        </div>
+                    </div>
+                    <div style="text-align:right">
+                        @if (r.Critical > 0) { <span class="pill pill-bad">@r.Critical urgent</span> }
+                        @if (r.Warning > 0) { <span class="pill pill-warn">@r.Warning to plan</span> }
+                        @if (r.Critical == 0 && r.Warning == 0) { <span class="pill pill-ok">nothing needs attention</span> }
+                        <div style="margin-top:6px">
+                            @if (!string.IsNullOrEmpty(r.PdfFile))
+                            {
+                                <a class="btn btn-sm" asp-page-handler="Report" asp-route-id="@r.Id">Report</a>
+                            }
+                            else
+                            {
+                                <span class="muted" style="font-size:12px">no report file</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                @* The mail outcome belongs next to the run. A send that quietly failed is how a
+                   monthly report stops arriving without anyone noticing for months. *@
+                @if (r.MailSent)
+                {
+                    <p class="muted" style="font-size:12px;margin:8px 0 0">
+                        Emailed to @t.HealthCheckEmailTo on @r.MailedUtc!.Value.Local().ToString("d MMM, HH:mm").
+                    </p>
+                }
+                else if (!string.IsNullOrEmpty(r.MailStatus))
+                {
+                    <div class="alert alert-bad" style="margin:10px 0 0;font-size:13px">
+                        Not emailed: @r.MailStatus
+                    </div>
+                }
+
+                @if (row.Findings.Count > 0)
+                {
+                    <details style="margin-top:10px">
+                        <summary style="cursor:pointer">What it found (@row.Findings.Count)</summary>
+                        <div style="overflow-x:auto">
+                        <table class="table" style="margin-top:10px">
+                            <thead><tr><th>Severity</th><th>Area</th><th>What was found</th></tr></thead>
+                            <tbody>
+                            @foreach (var f in row.Findings)
+                            {
+                                <tr>
+                                    <td><span class="pill @RemoteSupport.Platform.Pages.Portal.HealthChecksModel.Pill(f.Severity)">@f.Severity</span></td>
+                                    <td class="muted">@f.Category</td>
+                                    <td>
+                                        <strong>@f.Title</strong>
+                                        @if (!string.IsNullOrWhiteSpace(f.Detail)) { <div class="muted" style="font-size:13px">@f.Detail</div> }
+                                        @if (!string.IsNullOrWhiteSpace(f.Recommendation))
+                                        {
+                                            <div style="font-size:13px;margin-top:4px"><em>What we suggest:</em> @f.Recommendation</div>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                        </div>
+                    </details>
+                }
+            </div>
+        }
+        <p class="muted" style="font-size:13px">Showing the most recent 25 runs.</p>
+    }
+</div></section>

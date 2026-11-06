@@ -1,0 +1,24 @@
+THE REMOTE SUPPORT PROGRAM - SOURCE CODE WITH FULL HISTORY
+==========================================================
+
+TheRemoteSupportProgram.bundle is a complete git repository in one file: every version of every
+file, and the reason for every change (533 commits, the latest 8159021 of 2026-10-28).
+
+To restore it on a computer with git installed (https://git-scm.com):
+
+    git clone TheRemoteSupportProgram.bundle "Remote Support"
+    cd "Remote Support"
+    git checkout master
+
+"master" is the branch the work was done on. "git log" shows the history, newest first.
+
+The plain copy in the "Source code" folder is the same as the latest commit, for anybody who
+just wants to read the files.
+
+Next: put the project somewhere safe and private online (GitHub, Azure DevOps, GitLab), because
+until now the only copies were the founder's laptop and this USB stick:
+
+    git remote add origin <the new private repository's address>
+    git push origin --all
+
+Then read "Handover documents\05-BUILD-AND-RELEASE.md".

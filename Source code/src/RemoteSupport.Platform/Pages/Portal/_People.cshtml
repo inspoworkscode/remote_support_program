@@ -1,0 +1,25 @@
+@model RemoteSupport.Platform.Pages.Portal.PeoplePicker
+@{
+    // "people" carries the WHOLE list wanted afterwards; "peopleShown" says the list was on the form,
+    // so ticking every box off reads as "nobody" rather than as "this form had no list". It says
+    // "true", not "1": a bool parameter binds only true or false, and "1" arrived as false —
+    // the first walk in the browser found every change being thrown away as "Nothing changed."
+    var on = Model.On;
+}
+<input type="hidden" name="peopleShown" value="true">
+<label class="people-label">@Model.Label</label>
+<div class="people">
+    @foreach (var name in Model.Names)
+    {
+        var ticked = on.Contains(name);
+        var may = Model.MayChange(name);
+        var gone = !Model.Team.Contains(name);
+        <label class="person@(may ? "" : " locked")" title="@(may ? "" : "Only the office administrator or a supervisor can change this")">
+            <input type="checkbox" name="people" value="@name" checked="@ticked" disabled="@(!may)">
+            @name@(gone ? " (no longer a technician)" : "")
+        </label>
+        @* A greyed box is not posted by the browser, so a ticked one is sent here instead. *@
+        if (!may && ticked) { <input type="hidden" name="people" value="@name"> }
+    }
+    @if (!Model.Names.Any()) { <span class="muted">Nobody on the team can work tickets yet.</span> }
+</div>

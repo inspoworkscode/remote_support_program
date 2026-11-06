@@ -1,0 +1,59 @@
+codecbench - what the screen pipeline costs, on this machine alone.
+
+monitor 0: 1920x1200 at 0,0 (primary)  \\.\DISPLAY1
+JPEG quality 55, cap 12 fps, 6 s per pass.
+
+
+| source | condition | pass | fps | KB/s | tiles/frame | ms/poll (grab/diff/jpeg) | CPU |
+|---|---|---|---|---|---|---|---|
+| gdi | idle | capped 12 |   0,0 |     0,0 |   0,0 of 150 |  67,0  (54,5/11,6/0,0) | 30,8% |
+| gdi | idle | uncapped |   0,0 |     0,0 |   0,0 of 150 |  51,4  (39,0/11,6/0,0) | 50,2% |
+| gdi | scroll | capped 12 |  10,6 |  2835,0 |  90,0 of 150 |  73,2  (42,6/12,1/17,2) | 47,1% |
+| gdi | scroll | uncapped |  14,9 |  4021,1 |  90,0 of 150 |  67,0  (36,4/12,1/17,3) | 65,3% |
+| gdi | video | capped 12 |  11,4 |  2853,9 | 150,0 of 150 |  87,4  (48,4/12,6/25,3) | 61,1% |
+| gdi | video | uncapped |  11,3 |  2808,1 | 150,0 of 150 |  88,8  (49,2/12,8/25,6) | 61,8% |
+| dxgi | idle | capped 12 |   0,0 |     0,0 |   0,0 of 150 |   0,2  (0,2/0,0/0,0) |  0,3% |
+| dxgi | idle | uncapped |   0,0 |     0,0 |   0,0 of 150 |   0,0  (0,0/0,0/0,0) | 99,0% |
+| dxgi | scroll | capped 12 |  10,5 |  2786,8 |  90,0 of 150 |  21,8  (7,1/1,8/12,8) | 15,3% |
+| dxgi | scroll | uncapped |  42,7 | 11496,3 |  89,8 of 150 |   0,4  (0,1/0,0/0,2) | 66,7% |
+| dxgi | video | capped 12 |  10,5 |  2614,8 | 150,0 of 150 |  24,5  (3,4/1,5/19,5) | 21,8% |
+| dxgi | video | uncapped |  22,2 |  5527,0 | 150,0 of 150 |   0,0  (0,0/0,0/0,0) | 82,6% |
+| h264 | idle | capped 12 |   0,0 |     0,0 |   whole frame |   0,3  (0,2/0,0/0,0) |  0,3% |
+| h264 | idle | uncapped |   0,0 |     0,0 |   whole frame |   0,0  (0,0/0,0/0,0) | 99,2% |
+| h264 | scroll | capped 12 |  10,4 |   199,1 |   whole frame |  18,9  (0,3/0,0/18,6) |  0,8% |
+| h264 | scroll | uncapped |  59,9 |  1097,3 |   whole frame |   0,1  (0,0/0,0/0,1) | 14,8% |
+| h264 | video | capped 12 |  10,5 |   184,1 |   whole frame |  16,5  (0,2/0,0/16,3) |  1,6% |
+| h264 | video | uncapped |  22,8 |   417,9 |   whole frame |   0,0  (0,0/0,0/0,0) | 63,1% |
+h264: Intelr Quick Sync Video H.264 Encoder MFT, 1799 kbit/s asked for
+
+JPEG quality 55; 6 s per pass after a warm-up that is discarded; screen 2,3 MP.
+fps counts only polls that carried pixels, so an idle screen correctly reads 0.
+The uncapped CPU figure for a still screen is an artefact of this bench and not of the
+product: with no cap it asks for a frame as fast as it can and Desktop Duplication says
+no in microseconds. The host's capture loop always sleeps to the frame budget.
+gdi: a forced-full frame -- what every subscribe and every desktop switch costs -- was 321 KB in 106 ms.
+dxgi: a forced-full frame -- what every subscribe and every desktop switch costs -- was 321 KB in 27 ms.
+h264: a forced-full frame -- what every subscribe and every desktop switch costs -- was 122 KB in 17 ms.
+gdi: idle sent something on 0 of 64 polls. A still screen should send nothing at all.
+dxgi: idle sent something on 0 of 63 polls. A still screen should send nothing at all.
+h264: idle sent something on 0 of 63 polls. A still screen should send nothing at all.
+
+The 'video' condition is a moving field with noise, NOT a film: reproducible on purpose,
+harsher than scrolling text and cheaper than real footage. Run --live against a real
+video once before trusting it as an upper bound.
+codecbench - what the screen pipeline costs, on this machine alone.
+
+monitor 0: 1920x1200 at 0,0 (primary)  \\.\DISPLAY1
+JPEG quality 55, cap 12 fps, 6 s per pass.
+
+Encoding one frame, decoding it again, and comparing it to the screen.
+
+  encoder: Intelr Quick Sync Video H.264 Encoder MFT
+  1920x1200, 1799 kbit/s, taking BGRA directly
+  key frame: 10,9 KB for a whole 1920x1200 screen
+  decoder: Microsoft H264 Video Decoder MFT
+  BT.601: mean difference from the screen 4,4 of 255
+  BT.709: mean difference from the screen 1,0 of 255
+
+  PASS  the decoded picture matches the screen (1,0 of 255) using BT.709.
+  pictures written to C:\Users\Clint\AppData\Local\Temp\codecbench

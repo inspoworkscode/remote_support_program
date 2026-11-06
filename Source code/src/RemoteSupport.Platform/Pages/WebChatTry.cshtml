@@ -1,0 +1,35 @@
+@page "/webchat/{slug}/try"
+@inject RemoteSupport.Platform.Services.TenantService Tenants
+@{
+    Layout = null;
+    var slug = (string)RouteData.Values["slug"]!;
+    var t = await Tenants.BySlugAsync(slug);
+    var company = t?.CompanyName ?? "Your company";
+}
+@* Website chat (3.8.3): a pretend company website with the bubble on it, exactly as the one line
+   on the Website chat page puts it there — so a company can see it and try it before it is on
+   their real site. It loads the script the same way their site will. *@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>@company — sample website</title>
+<style>
+  body { margin: 0; font: 16px/1.6 Georgia, serif; color: #222; background: #fbfaf7; }
+  .bar { background: #fff; border-bottom: 1px solid #e6e2d8; padding: 16px 24px; font: 700 18px system-ui, sans-serif; }
+  .note { background: #fff7d6; border-bottom: 1px solid #efe2a8; padding: 10px 24px; font: 14px system-ui, sans-serif; }
+  main { max-width: 720px; margin: 40px auto; padding: 0 24px; }
+  h1 { font-size: 34px; margin: 0 0 12px; }
+</style>
+</head>
+<body>
+<div class="note">This is a <strong>sample website</strong> showing how the chat bubble looks on yours. Click the round button at the bottom right.</div>
+<div class="bar">@company</div>
+<main>
+    <h1>IT support you can reach</h1>
+    <p>This stands in for your own website. The bubble in the corner is the real thing: chat through it, and it pops up for everybody signed in to your console and portal.</p>
+    <p>Move to <a href="?p=2">another page</a> of this sample site while chatting: the conversation carries on.</p>
+</main>
+<script src="/webchat/@(slug).js" async></script>
+</body>
+</html>

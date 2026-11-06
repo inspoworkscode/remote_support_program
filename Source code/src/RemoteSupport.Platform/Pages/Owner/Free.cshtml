@@ -1,0 +1,103 @@
+@page "/owner/free"
+@model RemoteSupport.Platform.Pages.Owner.FreeModel
+@using RemoteSupport.Platform.Services
+@{ ViewData["Title"] = "Free and Basic"; ViewData["Section"] = "owner"; var region = Model.Region; bool basicChosen = RemoteSupport.Shared.FreePlan.IsBasic(Model.Plan); }
+<section class="portal"><div class="wrap">
+    <h1>Free and Basic</h1>
+    <p class="muted">Set somebody up on @RemoteSupport.Shared.FreePlan.FreeFullName — one person, @RemoteSupport.Shared.FreePlan.FreeMachines of their own computers,
+        unattended with a password, nothing to pay — or on @RemoteSupport.Shared.FreePlan.FullName: up to @RemoteSupport.Shared.FreePlan.MaxMachines computers (more on Billing),
+        attended or unattended, @Pricing.Money(region, region.Basic) a month after a 14-day free trial (they add their card on Billing). Their account is
+        ready at once — nothing to approve — and one email gives them the link to set up their account (they accept the terms and
+        choose their own password there), the installer for their computers and the console. Times are UTC.</p>
+    @if (Model.Message.Length > 0) { <div class="alert @(Model.IsError ? "alert-bad" : Model.Link.Length > 0 ? "alert-warn" : "alert-ok")" id="freeMessage">@Model.Message</div> }
+    @if (Model.Link.Length > 0)
+    {
+        <div class="card" style="margin-bottom:18px" id="freeLink">
+            <h3>Their set-up link</h3>
+            <p style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                <input id="setupLink" readonly value="@Model.Link" style="flex:1 1 420px;font-family:monospace" onclick="this.select()">
+                <button class="btn btn-accent" type="button" onclick="var i=document.getElementById('setupLink');i.select();navigator.clipboard&&navigator.clipboard.writeText(i.value);this.textContent='Copied'">Copy</button>
+            </p>
+            <p class="muted" style="font-size:13px">Shown this once. It is for this one person — send it to them yourself.</p>
+        </div>
+    }
+    @if (Model.MayMake)
+    {
+        <div class="card" style="margin-bottom:18px">
+            <h3>Set up an account</h3>
+            <form method="post" asp-page-handler="Make" class="form" id="makeFree">
+                <label>Version</label>
+                <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:6px" id="makePlan">
+                    <label style="font-weight:normal"><input type="radio" name="Plan" value="@RemoteSupport.Shared.FreePlan.Name" checked="@(!basicChosen)"> @RemoteSupport.Shared.FreePlan.FreeShortName — nothing to pay</label>
+                    <label style="font-weight:normal"><input type="radio" name="Plan" value="@RemoteSupport.Shared.FreePlan.BasicName" checked="@basicChosen"> @RemoteSupport.Shared.FreePlan.ShortName — @Pricing.Money(region, region.Basic) a month after 14 days</label>
+                </div>
+                <div class="row">
+                    <div><label>Their name</label><input name="Name" value="@Model.Name" required placeholder="Jane Smith"></div>
+                    <div><label>Their email <span class="muted">(their login)</span></label><input name="Email" type="email" value="@Model.Email" required placeholder="jane@example.co.za"></div>
+                </div>
+                <div class="row">
+                    <div><label>Company <span class="muted">(optional)</span></label><input name="Company" value="@Model.Company" placeholder="Their name if left blank"></div>
+                    <div><label>Phone <span class="muted">(optional)</span></label><input name="Phone" value="@Model.Phone"></div>
+                </div>
+                @if (region.Code == "EU")
+                {
+                    <label>Country</label>
+                    <select name="Country" required><option value="">Choose…</option>
+                        @foreach (var c in Pricing.EuropeanCountries) { <option selected="@(c == Model.Country)">@c</option> }</select>
+                }
+                @if (CompanyClock.MustChoose(region.Code))
+                {
+                    <label>Time zone</label>
+                    <select name="TimeZone" required><option value="">Choose…</option>
+                        @foreach (var z in CompanyClock.For(region.Code)) { <option value="@z.Id" selected="@(z.Id == Model.TimeZone)">@z.Label</option> }</select>
+                }
+                else
+                {
+                    <p class="muted" style="font-size:13px;margin:8px 0 0">@CompanyClock.For(region.Code).First().Label — this server's region.</p>
+                }
+                <label>Copy to a technician <span class="muted">(optional)</span></label>
+                <input name="Cc" value="@Model.Cc" placeholder="tech@anywhereit.co.za" id="freeCc">
+                <p class="muted" style="font-size:13px;margin:4px 0 0">They get the same email, set-up link included, and replies go to them — so they can help
+                    set it up. Several addresses: separate them with commas.</p>
+                <div class="actions"><button class="btn btn-accent" type="submit" id="makeFreeButton">Create and send the links</button></div>
+            </form>
+        </div>
+    }
+    @if (Model.Rows.Count == 0) { <div class="card">No Free or Basic accounts yet.</div> }
+    else
+    {
+        <table id="freeCompanies">
+            <tr><th>Account</th><th>Version</th><th>Person</th><th>State</th><th>Machines</th><th></th></tr>
+            @foreach (var r in Model.Rows)
+            {
+                var t = r.Tenant; var p = r.Person;
+                <tr data-free="@t.Id" style="@(Model.Highlight == t.Id ? "outline:2px solid var(--accent)" : "")">
+                    <td><strong>@t.CompanyName</strong><div class="muted" style="font-size:12px">since @t.CreatedUtc.ToString("yyyy-MM-dd") · @t.Slug</div></td>
+                    <td data-plan="@t.Id"><span class="pill pill-muted">@RemoteSupport.Shared.FreePlan.ShortNameOf(t.Plan)</span></td>
+                    <td>@if (p != null) { @p.DisplayName<div class="muted" style="font-size:12px">@p.Email</div> } else { <span class="muted">nobody</span> }</td>
+                    <td>
+                        @if (!t.IsServiceEnabled) { <span class="pill pill-muted">@t.Status</span> }
+                        else if (p == null || p.AwaitingSetup) { <span class="pill pill-warn" title="They have not used their set-up link yet">Not set up yet</span> }
+                        else { <span class="pill pill-ok">Set up</span><div class="muted" style="font-size:12px">Last sign-in: @(p.LastLoginUtc?.ToString("yyyy-MM-dd HH:mm") ?? "never")</div> }
+                        @if (!r.TermsAccepted) { <div class="muted" style="font-size:12px">Terms not accepted yet</div> }
+                        @if (r.Card) { <div class="muted" style="font-size:12px" data-card="@t.Id">Pays by card</div> }
+                        else if (t.Status == RemoteSupport.Platform.Data.TenantStatus.Trial && t.TrialEndsUtc is { } until) { <div class="muted" style="font-size:12px" data-pay-by="@t.Id">No card yet · @(t.TrialExpired ? "stopped" : "pays from") @until.ToString("yyyy-MM-dd")</div> }
+                    </td>
+                    <td>@r.Machines of @RemoteSupport.Shared.FreePlan.MachinesFor(t.Plan, t.BasicMachines)</td>
+                    <td>@if (Model.MayMake && t.IsServiceEnabled && p != null)
+                        {
+                            <details><summary class="btn btn-sm">Send the links again…</summary>
+                                <form method="post" asp-page-handler="Send" class="form" style="margin-top:10px;min-width:260px">
+                                    <input type="hidden" name="id" value="@t.Id">
+                                    <label>Copy to a technician <span class="muted">(optional)</span></label>
+                                    <input name="cc" placeholder="tech@anywhereit.co.za">
+                                    <p class="muted" style="font-size:12px;margin:4px 0 0">@(p.AwaitingSetup ? "A new set-up link — the one sent before stops working." : "They are set up, so only the two download links go.")</p>
+                                    <div class="actions"><button class="btn btn-sm btn-accent" type="submit">Send</button></div>
+                                </form>
+                            </details>
+                        }</td>
+                </tr>
+            }
+        </table>
+    }
+</div></section>

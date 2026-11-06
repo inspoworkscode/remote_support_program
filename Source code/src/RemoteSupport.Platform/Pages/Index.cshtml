@@ -1,0 +1,227 @@
+@page
+@inject RemoteSupport.Platform.Services.ReviewService Reviews
+@{
+    ViewData["Title"] = "Branded remote support and job cards";
+    ViewData["Description"] = "Remote support, remote access and job cards under your brand, for IT companies, software suppliers, repair shops and call-out work. R500 for five.";
+    ViewData["Keywords"] = "remote support software, remote access software, remote desktop, unattended remote access, job card software, job card app, workshop job card, AnyDesk alternative, TeamViewer alternative, POS support, computer repair shop software, live chat, work from home, South Africa";
+}
+@section Head {
+    @* Who we are and what we sell, for search engines (schema.org). Prices as on the pricing page. *@
+    <script type="application/ld+json">
+    {
+      "@@context": "https://schema.org",
+      "@@graph": [
+        {
+          "@@type": "Organization",
+          "name": "The Remote Support Program (Pty) Ltd",
+          "url": "https://theremotesupportprogram.com/",
+          "email": "queries@theremotesupportprogram.com",
+          "telephone": "+27781315618",
+          "address": { "@@type": "PostalAddress", "streetAddress": "19 Tide Street", "addressLocality": "Knysna", "addressRegion": "Western Cape", "postalCode": "6571", "addressCountry": "ZA" }
+        },
+        {
+          "@@type": "SoftwareApplication",
+          "name": "The Remote Support Program",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Windows",
+          "description": "Branded remote support, remote access and job cards for businesses that look after other people's computers and jobs: IT companies, software and point-of-sale suppliers, in-house IT teams, repair shops and call-out businesses.",
+          "offers": [
+            { "@@type": "Offer", "name": "Full version, five people", "price": "500", "priceCurrency": "ZAR" },
+            { "@@type": "Offer", "name": "The Basic Version for Remote Workers, one person and three computers", "price": "50", "priceCurrency": "ZAR" }
+          ]
+        }
+      ]
+    }
+    </script>
+}
+
+<section class="hero">
+    <div class="wrap">
+        <div>
+            <h1>Remote support and job cards, under <em>your</em> brand.</h1>
+            <p class="lede">One product for businesses that look after other people's computers and jobs. Your customers ask for help
+                from an app with your logo, anyone on your team can take the call and see their screen, and every session, call-out
+                and workshop job becomes a job card your office can invoice.</p>
+            <div class="cta"><partial name="_SiteCta" /></div>
+            <small>Five people for R500 a month. As many computers as you look after. Made in South Africa.</small>
+        </div>
+        @* The real console, and the customer's app in front of its corner (2026-10-14) — it replaced a drawing of a window. *@
+        <div class="hero-shots">
+            <partial name="_Shot" model="SitePages.Shots.Console" />
+            <div class="hero-float"><partial name="_Shot" model="SitePages.Shots.CustomerApp" /></div>
+        </div>
+    </div>
+</section>
+
+<section class="section">
+    <div class="wrap">
+        <h2 style="text-align:center">Who it is for</h2>
+        <p class="lede" style="margin:0 auto;text-align:center">Anyone whose work is fixing, supporting or looking after things for
+            other people — and who wants the remote support and the job cards in one place.</p>
+        <div class="grid3" style="margin-top:24px">
+            <div class="card"><h3>IT companies</h3><p>Your customers' computers in one list, attended and unattended support, monthly
+                health checks, and every session, call-out and workshop job on a job card the office can invoice.</p></div>
+            <div class="card"><h3>Software and point-of-sale suppliers</h3><p>Support the people who use your accounting, payroll or
+                point-of-sale software on their own computers, with every call on a ticket and how you fixed it kept in your
+                knowledge base.</p></div>
+            <div class="card"><h3>In-house IT teams</h3><p>The IT person or team at a school, a medical or legal practice, an accounting
+                firm, a franchise group or an office with branches: every computer within reach, and every request written down.</p></div>
+            <div class="card"><h3>Computer and cellphone repair shops</h3><p>Workshop job cards from booking in to collection: photos in
+                and out, inspection, quotes to your suppliers, the customer kept up to date by email, and a billing queue for the
+                counter.</p></div>
+            <div class="card"><h3>Call-out businesses</h3><p>Office equipment and printer dealers, CCTV and alarm installers and other
+                technical call-out work: call-outs booked and rescheduled, work done, paid on site or invoiced — and remote support
+                wherever there is a Windows PC.</p></div>
+            <div class="card"><h3>Remote workers</h3><p>One person reaching their own office computer or branches from home, from R50 a
+                month. <a href="/remote-workers">For remote workers</a></p></div>
+        </div>
+    </div>
+</section>
+
+<section class="section alt">
+    <div class="wrap">
+        <h2 style="text-align:center">Why businesses choose it</h2>
+        <div class="usp" style="margin-top:28px">
+            <div class="card"><h3>Remote support and tickets in one</h3><p>No second system. A session opens its own ticket with the time spent; the workshop, call-outs, quotes and the office's billing queue are all in the same place.</p></div>
+            <div class="card"><h3>Your brand, not ours</h3><p>Your logo, colours and name on the customer's app, the prompts, the download page and your technicians' console. Your customers never see our name.</p></div>
+            <div class="card"><h3>Made for small teams</h3><p>R500 a month for five people — the same price for everybody, with more seats on request. Every computer you look after, and every session, is included: the bill does not grow when your customer list does.</p></div>
+            <div class="card"><h3>Your customer stays in charge</h3><p>They allow each connection, and unattended access is a switch on their computer that they can turn off — with a password of their own if they want one.</p></div>
+            <div class="card"><h3>Secure by design</h3><p>Sessions are encrypted end to end, every sign-in asks for a code from an authenticator app, and your data is kept in South Africa under POPIA.</p></div>
+            <div class="card"><h3>Built by an IT company</h3><p>We use it every day at our own IT business. Everything in it — capture, control, files, the protocol, the tickets — is our own work, not a badge on someone else's tool.</p></div>
+        </div>
+    </div>
+</section>
+
+@* The tour (2026-10-14, Clint: "a good look and feel about what the product is about"): the real windows, one at a time. *@
+<section class="section" id="see-it">
+    <div class="wrap">
+        <h2 style="text-align:center">See it for yourself</h2>
+        <p class="lede" style="margin:0 auto;text-align:center">The real windows, shown with a made-up IT company called Coastline IT and its
+            made-up customers. Yours has your name, logo and colours instead.</p>
+        <div class="tour" id="tour">
+            <div class="tour-tabs" role="tablist" aria-label="Screenshots" hidden></div>
+            <figure class="tour-pane shot-figure" data-tab="The console">
+                <div class="shot-wide"><partial name="_Shot" model="SitePages.Shots.Console" /></div>
+                <figcaption><h3>The console</h3>
+                    <p>Every customer's computers in one list, under the customer they belong to. Green is online — double-click to
+                        connect. Chat with customers and your team beside it, and a call rings here the moment someone asks for help.</p></figcaption>
+            </figure>
+            <figure class="tour-pane shot-figure" data-tab="A session">
+                <div class="shot-wide"><partial name="_Shot" model="SitePages.Shots.Session" /></div>
+                <figcaption><h3>A session</h3>
+                    <p>Their screen in your console, with control, every monitor, files both ways, Ctrl+Alt+Del and admin prompts. A bar on
+                        their screen says who is connected for as long as you are.</p></figcaption>
+            </figure>
+            <figure class="tour-pane shot-figure" data-tab="A ticket">
+                <div class="shot-wide"><partial name="_Shot" model="SitePages.Shots.Tickets" /></div>
+                <figcaption><h3>A ticket</h3>
+                    <p>Every job tells its story step by step — booked in, inspected, repaired, invoiced — and only the next steps are
+                        buttons. Comments, photos and quotes stay with the job.</p></figcaption>
+            </figure>
+            <figure class="tour-pane shot-figure" data-tab="Your customer's side">
+                <div class="shot-row">
+                    <partial name="_Shot" model="SitePages.Shots.CustomerApp" />
+                    <partial name="_Shot" model="SitePages.Shots.Request" />
+                    <partial name="_Shot" model="SitePages.Shots.Allow" />
+                </div>
+                <figcaption><h3>Your customer's side</h3>
+                    <p>Your name and logo on their app. They say what is wrong, with a picture of their screen if they want, and they
+                        allow every connection before anything is seen.</p></figcaption>
+            </figure>
+            <figure class="tour-pane shot-figure" data-tab="Without connecting">
+                <div class="shot-mid"><partial name="_Shot" model="SitePages.Shots.Performance" /></div>
+                <figcaption><h3>Without connecting</h3>
+                    <p>Right-click a computer to see its processor, memory, disk and network live — and its running programs — without
+                        opening a session or interrupting anybody.</p></figcaption>
+            </figure>
+        </div>
+        <script>
+        (function () {
+            var tour = document.getElementById('tour'), tabs = tour.querySelector('.tour-tabs'), panes = tour.querySelectorAll('.tour-pane');
+            function show(i) {
+                panes.forEach(function (p, j) { p.hidden = j !== i; });
+                tabs.querySelectorAll('button').forEach(function (b, j) { b.setAttribute('aria-selected', j === i ? 'true' : 'false'); b.tabIndex = j === i ? 0 : -1; });
+            }
+            panes.forEach(function (p, i) {
+                p.id = 'tour-' + i; p.setAttribute('role', 'tabpanel');
+                var b = document.createElement('button');
+                b.type = 'button'; b.setAttribute('role', 'tab'); b.setAttribute('aria-controls', p.id); b.textContent = p.getAttribute('data-tab');
+                b.addEventListener('click', function () { show(i); });
+                b.addEventListener('keydown', function (e) {
+                    var n = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+                    if (!n) return;
+                    var k = (i + n + panes.length) % panes.length;
+                    show(k); tabs.children[k].focus();
+                });
+                tabs.appendChild(b);
+            });
+            tabs.hidden = false; tour.classList.add('ready'); show(0);
+        })();
+        </script>
+    </div>
+</section>
+
+<section class="section alt">
+    <div class="wrap">
+        <h2>How it works</h2>
+        <div class="grid3" style="margin-top:22px">
+            <div class="card"><div class="icon">1</div><h3>Your customers install your app</h3><p>Send them your own download link. They see your name and logo, and a <strong>Request Support</strong> button.</p></div>
+            <div class="card"><div class="icon">2</div><h3>Every technician hears the call</h3><p>A request rings every technician who is signed in until one answers. The customer allows the connection, and you are on their screen.</p></div>
+            <div class="card"><div class="icon">3</div><h3>The work becomes a ticket</h3><p>The session is recorded on a ticket with the time spent, so the office can invoice it without asking anyone.</p></div>
+        </div>
+    </div>
+</section>
+
+<section class="section">
+    <div class="wrap">
+        <h2>Everything a support team needs</h2>
+        <div class="grid2" style="margin-top:20px">
+            <div class="card"><h3><a href="/remote-support">Remote support and remote access</a></h3><p>Screen and control on every monitor, files and copy-and-paste both ways, printing, talking, Ctrl+Alt+Del and admin prompts — attended or unattended.</p></div>
+            <div class="card"><h3><a href="/ticketing">Job cards and the workshop</a></h3><p>Workshop jobs from booking in to collection, call-outs, walk-ins, quotes to your suppliers, recurring tasks and a billing queue for the office.</p></div>
+            <div class="card"><h3><a href="/health-checks">Monthly health checks</a></h3><p>Every month, a report on each customer's computers — disks, backups, updates, security — that shows them what you do for them.</p></div>
+            <div class="card"><h3><a href="/knowledge-base">A knowledge base</a></h3><p>How you fixed it, written once from the ticket and found again by anybody in the team — general, or per customer.</p></div>
+            <div class="card"><h3><a href="/website-chat">Live chat and browser support</a></h3><p>A chat bubble for your own website, a contact form that opens tickets, and screen sharing in a browser for someone with nothing installed.</p></div>
+            <div class="card"><h3><a href="/security">Security and POPIA</a></h3><p>End-to-end encryption, two-factor sign-in for everybody, and data kept in South Africa.</p></div>
+        </div>
+    </div>
+</section>
+
+@* Real reviews from companies that use it (2026-10-14), each approved on /owner/reviews first — never made-up quotes.
+   Nothing at all until there is one. *@
+@{ var reviews = await Reviews.PublishedAsync(); }
+@if (reviews.Count > 0)
+{
+    <section class="section" id="reviews">
+        <div class="wrap">
+            <h2 style="text-align:center">What our customers say</h2>
+            <div class="grid3" style="margin-top:24px">
+                @foreach (var r in reviews)
+                {
+                    <div class="card review-card">
+                        <span class="review-stars" role="img" aria-label="@r.Stars of 5 stars">@(new string('★', r.Stars))@(new string('☆', 5 - r.Stars))</span>
+                        <blockquote>@r.Words</blockquote>
+                        <div class="muted">— @r.ShownName, @if (r.BusinessUrl.Length > 0) { <a href="@r.BusinessUrl" rel="ugc nofollow noopener" target="_blank">@r.BusinessName</a> } else { @r.BusinessName }</div>
+                    </div>
+                }
+            </div>
+        </div>
+    </section>
+}
+
+<section class="section alt" id="free">
+    <div class="wrap grid2">
+        <div>
+            <h2>Working remotely? R50 a month.</h2>
+            <p>The Basic Version for Remote Workers is for one person reaching their own computers — @RemoteSupport.Shared.FreePlan.MaxMachines included, more at R10 each — the one at the office, or
+                your branches — unattended with a password, or attended with somebody there to allow you in. Fourteen days free, then R50 a month, and you can upgrade to the full version
+                later without losing anything. Just one computer? @RemoteSupport.Shared.FreePlan.FreeFullName reaches it for nothing.</p>
+            <p><a class="btn" href="/remote-workers">For remote workers</a> <a class="btn" href="/pricing#free">Pricing</a></p>
+        </div>
+        <div>
+            <h2>Ready?</h2>
+            <p class="muted">Fourteen days free with everything in it. Your card at signup; nothing is charged until the fifteenth day,
+                and you can cancel any time before.</p>
+            <div class="next-links"><partial name="_SiteCta" /></div>
+        </div>
+    </div>
+</section>

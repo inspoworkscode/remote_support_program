@@ -1,0 +1,25 @@
+@page "/portal/sessions"
+@model RemoteSupport.Platform.Pages.Portal.SessionsModel
+@{ ViewData["Title"] = "Sessions"; ViewData["Section"] = "portal"; }
+<section class="portal"><div class="wrap">
+    <h1>Session history</h1>
+    <p class="muted">The last 100 support sessions.</p>
+    @if (Model.List.Count == 0) { <div class="card">No sessions yet.</div> }
+    else
+    {
+        <table>
+            <tr><th>Started</th><th>Machine</th><th>Technicians</th><th>Type</th><th>Duration</th><th>Ended</th></tr>
+            @foreach (var s in Model.List)
+            {
+                var dur = s.EndedUtc.HasValue ? (s.EndedUtc.Value - s.StartedUtc) : (TimeSpan?)null;
+                <tr>
+                    <td>@s.StartedUtc.Local().ToString("yyyy-MM-dd HH:mm")</td><td>@s.MachineName</td>
+                    <td>@(string.IsNullOrEmpty(s.Technicians) ? s.StartedBy : s.Technicians)</td>
+                    <td>@(s.Unattended ? "Unattended" : "Attended")</td>
+                    <td>@(dur.HasValue ? $"{(int)dur.Value.TotalMinutes} min" : "in progress")</td>
+                    <td class="muted">@s.EndReason</td>
+                </tr>
+            }
+        </table>
+    }
+</div></section>

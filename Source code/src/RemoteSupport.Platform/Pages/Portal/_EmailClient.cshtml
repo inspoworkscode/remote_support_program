@@ -1,0 +1,38 @@
+@model RemoteSupport.Platform.Pages.Portal.TicketModel
+@using RemoteSupport.Platform.Services
+@{
+    // An owner-only login does not email the client: it oversees and comments (2026-10-15).
+    if (!Model.WorksTickets) { return; }
+    // Emailing a comment to the client (Clint, 2026-10-09). Inside a comment form, in BOTH layouts: the
+    // tick box and who it goes to. Every answer is ClientUpdateService's — whether it is set up, the address
+    // ticked by default, the others — and the server checks whatever is posted. Unticked by default: most
+    // comments are internal, and only a tick sends one.
+    var o = Model.ClientOffer;
+    var ticked = Model.PostedEmail;
+    var chosen = Model.PostedEmail ? Model.PostedTo : o.Default;
+    var known = o.Choices.Any(c => c.Address.Equals(chosen, StringComparison.OrdinalIgnoreCase));
+}
+@if (!o.Ready)
+{
+    <p class="tk-sys ec-off" style="margin:4px 0 10px">@o.WhyNot
+        @if (Permissions.CanManageCompany(Model.MyRole)) { <a href="/portal/mailintake">Set it up</a> }</p>
+}
+else
+{
+    <div class="ec" style="margin:2px 0 12px">
+        <label style="display:inline-flex;gap:8px;align-items:center;font-weight:700;font-size:14px;cursor:pointer">
+            <input type="checkbox" name="emailClient" value="true" checked="@ticked" onchange="ecTick(this)"> Also email this to the client
+        </label>
+        <div class="ec-to" style="margin-top:8px;@(ticked ? "" : "display:none")">
+            @await Html.PartialAsync("_EmailTo", Model, new Microsoft.AspNetCore.Mvc.ViewFeatures.ViewDataDictionary(ViewData) { ["chosen"] = chosen, ["known"] = known })
+            <p class="tk-sys" style="margin:6px 0 0">They get the fault the ticket was opened for and this comment, with your name on it, from @o.From — nothing else on the ticket. Their reply comes back here.</p>
+        </div>
+    </div>
+}
+<script>
+// The tick shows who it goes to; unticked, the comment stays on the ticket only.
+window.ecTick = window.ecTick || function (box) {
+    var to = box.closest('.ec').querySelector('.ec-to');
+    if (to) to.style.display = box.checked ? '' : 'none';
+};
+</script>

@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>RemoteSupport.Client</AssemblyName>
+    <RootNamespace>RemoteSupport.Client</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\RemoteSupport.Shared\RemoteSupport.Shared.csproj" />
+    <ProjectReference Include="..\RemoteSupport.UI\RemoteSupport.UI.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="branding\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <!-- The single downloadable .exe (2026-09-30): tools/Pack-ClientExe.ps1 passes the signed host,
+       agent and install scripts as one zip, and the server this build is for. A build made any
+       other way has neither, and works as it always did. See ClientPayload. -->
+  <ItemGroup Condition="'$(ClientPayload)' != '' And Exists('$(ClientPayload)')">
+    <EmbeddedResource Include="$(ClientPayload)" LogicalName="client-payload.zip" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(ClientDefaults)' != '' And Exists('$(ClientDefaults)')">
+    <EmbeddedResource Include="$(ClientDefaults)" LogicalName="client-defaults.json" />
+  </ItemGroup>
+</Project>

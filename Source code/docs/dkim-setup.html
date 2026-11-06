@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Set up DKIM — The Remote Support Program</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --paper:#FFFFFF; --surface:#FBF8FB;
+    --ink:#1C1420; --ink-soft:#5E5266; --line:#E4DCE6;
+    --plum:#8B4499; --plum-deep:#5E2A68; --plum-wash:#F5EAF7;
+    --cyan:#00B0F0; --cyan-ink:#046B92; --cyan-wash:#E8F7FE;
+    --warn:#8A5A00; --warn-bg:#FBF0DA; --warn-line:#E5C98A;
+    --stop:#96261F; --stop-bg:#FBEAE8; --stop-line:#E7B4AE;
+    --code-bg:#1E1826; --code-ink:#EFE8F0;
+    --display:'Archivo','Helvetica Neue',Arial,sans-serif;
+    --body:'Source Serif 4',Georgia,'Times New Roman',serif;
+    --mono:'IBM Plex Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;
+  }
+  * { box-sizing:border-box; }
+  html { background:var(--surface); }
+  body {
+    margin:0 auto; padding:28px 34px 60px; max-width:840px;
+    background:var(--paper); color:var(--ink);
+    font-family:var(--body); font-size:10.6pt; line-height:1.55;
+  }
+
+  .masthead { border-bottom:3px solid var(--plum-deep); padding-bottom:14px; margin-bottom:22px; }
+  .eyebrow {
+    font-family:var(--display); font-size:8.4pt; font-weight:700; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--plum); margin:0 0 6px;
+  }
+  h1 { font-family:var(--display); font-weight:800; font-size:25pt; line-height:1.08; letter-spacing:-.02em; margin:0 0 8px; }
+  .standfirst { margin:0; color:var(--ink-soft); font-size:11pt; max-width:62ch; }
+  .meta { margin-top:12px; font-family:var(--mono); font-size:8.2pt; color:var(--ink-soft); display:flex; gap:22px; flex-wrap:wrap; }
+
+  h2 { font-family:var(--display); font-weight:700; font-size:14pt; letter-spacing:-.01em; margin:30px 0 10px; padding-bottom:5px; border-bottom:1px solid var(--line); }
+  h3 { font-family:var(--display); font-weight:600; font-size:11pt; margin:20px 0 6px; }
+  p { margin:0 0 10px; }
+  ul, ol { margin:0 0 10px; padding-left:20px; }
+  li { margin-bottom:5px; }
+  strong { font-weight:600; }
+
+  .step { margin:26px 0 0; padding-left:52px; position:relative; break-inside:avoid; }
+  .step > .n {
+    position:absolute; left:0; top:-2px; width:38px; height:38px; border-radius:50%;
+    background:var(--plum-deep); color:#fff; font-family:var(--display); font-weight:800;
+    font-size:16pt; display:flex; align-items:center; justify-content:center;
+  }
+  .step > h2 { margin:0 0 8px; border:0; padding:0; font-size:15pt; display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+  .step > h2 .where {
+    font-family:var(--mono); font-size:8pt; font-weight:500; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--plum); background:var(--plum-wash);
+    border-radius:999px; padding:3px 9px; white-space:nowrap;
+  }
+
+  pre {
+    background:var(--code-bg); color:var(--code-ink); border-radius:8px; padding:11px 13px; margin:0 0 10px;
+    font-family:var(--mono); font-size:8.4pt; line-height:1.5;
+    white-space:pre-wrap; word-break:break-word; break-inside:avoid;
+  }
+  code { font-family:var(--mono); font-size:.86em; background:var(--surface); border:1px solid var(--line); border-radius:4px; padding:1px 4px; }
+  pre code { background:none; border:0; padding:0; font-size:1em; color:inherit; }
+
+  .note, .warn, .stop { border-left:4px solid; border-radius:0 7px 7px 0; padding:10px 13px; margin:0 0 12px; break-inside:avoid; font-size:10pt; }
+  .note { border-color:var(--cyan); background:var(--cyan-wash); }
+  .warn { border-color:var(--warn-line); background:var(--warn-bg); }
+  .stop { border-color:var(--stop-line); background:var(--stop-bg); }
+  .note :last-child, .warn :last-child, .stop :last-child { margin-bottom:0; }
+  .label { font-family:var(--display); font-weight:700; font-size:8.2pt; letter-spacing:.12em; text-transform:uppercase; display:block; margin-bottom:4px; }
+  .note .label { color:var(--cyan-ink); }
+  .warn .label { color:var(--warn); }
+  .stop .label { color:var(--stop); }
+
+  table { border-collapse:collapse; width:100%; margin:0 0 12px; font-size:9.6pt; break-inside:avoid; }
+  th, td { text-align:left; vertical-align:top; padding:7px 10px; border-bottom:1px solid var(--line); }
+  th { font-family:var(--display); font-weight:700; font-size:8.4pt; letter-spacing:.07em; text-transform:uppercase; color:var(--plum-deep); border-bottom:2px solid var(--plum-deep); }
+
+  .check { list-style:none; padding-left:0; }
+  .check li { padding-left:26px; position:relative; margin-bottom:7px; }
+  .check li::before { content:""; position:absolute; left:0; top:2px; width:13px; height:13px; border:1.5px solid var(--plum); border-radius:3px; }
+
+  .handback { background:var(--plum-wash); border:1px solid var(--line); border-radius:9px; padding:14px 16px; break-inside:avoid; }
+  .handback h2 { margin-top:0; border-bottom-color:var(--plum); }
+
+  footer { margin-top:34px; padding-top:12px; border-top:1px solid var(--line); font-family:var(--mono); font-size:8pt; color:var(--ink-soft); }
+
+  @page { size:A4; margin:14mm 13mm 15mm; }
+  @media print {
+    html, body { background:#fff; }
+    body { max-width:none; padding:0; font-size:10pt; }
+    * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    h2, h3 { break-after:avoid; }
+    .page-break { break-before:page; }
+  }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <p class="eyebrow">The Remote Support Program &middot; Job sheet</p>
+  <h1>Set up DKIM email signing for theremotesupportprogram.com</h1>
+  <p class="standfirst">Get xneelo to sign our outgoing mail, publish the matching key in
+  Cloudflare, and prove it works. Most of the job is waiting for a support reply; the work itself
+  is one DNS record and one test email.</p>
+  <div class="meta">
+    <span>Version 1 &middot; 16 September 2026</span>
+    <span>Owner: Clint, Anywhere IT</span>
+    <span>queries@theremotesupportprogram.com</span>
+  </div>
+</header>
+
+<h2>Why this matters</h2>
+
+<p>DKIM puts a cryptographic signature on every email we send. The receiving mail server checks
+that signature against a key published in our DNS, and so can tell a genuine message from a forged
+one.</p>
+
+<p>Gmail and Microsoft have both tightened their rules. Mail from a domain with no DKIM is far more
+likely to be filed as spam or rejected outright &mdash; particularly from a domain that has not
+sent much before, which is exactly our position. <strong>Our website's only contact route is an
+email address.</strong> A reply to a prospect that lands silently in their junk folder is a lost
+sale we never hear about.</p>
+
+<h3>Where DKIM fits</h3>
+
+<p>Three standards work together. We have two of them already; you are adding the third.</p>
+
+<table>
+  <tr><th style="width:15%">Standard</th><th style="width:47%">What it does</th><th>Ours today</th></tr>
+  <tr>
+    <td><strong>SPF</strong></td>
+    <td>Lists which servers are allowed to send mail for the domain.</td>
+    <td><strong>In place.</strong> <code>v=spf1 mx a include:spf.host-h.net ~all</code></td>
+  </tr>
+  <tr>
+    <td><strong>DKIM</strong></td>
+    <td>Signs each message, proving it really came from us and was not altered.</td>
+    <td><strong>Missing. This job.</strong></td>
+  </tr>
+  <tr>
+    <td><strong>DMARC</strong></td>
+    <td>Tells receivers what to do when a message fails SPF or DKIM.</td>
+    <td><strong>In place</strong>, set to monitor only: <code>p=none</code></td>
+  </tr>
+</table>
+
+<h3>Two systems, and they are not the same company</h3>
+
+<div class="stop">
+  <span class="label">Read this before you start</span>
+  <p><strong>Mail is hosted by xneelo. DNS is hosted by Cloudflare.</strong> They are separate, and
+  this job touches both:</p>
+  <ul>
+    <li>The DKIM <strong>key</strong> comes from <strong>xneelo</strong> (konsoleH, or their support desk).</li>
+    <li>The DKIM <strong>record</strong> is published in <strong>Cloudflare</strong>.</li>
+  </ul>
+  <p>The domain is registered at Afrihost, but its nameservers point at Cloudflare, so
+  <strong>DNS changes made at Afrihost do nothing at all</strong>. If you find yourself in Afrihost
+  ClientZone editing DNS, stop.</p>
+</div>
+
+<!-- ====================================================================== -->
+<section class="step">
+  <div class="n">1</div>
+  <h2>Get the DKIM key from xneelo <span class="where">konsoleH, or support</span></h2>
+
+  <p>Sign in to konsoleH at <code>https://konsoleh.xneelo.co.za</code> with the details Clint gave
+  you and select <code>theremotesupportprogram.com</code>.</p>
+
+  <p>Look through the mail settings for a <strong>DKIM</strong> option. It may appear under a
+  heading such as <em>Mail</em>, <em>Email</em> or <em>Advanced</em>. If it is there, enable it for
+  the domain, and it will generate and show you two things you need to write down:</p>
+
+  <ul>
+    <li>the <strong>selector</strong> &mdash; a short name such as <code>default</code> or <code>x</code></li>
+    <li>the <strong>public key</strong> &mdash; a long block of letters and numbers</li>
+  </ul>
+
+  <div class="note">
+    <span class="label">If there is no DKIM option in konsoleH</span>
+    <p>That is common, and it is not a dead end. Log a support ticket with xneelo asking them to
+    do it. Wording that gets a useful reply first time:</p>
+    <pre><code>Please enable DKIM signing for outgoing mail on the domain
+theremotesupportprogram.com, which is on your shared hosting
+(server www40.cpt3.host-h.net).
+
+Our DNS is hosted at Cloudflare, not with xneelo, so please send
+me the DKIM selector and the public key TXT record value and I
+will publish the record myself.</code></pre>
+    <p>That last paragraph matters. If they assume they control the DNS they will try to add the
+    record themselves, find they cannot, and the ticket stalls.</p>
+  </div>
+
+  <p><strong>Do not continue until you have both the selector and the key.</strong> Without them
+  there is nothing to publish.</p>
+</section>
+
+<!-- ====================================================================== -->
+<section class="step">
+  <div class="n">2</div>
+  <h2>Publish the record in Cloudflare <span class="where">dash.cloudflare.com</span></h2>
+
+  <p>Sign in to Cloudflare, open <code>theremotesupportprogram.com</code>, and go to
+  <strong>DNS &rarr; Records</strong>. Add a record:</p>
+
+  <table>
+    <tr><th style="width:18%">Field</th><th>What to enter</th></tr>
+    <tr><td><strong>Type</strong></td><td><code>TXT</code></td></tr>
+    <tr>
+      <td><strong>Name</strong></td>
+      <td><code>SELECTOR._domainkey</code> &mdash; replacing <code>SELECTOR</code> with the one
+      xneelo gave you. If the selector is <code>x</code>, the name is <code>x._domainkey</code>.</td>
+    </tr>
+    <tr>
+      <td><strong>Content</strong></td>
+      <td>The value xneelo gave you. It starts <code>v=DKIM1;</code> and ends with a very long
+      <code>p=</code> section.</td>
+    </tr>
+    <tr><td><strong>TTL</strong></td><td>Leave on Auto.</td></tr>
+  </table>
+
+  <div class="warn">
+    <span class="label">Getting the value in exactly right</span>
+    <ul>
+      <li>Paste it as <strong>one continuous line</strong>. If your text editor or the ticket wrapped
+        it across several lines, join them back up and remove the line breaks.</li>
+      <li>Do <strong>not</strong> add quotation marks around it. Cloudflare adds those itself. A
+        pasted pair of quotes becomes part of the key and breaks it.</li>
+      <li>Do not add spaces. The <code>p=</code> section is one unbroken run of characters.</li>
+      <li>If xneelo sent the whole line including the record name, paste only the part from
+        <code>v=DKIM1</code> onwards into Content.</li>
+    </ul>
+  </div>
+
+  <div class="stop">
+    <span class="label">Do not change anything else in Cloudflare</span>
+    <p>You are <strong>adding</strong> one record. Do not edit or delete the MX record, the existing
+    SPF record, or any of the A records.</p>
+    <p><strong>A domain may only have one SPF record.</strong> If you add a second one, mail from
+    this domain starts failing at every receiver &mdash; the opposite of what this job is for. Ours
+    already exists and is correct. Leave it alone.</p>
+  </div>
+</section>
+
+<!-- ====================================================================== -->
+<section class="step">
+  <div class="n">3</div>
+  <h2>Check the record is live <span class="where">on any Windows PC</span></h2>
+
+  <p>Give it a few minutes, then open Command Prompt and run this, replacing
+  <code>SELECTOR</code> with the real one:</p>
+
+<pre><code>nslookup -type=TXT SELECTOR._domainkey.theremotesupportprogram.com</code></pre>
+
+  <p>You should get back a line starting <code>"v=DKIM1;</code> followed by the long key. If you
+  see <em>Non-existent domain</em>, or nothing at all, the record has not published &mdash; check
+  the Name field is <code>SELECTOR._domainkey</code> and not something else.</p>
+
+  <div class="note">
+    <span class="label">Useful comparison</span>
+    <p>These two already work and will answer, so you can use them to confirm the command itself is
+    right before blaming the new record:</p>
+<pre><code>nslookup -type=TXT theremotesupportprogram.com
+nslookup -type=TXT _dmarc.theremotesupportprogram.com</code></pre>
+  </div>
+</section>
+
+<!-- ====================================================================== -->
+<section class="step">
+  <div class="n">4</div>
+  <h2>Prove that mail is actually signed <span class="where">the step that matters</span></h2>
+
+  <p>A published record is not proof. It only means the key is <em>available</em> &mdash; the mail
+  server still has to be signing with it. Test it properly:</p>
+
+  <ol>
+    <li>Sign in to webmail at <code>https://webmail.xneelo.com</code> as
+      <code>queries@theremotesupportprogram.com</code>.</li>
+    <li>Send an email to a <strong>Gmail</strong> address &mdash; your own is fine.</li>
+    <li>Open it in Gmail. Click the three dots at the top right of the message and choose
+      <strong>Show original</strong>.</li>
+  </ol>
+
+  <p>At the top you will see three lines. You want all three to say <strong>PASS</strong>:</p>
+
+<pre><code>SPF:    PASS
+DKIM:   PASS
+DMARC:  PASS</code></pre>
+
+  <div class="warn">
+    <span class="label">If DKIM says FAIL or does not appear at all</span>
+    <p><strong>Not appearing</strong> usually means xneelo has not switched signing on at their end,
+    even if they gave you a key. Go back to the ticket and say the record is published but messages
+    are arriving unsigned.</p>
+    <p><strong>FAIL</strong> usually means the key in Cloudflare does not match the one signing the
+    mail &mdash; most often a line break, a stray space, or added quotes in the Content field. Check
+    step 2 again.</p>
+  </div>
+</section>
+
+<!-- ====================================================================== -->
+<section class="step">
+  <div class="n">5</div>
+  <h2>Point the DMARC reports somewhere real <span class="where">Cloudflare</span></h2>
+
+  <p>Our DMARC record currently reads:</p>
+
+<pre><code>v=DMARC1; p=none; rua=mailto:info@theremotesupportprogram.com</code></pre>
+
+  <p>Those reports go to <code>info@</code>, which may not be a mailbox that exists. Check in
+  konsoleH whether <code>info@theremotesupportprogram.com</code> is a real mailbox.</p>
+
+  <ul>
+    <li><strong>If it exists</strong>, leave the record alone and tell Clint it is fine.</li>
+    <li><strong>If it does not</strong>, edit the <code>_dmarc</code> TXT record in Cloudflare and
+      change that address to <code>queries@theremotesupportprogram.com</code>, changing nothing
+      else on the line.</li>
+  </ul>
+
+  <div class="note">
+    <span class="label">What these reports are</span>
+    <p>Other mail providers send a daily summary of mail they saw claiming to be from our domain,
+    and whether it passed. They are how you find out if someone is spoofing us &mdash; worth having
+    arrive somewhere a person looks.</p>
+  </div>
+</section>
+
+<!-- ====================================================================== -->
+<h2 class="page-break">Hand back to Clint</h2>
+
+<div class="handback">
+  <h2>Tell him these five things</h2>
+  <ul class="check">
+    <li>The <strong>selector</strong> xneelo issued, and whether it came from konsoleH or a support ticket.</li>
+    <li>That <code>nslookup</code> returns the DKIM record.</li>
+    <li>What Gmail's <strong>Show original</strong> said for all three: SPF, DKIM and DMARC.</li>
+    <li>Whether <code>info@theremotesupportprogram.com</code> exists, and whether you changed the
+      DMARC address.</li>
+    <li>The date you finished, so the key's age is known if it ever has to be rotated.</li>
+  </ul>
+</div>
+
+<h2>Not part of this job</h2>
+
+<p><strong>Do not tighten DMARC.</strong> Once DKIM has been passing for a few weeks, the
+<code>p=none</code> in the DMARC record can become <code>p=quarantine</code>, which is what
+actually stops a spoofed message reaching anyone. Doing that too early, or while DKIM is failing,
+sends our own legitimate mail to spam. <strong>That is Clint's call, on a later date, not part of
+this job.</strong></p>
+
+<h2>If something goes wrong</h2>
+
+<table>
+  <tr><th style="width:38%">What you see</th><th>What it means</th></tr>
+  <tr>
+    <td>xneelo says DKIM is not available on shared hosting</td>
+    <td>Ask them to escalate, and tell Clint. Do not try to work around it.</td>
+  </tr>
+  <tr>
+    <td><code>nslookup</code> says non-existent domain</td>
+    <td>The record name is wrong. It must be <code>SELECTOR._domainkey</code> &mdash; the
+    <code>_domainkey</code> part is required and the underscore is part of it.</td>
+  </tr>
+  <tr>
+    <td>Gmail shows DKIM: FAIL</td>
+    <td>The published key does not match the signature. Almost always a line break, a space, or
+    quotes added to the Content field.</td>
+  </tr>
+  <tr>
+    <td>Mail stops arriving at any point</td>
+    <td>Something was changed that should not have been. Check whether a second SPF record was
+    added, or an MX record edited. Tell Clint immediately.</td>
+  </tr>
+</table>
+
+<footer>
+  The Remote Support Program &middot; Anywhere IT &middot; queries@theremotesupportprogram.com &middot; 078 131 5618<br>
+  Mail: xneelo shared, konsoleH &middot; DNS: Cloudflare &middot; Registrar: Afrihost (DNS delegated away)
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,30 @@
+@page "/mail-confirm"
+@model RemoteSupport.Platform.Pages.MailConfirmModel
+@{ ViewData["Title"] = "Confirm your support address"; }
+<section class="section">
+    <div class="wrap" style="max-width:560px">
+        @if (Model.Done)
+        {
+            <h1>Confirmed</h1>
+            <div class="alert alert-ok">Mail forwarded from <strong>@Model.Address</strong> now becomes tickets for @Model.Company.</div>
+            <p class="muted">If you have not set up the forward yet, do it now — the portal's <em>Tickets by email</em> page says how.</p>
+        }
+        else if (Model.Error.Length > 0 && Model.Address.Length == 0)
+        {
+            <h1>This link cannot be used</h1>
+            <div class="alert alert-warn">@Model.Error</div>
+            <p class="muted">Sign in to the portal and send a new one from the <em>Tickets by email</em> page.</p>
+        }
+        else
+        {
+            <h1>Confirm your support address</h1>
+            @if (Model.Error.Length > 0) { <div class="alert alert-bad">@Model.Error</div> }
+            <p>@Model.Company asked for mail forwarded from <strong>@Model.Address</strong> to become tickets in The Remote Support Program.</p>
+            <form method="post" class="form">
+                <input type="hidden" name="T" value="@Model.T">
+                <button class="btn btn-accent" type="submit">Confirm</button>
+            </form>
+            <p class="muted" style="margin-top:14px">If this was not you, close this page — nothing happens unless you press Confirm.</p>
+        }
+    </div>
+</section>

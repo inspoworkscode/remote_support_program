@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Upload the holding page — The Remote Support Program</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --paper:#FFFFFF; --surface:#FBF8FB;
+    --ink:#1C1420; --ink-soft:#5E5266; --line:#E4DCE6;
+    --plum:#8B4499; --plum-deep:#5E2A68; --plum-wash:#F5EAF7;
+    --cyan:#00B0F0; --cyan-ink:#046B92; --cyan-wash:#E8F7FE;
+    --warn:#8A5A00; --warn-bg:#FBF0DA; --warn-line:#E5C98A;
+    --stop:#96261F; --stop-bg:#FBEAE8; --stop-line:#E7B4AE;
+    --code-bg:#1E1826; --code-ink:#EFE8F0;
+    --display:'Archivo','Helvetica Neue',Arial,sans-serif;
+    --body:'Source Serif 4',Georgia,'Times New Roman',serif;
+    --mono:'IBM Plex Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;
+  }
+  * { box-sizing:border-box; }
+  html { background:var(--surface); }
+  body {
+    margin:0 auto; padding:28px 34px 60px; max-width:840px;
+    background:var(--paper); color:var(--ink);
+    font-family:var(--body); font-size:10.6pt; line-height:1.55;
+  }
+
+  .masthead { border-bottom:3px solid var(--plum-deep); padding-bottom:14px; margin-bottom:22px; }
+  .eyebrow {
+    font-family:var(--display); font-size:8.4pt; font-weight:700; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--plum); margin:0 0 6px;
+  }
+  h1 { font-family:var(--display); font-weight:800; font-size:25pt; line-height:1.08; letter-spacing:-.02em; margin:0 0 8px; }
+  .standfirst { margin:0; color:var(--ink-soft); font-size:11pt; max-width:62ch; }
+  .meta { margin-top:12px; font-family:var(--mono); font-size:8.2pt; color:var(--ink-soft); display:flex; gap:22px; flex-wrap:wrap; }
+
+  h2 { font-family:var(--display); font-weight:700; font-size:14pt; letter-spacing:-.01em; margin:30px 0 10px; padding-bottom:5px; border-bottom:1px solid var(--line); }
+  h3 { font-family:var(--display); font-weight:600; font-size:11pt; margin:20px 0 6px; }
+  p { margin:0 0 10px; }
+  ul, ol { margin:0 0 10px; padding-left:20px; }
+  li { margin-bottom:5px; }
+  strong { font-weight:600; }
+
+  .step { margin:26px 0 0; padding-left:52px; position:relative; break-inside:avoid; }
+  .step > .n {
+    position:absolute; left:0; top:-2px; width:38px; height:38px; border-radius:50%;
+    background:var(--plum-deep); color:#fff; font-family:var(--display); font-weight:800;
+    font-size:16pt; display:flex; align-items:center; justify-content:center;
+  }
+  .step > h2 { margin:0 0 8px; border:0; padding:0; font-size:15pt; display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+  .step > h2 .where {
+    font-family:var(--mono); font-size:8pt; font-weight:500; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--plum); background:var(--plum-wash);
+    border-radius:999px; padding:3px 9px; white-space:nowrap;
+  }
+
+  pre {
+    background:var(--code-bg); color:var(--code-ink); border-radius:8px; padding:11px 13px; margin:0 0 10px;
+    font-family:var(--mono); font-size:8.4pt; line-height:1.5;
+    white-space:pre-wrap; word-break:break-word; break-inside:avoid;
+  }
+  code { font-family:var(--mono); font-size:.86em; background:var(--surface); border:1px solid var(--line); border-radius:4px; padding:1px 4px; }
+  pre code { background:none; border:0; padding:0; font-size:1em; color:inherit; }
+
+  .note, .warn, .stop { border-left:4px solid; border-radius:0 7px 7px 0; padding:10px 13px; margin:0 0 12px; break-inside:avoid; font-size:10pt; }
+  .note { border-color:var(--cyan); background:var(--cyan-wash); }
+  .warn { border-color:var(--warn-line); background:var(--warn-bg); }
+  .stop { border-color:var(--stop-line); background:var(--stop-bg); }
+  .note :last-child, .warn :last-child, .stop :last-child { margin-bottom:0; }
+  .label { font-family:var(--display); font-weight:700; font-size:8.2pt; letter-spacing:.12em; text-transform:uppercase; display:block; margin-bottom:4px; }
+  .note .label { color:var(--cyan-ink); }
+  .warn .label { color:var(--warn); }
+  .stop .label { color:var(--stop); }
+
+  table { border-collapse:collapse; width:100%; margin:0 0 12px; font-size:9.6pt; break-inside:avoid; }
+  th, td { text-align:left; vertical-align:top; padding:7px 10px; border-bottom:1px solid var(--line); }
+  th { font-family:var(--display); font-weight:700; font-size:8.4pt; letter-spacing:.07em; text-transform:uppercase; color:var(--plum-deep); border-bottom:2px solid var(--plum-deep); }
+
+  .check { list-style:none; padding-left:0; }
+  .check li { padding-left:26px; position:relative; margin-bottom:7px; }
+  .check li::before { content:""; position:absolute; left:0; top:2px; width:13px; height:13px; border:1.5px solid var(--plum); border-radius:3px; }
+
+  .handback { background:var(--plum-wash); border:1px solid var(--line); border-radius:9px; padding:14px 16px; break-inside:avoid; }
+  .handback h2 { margin-top:0; border-bottom-color:var(--plum); }
+
+  footer { margin-top:34px; padding-top:12px; border-top:1px solid var(--line); font-family:var(--mono); font-size:8pt; color:var(--ink-soft); }
+
+  @page { size:A4; margin:14mm 13mm 15mm; }
+  @media print {
+    html, body { background:#fff; }
+    body { max-width:none; padding:0; font-size:10pt; }
+    * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    h2, h3 { break-after:avoid; }
+    .page-break { break-before:page; }
+  }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <p class="eyebrow">The Remote Support Program &middot; Job sheet</p>
+  <h1>Upload the holding page to theremotesupportprogram.com</h1>
+  <p class="standfirst">Replace the page currently on the website with the new one. It is a single
+  file and the whole job takes about ten minutes. No server access, no DNS, nothing to install.</p>
+  <div class="meta">
+    <span>Version 2 &middot; 16 September 2026</span>
+    <span>Owner: Clint, Anywhere IT</span>
+    <span>queries@theremotesupportprogram.com</span>
+  </div>
+</header>
+
+<h2>What you are doing, and what you are not</h2>
+
+<p>The website <code>theremotesupportprogram.com</code> is hosted on <strong>xneelo shared
+hosting</strong>, managed through a control panel called <strong>konsoleH</strong>. There is one
+page on it today. You are replacing that page with a newer one.</p>
+
+<p>That is nearly the whole job. There is <strong>one</strong> setting to change at the end, in
+step&nbsp;6, and it is named there. Apart from that you are <strong>not</strong> touching DNS,
+email, or any other setting. If a screen you are on is about anything else, you are in the wrong
+place &mdash; back out.</p>
+
+<h3>What Clint gives you</h3>
+
+<table>
+  <tr><th style="width:32%">Item</th><th>Notes</th></tr>
+  <tr>
+    <td><code>index.html</code></td>
+    <td>One file, about 23&nbsp;KB. This is the whole website &mdash; there are no images,
+    stylesheets or other files that go with it.</td>
+  </tr>
+  <tr>
+    <td>konsoleH login</td>
+    <td>Username and password for the control panel. Ask Clint; do not go looking for them.</td>
+  </tr>
+</table>
+
+<div class="stop">
+  <span class="label">Do not rename the file</span>
+  <p>It must be uploaded as <code>index.html</code>, exactly, in lower case. A web server looks for
+  that precise name. <code>Index.html</code>, <code>index.htm</code> or
+  <code>index (1).html</code> will not be served, and the site will look unchanged or show a list
+  of files instead.</p>
+  <p>Check the name <strong>before</strong> you upload &mdash; browsers often add
+  <code>(1)</code> to a downloaded file when one of the same name already exists.</p>
+</div>
+
+<!-- ====================================================================== -->
+<section class="step">
+  <div class="n">1</div>
+  <h2>Sign in to konsoleH <span class="where">konsoleh.xneelo.co.za</span></h2>
+
+  <p>Open <code>https://konsoleh.xneelo.co.za</code> and sign in with the details Clint gave you.</p>
+
+  <p>Once in, select the domain <code>theremotesupportprogram.com</code>. Some accounts list
+  several domains and open on a summary page; others go straight into the one domain. Either is
+  normal &mdash; you just need to be looking at this domain before the next step.</p>
+
+  <div class="warn">
+    <span class="label">If you cannot sign in</span>
+    <p>Stop and go back to Clint. There are two separate xneelo systems &mdash; konsoleH for
+    hosting and email, and a different one for cloud servers. Only konsoleH is used here, and
+    logins for one do not work on the other.</p>
+  </div>
+</section>
+
+<!-- ====================================================================== -->
+<section class="step">
+  <div class="n">2</div>
+  <h2>Open the file manager <span class="where">in konsoleH</span></h2>
+
+  <p>Look for <strong>File Manager</strong> under the web hosting section of the menu. konsoleH has
+  been redesigned more than once, so it may sit under a heading such as <em>Web</em>,
+  <em>Hosting</em> or <em>Tools</em>. It is the option that lets you browse folders and upload
+  files.</p>
+
+  <p>Now open the folder called <code>public_html</code>. Everything the public website serves
+  lives in that folder, and nothing outside it is part of the website.</p>
+
+  <div class="note">
+    <span class="label">If you cannot find the file manager</span>
+    <p>Use FTP instead &mdash; it does the same job. The server is
+    <code>www40.cpt3.host-h.net</code>, and FTP usernames and passwords are created and shown in
+    konsoleH under <strong>FTP Users</strong>. Connect with FileZilla or any FTP client, then open
+    <code>public_html</code> and carry on from step 3.</p>
+  </div>
+</section>
+
+<!-- ====================================================================== -->
+<section class="step">
+  <div class="n">3</div>
+  <h2>Move the old page out of the way <span class="where">in public_html</span></h2>
+
+  <p>Look in <code>public_html</code> for a file called <code>index.html</code>, and also one
+  called <code>index.htm</code>. One or both will be there.</p>
+
+  <p><strong>Rename each one you find</strong> by adding <code>.old</code> to the end, so
+  <code>index.html</code> becomes <code>index.html.old</code>. Most file managers offer Rename when
+  you right-click a file, or from a menu next to it.</p>
+
+  <p>Renaming rather than deleting means the old page can be put straight back if anything is
+  wrong, which is worth ten seconds.</p>
+
+  <div class="stop">
+    <span class="label">This step is the one people skip</span>
+    <p>If the old <code>index.html</code> is still there when you upload the new one, one of two
+    things happens: the upload is refused, or it overwrites without warning. If it is refused, the
+    website carries on showing the old page and it looks as though the upload did nothing.</p>
+  </div>
+
+  <div class="warn">
+    <span class="label">Leave everything else alone</span>
+    <p>Do not delete any other file or folder in <code>public_html</code>, even if it looks
+    unused. If the folder contains things you were not expecting, that is fine &mdash; carry on.</p>
+  </div>
+</section>
+
+<!-- ====================================================================== -->
+<section class="step">
+  <div class="n">4</div>
+  <h2>Upload the new page <span class="where">into public_html</span></h2>
+
+  <p>Use the <strong>Upload</strong> button in the file manager and choose the
+  <code>index.html</code> Clint gave you. Make sure you are still inside <code>public_html</code>
+  when you do it &mdash; not in the folder above it.</p>
+
+  <p>When it finishes, you should see <code>index.html</code> listed, roughly 23&nbsp;KB in size,
+  with today's date.</p>
+
+  <div class="warn">
+    <span class="label">Check the name one more time</span>
+    <p>If it uploaded as <code>index (1).html</code> or anything other than
+    <code>index.html</code>, rename it now. This is the single most common reason the site does not
+    change.</p>
+  </div>
+</section>
+
+<!-- ====================================================================== -->
+<section class="step">
+  <div class="n">5</div>
+  <h2>Check it worked <span class="where">in a browser</span></h2>
+
+  <p>Open the website:</p>
+
+<pre><code>https://theremotesupportprogram.com</code></pre>
+
+  <p>You should see a <strong>dark navy page</strong> headed <em>&ldquo;Remote support that carries
+  your brand&rdquo;</em>, with purple buttons, and further down a pricing section showing
+  <strong>R500</strong> and four region buttons &mdash; South&nbsp;Africa, US&nbsp;&amp;&nbsp;Canada,
+  United&nbsp;Kingdom, Europe.</p>
+
+  <div class="stop">
+    <span class="label">How to tell the new page from the old one</span>
+    <p>The <strong>old</strong> page is also dark navy, which makes them very easy to confuse. Two
+    reliable differences:</p>
+    <ul>
+      <li>The new page has a <strong>pricing section</strong> with R500 and four region buttons.
+        The old one has no pricing at all.</li>
+      <li>The new page's email address is <code>queries@theremotesupportprogram.com</code>. The old
+        one says <code>info@</code>.</li>
+    </ul>
+    <p>If you see no pricing, or an <code>info@</code> address, you are still looking at the old
+    page. Go back to step 3 and check the rename and the file name.</p>
+  </div>
+
+  <div class="note">
+    <span class="label">If the browser shows an old version</span>
+    <p>Press <strong>Ctrl</strong>&nbsp;+&nbsp;<strong>F5</strong> to force a reload, or open the
+    site in a private window. Browsers hold on to a page they have seen before, which can make a
+    correct upload look as though it did nothing.</p>
+    <p>You can also check the site directly on the hosting server, which bypasses caching
+    entirely: <code>http://theremotesupportprogram.com.www40.cpt3.host-h.net</code></p>
+  </div>
+</section>
+
+<!-- ====================================================================== -->
+<section class="step">
+  <div class="n">6</div>
+  <h2>Switch on Force HTTPS <span class="where">in konsoleH</span></h2>
+
+  <p>The site has a valid security certificate, so <code>https://</code> works. Visitors who type
+  the address without it still arrive on the unencrypted <code>http://</code> version, and this
+  setting sends them to the secure one automatically.</p>
+
+  <p>In konsoleH, find the <strong>Web Server Config</strong> settings for the domain and turn on
+  <strong>Force HTTPS</strong> (it may be called <em>Redirect to HTTPS</em> or <em>SSL
+  redirect</em>). Save.</p>
+
+  <p>Then check it. Type the address with <code>http://</code> deliberately:</p>
+
+<pre><code>http://theremotesupportprogram.com</code></pre>
+
+  <p>The browser should jump to <code>https://</code> on its own, with a padlock showing.</p>
+
+  <div class="warn">
+    <span class="label">Do this last, and only if step 5 worked</span>
+    <p>If <code>https://theremotesupportprogram.com</code> did not load cleanly with a padlock in
+    step 5, <strong>stop and tell Clint</strong>. Forcing HTTPS when the certificate is not working
+    takes the website off the internet completely, and it is not obvious from inside konsoleH that
+    it has happened.</p>
+    <p>If the site stops loading after you change this, switch the setting back off. That undoes
+    it immediately.</p>
+  </div>
+</section>
+
+<!-- ====================================================================== -->
+<h2 class="page-break">Hand back to Clint</h2>
+
+<div class="handback">
+  <h2>Tell him these four things</h2>
+  <ul class="check">
+    <li>The new page is live on the interim address, and you can see the pricing section with
+      R500 and the four region buttons.</li>
+    <li>What the old file was renamed to, and that it is still in <code>public_html</code>.</li>
+    <li>That <code>https://theremotesupportprogram.com</code> loads with a padlock, and that typing<br><code>http://</code> now jumps to it.</li>
+    <li>Anything in <code>public_html</code> that looked unexpected. Do not act on it &mdash;
+      just say what you saw.</li>
+  </ul>
+</div>
+
+<h2>If something goes wrong</h2>
+
+<table>
+  <tr><th style="width:38%">What you see</th><th>What it means</th></tr>
+  <tr>
+    <td>The page has not changed</td>
+    <td>Almost always the file name. Check it is <code>index.html</code> exactly, in lower case,
+    and that the old <code>index.html</code> and <code>index.htm</code> were renamed.</td>
+  </tr>
+  <tr>
+    <td>A list of file names instead of a website</td>
+    <td>There is no file called <code>index.html</code> in <code>public_html</code>. The upload
+    landed in the wrong folder, or under the wrong name.</td>
+  </tr>
+  <tr>
+    <td>The page loads but looks plain and unstyled</td>
+    <td>Only part of the file uploaded. Upload it again and let it finish.</td>
+  </tr>
+  <tr>
+    <td>A security warning on the domain</td>
+    <td>Not expected any more - the certificate is in place. Stop, do not change any HTTPS setting, and tell Clint.</td>
+  </tr>
+  <tr>
+    <td>Anything to do with email</td>
+    <td>Stop. Email is set up and working on this hosting, and it is not part of this job.</td>
+  </tr>
+</table>
+
+<div class="note">
+  <span class="label">Putting it back</span>
+  <p>If the new page is wrong in any way, rename <code>index.html</code> to
+  <code>index.html.new</code> and rename <code>index.html.old</code> back to
+  <code>index.html</code>. The site returns to exactly what it was, immediately.</p>
+</div>
+
+<footer>
+  The Remote Support Program &middot; Anywhere IT &middot; queries@theremotesupportprogram.com &middot; 078 131 5618<br>
+  Hosting: xneelo shared, konsoleH &middot; Web root: public_html &middot; Server: www40.cpt3.host-h.net
+</footer>
+
+</body>
+</html>

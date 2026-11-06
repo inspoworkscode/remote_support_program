@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- A console app, not WinExe: a diagnostic that cannot print is no use, and WinForms works
+         perfectly well from one as long as Main is [STAThread]. -->
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Portal credentials helper, shared by the harnesses; keeps the password out of the repo. -->
+    <Compile Include="..\Common\RsCredentials.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The REAL console, driven the way the technician drives it. viewprobe does the same for
+         SessionForm; a reimplementation of the layout would prove nothing about the layout. -->
+    <ProjectReference Include="..\..\src\RemoteSupport.Technician\RemoteSupport.Technician.csproj" />
+    <ProjectReference Include="..\..\src\RemoteSupport.Shared\RemoteSupport.Shared.csproj" />
+    <ProjectReference Include="..\..\src\RemoteSupport.UI\RemoteSupport.UI.csproj" />
+  </ItemGroup>
+</Project>

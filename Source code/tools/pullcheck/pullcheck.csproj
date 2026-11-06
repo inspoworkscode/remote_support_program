@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The real SessionForm and the real SessionLink, the same as pastecheck. A harness that
+         carries its own copy of the receive path proves only that the copy agrees with itself. -->
+    <ProjectReference Include="..\..\src\RemoteSupport.Technician\RemoteSupport.Technician.csproj" />
+    <ProjectReference Include="..\..\src\RemoteSupport.Shared\RemoteSupport.Shared.csproj" />
+    <ProjectReference Include="..\..\src\RemoteSupport.UI\RemoteSupport.UI.csproj" />
+  </ItemGroup>
+</Project>

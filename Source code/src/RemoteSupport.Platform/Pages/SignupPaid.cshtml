@@ -1,0 +1,72 @@
+@page "/signup/paid"
+@model RemoteSupport.Platform.Pages.SignupPaidModel
+@using RemoteSupport.Platform.Services
+@{ ViewData["Title"] = "Your card"; var t = Model.Company; var s = Model.Sub; }
+<section class="section"><div class="wrap" style="max-width:720px">
+    @if (Model.Checkout is { } co)
+    {
+        <h1>Going to PayFast…</h1>
+        <form id="toPayfast" method="post" action="@co.Action">
+            @foreach (var f in co.Fields) { <input type="hidden" name="@f.Key" value="@f.Value"> }
+            <button class="btn btn-accent btn-lg" type="submit">Continue to PayFast</button>
+        </form>
+        <script>document.getElementById('toPayfast').submit();</script>
+    }
+    else if (t == null || s == null)
+    {
+        <h1>We could not find that signup</h1>
+        <p class="muted">The link may be incomplete. If you signed up, check your email, or <a href="/support">contact us</a>.</p>
+    }
+    else
+    {
+        <h1 id="paidHeading">@t.CompanyName</h1>
+        @if (Model.Error.Length > 0) { <div class="alert alert-bad">@Model.Error</div> }
+        <div class="card" id="paidState" data-state="@Model.State">
+            <div id="waiting" style="@(Model.State == "waiting" ? "" : "display:none")">
+                @if (Model.Cancelled == 1)
+                {
+                    <p><strong>Your card was not added.</strong> Nothing was charged, and your account is waiting for it.</p>
+                }
+                else
+                {
+                    <p><strong>Waiting for PayFast to confirm your card…</strong> This usually takes a few seconds. You can leave this
+                        page open; it will change by itself.</p>
+                }
+                <form method="post">
+                    <button class="btn @(Model.Cancelled == 1 ? "btn-accent" : "")" type="submit">@(Model.Cancelled == 1 ? "Add your card" : "Try the card again")</button>
+                </form>
+            </div>
+            <div id="ready" style="@(Model.State == "ready" ? "" : "display:none")">
+                <p><strong>Your card is in, and your account is ready.</strong> Nothing is charged until @s.BillingDate; then
+                    @Pricing.Money(Pricing.For(t), s.AmountCents / 100m) a month. We have emailed you the details.</p>
+                <p><a class="btn btn-accent btn-lg" href="/login">Sign in</a></p>
+            </div>
+            <div id="stopped" style="@(Model.State == "stopped" ? "" : "display:none")">
+                <p><strong>This subscription is not active.</strong> Please <a href="/support">contact us</a>.</p>
+            </div>
+        </div>
+        @if (Model.State == "waiting")
+        {
+            <script>
+            (function () {
+                var tries = 0;
+                function ask() {
+                    if (++tries > 100) return;
+                    fetch('/api/payfast/checkout/' + encodeURIComponent('@Model.Ref'), { cache: 'no-store' })
+                        .then(function (r) { return r.ok ? r.json() : null; })
+                        .then(function (j) {
+                            if (j && j.state && j.state !== 'waiting') {
+                                ['waiting', 'ready', 'stopped'].forEach(function (id) { document.getElementById(id).style.display = id === j.state ? '' : 'none'; });
+                                document.getElementById('paidState').dataset.state = j.state;
+                                return;
+                            }
+                            setTimeout(ask, 3000);
+                        })
+                        .catch(function () { setTimeout(ask, 5000); });
+                }
+                setTimeout(ask, 2000);
+            })();
+            </script>
+        }
+    }
+</div></section>

@@ -1,0 +1,119 @@
+@page "/owner/pilots"
+@model RemoteSupport.Platform.Pages.Owner.PilotsModel
+@using RemoteSupport.Platform.Services
+@{ ViewData["Title"] = "Pilots"; ViewData["Section"] = "owner"; var now = DateTime.UtcNow; }
+<section class="portal"><div class="wrap">
+    <h1>Pilots</h1>
+    <p class="muted">One link per pilot company. It opens a sign-up of its own, even while public signup is closed: the company reads and
+        accepts the pilot terms, types its own details, and its account is ready at once — <strong>five seats free while it is a
+        pilot</strong>. A link works once, for @PilotService.LinkDays days. Times are UTC.</p>
+    @if (Model.Message.Length > 0) { <div class="alert @(Model.IsError ? "alert-bad" : "alert-ok")" id="pilotsMessage">@Model.Message</div> }
+    @if (Model.NewLink.Length > 0)
+    {
+        <div class="card" style="margin-bottom:18px" id="newPilotLink">
+            <h3>The link</h3>
+            <p style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                <input id="pilotLink" readonly value="@Model.NewLink" style="flex:1 1 420px;font-family:monospace" onclick="this.select()">
+                <button class="btn btn-accent" type="button" onclick="var i=document.getElementById('pilotLink');i.select();navigator.clipboard&&navigator.clipboard.writeText(i.value);this.textContent='Copied'">Copy</button>
+            </p>
+            <p class="muted" style="font-size:13px">Send it to the company yourself — by email or WhatsApp. Anybody holding it can sign a company up with it, once.</p>
+        </div>
+    }
+    @if (Model.Companies.Count > 0)
+    {
+        @* Ending a pilot (2026-10-22, PilotService.GiveNoticeAsync). *@
+        <h2 style="margin-top:8px">Pilot companies</h2>
+        <p class="muted">How much each has used the service, and ending a pilot. The pilot terms give <strong>@PilotService.NoticeDays days' notice</strong>,
+            so that is the day offered; choose an earlier one only if the company has agreed. Nothing changes for them until the day, and the
+            notice can be withdrawn until then. Their owners are emailed the notice, and again on the day.</p>
+        <table id="pilotCompanies" style="margin-bottom:22px">
+            <tr><th>Company</th><th>Used</th><th>State</th><th></th></tr>
+            @foreach (var c in Model.Companies)
+            {
+                var t = c.Tenant;
+                <tr data-pilot-company="@t.Id">
+                    <td><strong>@t.CompanyName</strong><div class="muted" style="font-size:12px">since @t.CreatedUtc.ToString("yyyy-MM-dd")</div></td>
+                    <td class="muted" style="font-size:13px">@c.People people · @c.Machines machines · @c.Tickets tickets · @c.Sessions sessions
+                        <div style="font-size:12px">Last sign-in: @(c.LastSignInUtc is { } l ? l.ToString("yyyy-MM-dd HH:mm") : "never")</div></td>
+                    <td>
+                        @if (t.Pilot && t.PilotEndsUtc is { } ends)
+                        {
+                            <span class="pill pill-warn">Notice given</span>
+                            <div class="muted" style="font-size:12px">ends @PilotService.Day(t, ends), then @(t.PilotAfter == PilotService.Pay ? "the standard price" : "suspended, closed 30 days later")</div>
+                        }
+                        else if (t.Pilot) { <span class="pill pill-ok">Pilot</span> }
+                        else
+                        {
+                            <span class="pill pill-muted">Ended @t.PilotEndedUtc?.ToString("yyyy-MM-dd")</span>
+                            <div class="muted" style="font-size:12px">@t.Status@(t.PilotAfter == PilotService.Close && t.Status == Data.TenantStatus.Suspended && t.PilotEndedUtc is { } ended ? $" — closes {ended.AddDays(PilotService.SuspendedDays):yyyy-MM-dd}" : "")</div>
+                        }
+                    </td>
+                    <td>
+                        @if (Model.MayMake && t.Pilot && t.PilotEndsUtc != null)
+                        {
+                            <form method="post" asp-page-handler="Withdraw" class="inline" onsubmit="return confirm('Withdraw the notice? The company stays a pilot, and its owners are told.')">
+                                <input type="hidden" name="id" value="@t.Id"><button class="btn btn-sm" type="submit">Withdraw notice</button></form>
+                        }
+                        else if (Model.MayMake && t.Pilot)
+                        {
+                            <details class="end-pilot"><summary class="btn btn-sm btn-danger">End the pilot…</summary>
+                                <form method="post" asp-page-handler="Notice" class="form" style="margin-top:10px;min-width:280px"
+                                      onsubmit="var d=this.day.value,min='@PilotsModel.NoticeDefault(t)';return d>=min||confirm('That is less than @PilotService.NoticeDays days away. The pilot terms give @PilotService.NoticeDays days of notice, so only do this if the company has agreed. Go ahead?')">
+                                    <input type="hidden" name="id" value="@t.Id">
+                                    <label>The pilot ends on</label>
+                                    <input type="date" name="day" value="@PilotsModel.NoticeDefault(t)" required>
+                                    <label>Then</label>
+                                    <label class="person"><input type="radio" name="after" value="@PilotService.Close" checked> Suspend the account, and close it @PilotService.SuspendedDays days later</label>
+                                    <label class="person"><input type="radio" name="after" value="@PilotService.Pay"> Move them to the standard price — 14 days to add a card</label>
+                                    <label>A line of your own at the top of the email <span class="muted">(optional)</span></label>
+                                    <textarea name="message" rows="3"></textarea>
+                                    <div class="actions"><button class="btn btn-danger" type="submit">Give notice</button></div>
+                                </form>
+                            </details>
+                        }
+                    </td>
+                </tr>
+            }
+        </table>
+        <h2>Pilot links</h2>
+    }
+    @if (Model.MayMake)
+    {
+        <div class="card" style="margin-bottom:18px">
+            <h3>Make a link</h3>
+            <form method="post" asp-page-handler="Make" class="form">
+                <div class="row">
+                    <div><label>Company</label><input name="CompanyName" value="@Model.CompanyName" required placeholder="Acme IT Services"></div>
+                    <div><label>Their email <span class="muted">(optional — filled in for them)</span></label><input name="Email" type="email" value="@Model.Email"></div>
+                </div>
+                <label>Note <span class="muted">(optional, for us)</span></label>
+                <input name="Note" value="@Model.Note" placeholder="Agreed with Jason on 15 October">
+                <div class="actions"><button class="btn btn-accent" type="submit" id="makePilot">Make the link</button></div>
+            </form>
+        </div>
+    }
+    @if (Model.Rows.Count == 0) { <div class="card">No pilot links yet.</div> }
+    else
+    {
+        <table id="pilotLinks">
+            <tr><th>Company</th><th>Made</th><th>State</th><th>Signed up as</th><th></th></tr>
+            @foreach (var (i, company) in Model.Rows)
+            {
+                var state = PilotService.State(i, now);
+                <tr data-pilot="@i.Id" data-state="@state">
+                    <td><strong>@i.CompanyName</strong>@if (i.Email.Length > 0) { <div class="muted" style="font-size:12px">@i.Email</div> }@if (i.Note.Length > 0) { <div class="muted" style="font-size:12px">@i.Note</div> }</td>
+                    <td class="muted" style="font-size:12px">@i.MadeUtc.ToString("yyyy-MM-dd HH:mm") by @i.MadeBy</td>
+                    <td><span class="pill @(state == "Used" ? "pill-ok" : state == "Waiting" ? "pill-warn" : "pill-muted")">@state</span>
+                        @if (state == "Waiting") { <div class="muted" style="font-size:12px">until @i.ExpiresUtc.ToString("yyyy-MM-dd")</div> }
+                        @if (i.UsedUtc is { } u) { <div class="muted" style="font-size:12px">@u.ToString("yyyy-MM-dd HH:mm")</div> }</td>
+                    <td>@company</td>
+                    <td>@if (Model.MayMake && state == "Waiting")
+                        {
+                            <form method="post" asp-page-handler="Cancel" class="inline" onsubmit="return confirm('Stop this link working?')">
+                                <input type="hidden" name="id" value="@i.Id"><button class="btn btn-sm btn-danger" type="submit">Cancel</button></form>
+                        }</td>
+                </tr>
+            }
+        </table>
+    }
+</div></section>

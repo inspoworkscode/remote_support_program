@@ -1,0 +1,107 @@
+@page "/portal/activity"
+@model RemoteSupport.Platform.Pages.Portal.ActivityModel
+@{ ViewData["Title"] = "Latest activity"; ViewData["Section"] = "portal"; }
+<section class="portal"><div class="wrap">
+    <h1>Latest activity</h1>
+    <p class="muted tintro">
+        Every update on @(Model.Mine ? "your tickets" : Permissions.CanSeeAllTickets(Model.MyRole) ? "every ticket" : "your tickets and the ones nobody has been given yet")
+        as it is posted — comments, stage changes, replies from customers, tickets assigned — newest first. It moves by itself while this page is open.
+    </p>
+
+    @* All or Mine first, as two tabs: the choice is remembered, and it is what the badge counts. *@
+    <div class="act-scope" role="tablist" aria-label="Whose tickets">
+        <a role="tab" aria-selected="@(!Model.Mine ? "true" : "false")" class="@(!Model.Mine ? "on" : "")" href="@Model.Address(mine: false, before: null)">All tickets</a>
+        <a role="tab" aria-selected="@(Model.Mine ? "true" : "false")" class="@(Model.Mine ? "on" : "")" href="@Model.Address(mine: true, before: null)">My tickets</a>
+    </div>
+
+    <form method="get" class="card act-filter" id="actFilter">
+        <input type="hidden" name="mine" value="@(Model.Mine ? 1 : 0)">
+        @* The client shown is kept by its number; the picker's own box is empty until somebody chooses or clears one —
+           then it carries the id, and the page turns it into the number (an id never stays in the address). *@
+        @if (Model.ClientNumber is > 0) { <input type="hidden" name="c" value="@Model.ClientNumber"> }
+        <div class="act-fields">
+            <div class="act-field">
+                <label for="actClient">Client</label>
+                <div class="cpick" data-mode="id">
+                    <input type="hidden" name="client" value="" id="actClientId">
+                    <input class="cpick-in" id="actClient" value="@Model.ClientName" placeholder="Every client" autocomplete="off" aria-label="Client">
+                    <div class="cpick-list" role="listbox" hidden></div>
+                </div>
+            </div>
+            <div class="act-field">
+                <label for="actWho">Posted by</label>
+                <select name="who" id="actWho" onchange="this.form.submit()">
+                    <option value="">Everybody</option>
+                    @foreach (var p in Model.Result.People) { <option value="@p" selected="@(p == Model.Poster)">@p</option> }
+                </select>
+            </div>
+            <label class="act-tick"><input type="checkbox" name="own" value="true" checked="@Model.Own" onchange="this.form.submit()"> Include my own</label>
+            <label class="act-tick"><input type="checkbox" name="auto" value="true" checked="@Model.Automatic" onchange="this.form.submit()"> Include automatic entries</label>
+            @if (Model.Filtered) { <a class="btn btn-sm" href="@Model.Address(clientNumber: null, who: "", own: false, auto: false, before: null)">Clear</a> }
+        </div>
+        <noscript><button class="btn btn-sm" type="submit">Show</button></noscript>
+    </form>
+
+    <div id="actList" data-list="@(Model.Address() + "&handler=List")" data-live="@(Model.Before == null ? "1" : "0")">
+        <partial name="_ActivityList" model="Model" />
+    </div>
+</div></section>
+
+<style>
+.act-scope{display:inline-flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:4px 0 14px}
+.act-scope a{padding:9px 16px;font-weight:800;color:var(--muted);text-decoration:none}
+.act-scope a.on{background:var(--fill);color:#fff}
+.act-filter{margin-bottom:18px}
+.act-fields{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end}
+.act-field{min-width:220px;flex:1}
+.act-field label{display:block;font-weight:800;font-size:13px;margin-bottom:6px}
+.act-field .cpick{display:block;width:100%}
+.act-field select,.act-field .cpick-in{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
+.act-tick{display:flex;gap:8px;align-items:center;font-size:14px;padding-bottom:10px;white-space:nowrap}
+.act-list{display:grid;gap:10px}
+.act-item{display:grid;grid-template-columns:110px 1fr;gap:14px;align-items:start;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:12px;padding:12px 14px;color:inherit;text-decoration:none}
+.act-item:hover{border-color:rgba(var(--grape-rgb),.45)}
+.act-item.new{background:rgba(var(--grape-rgb),.07)}
+.act-when{font-size:13px;color:var(--muted)}
+.act-title{font-weight:800}
+.act-what{margin-top:3px;font-size:14px}
+.act-text{margin-top:4px;font-size:14px;color:var(--muted);overflow-wrap:anywhere}
+.act-comment{border-left-color:var(--grape)}
+.act-customer{border-left-color:#d97706}
+.act-step{border-left-color:#059669}
+.act-back{border-left-color:#dc2626}
+.act-opened{border-left-color:#2563eb}
+.act-change,.act-auto{border-left-color:var(--line)}
+.act-undone .act-what{text-decoration:line-through}
+@@media (max-width:700px){.act-item{grid-template-columns:1fr;gap:4px}.act-field{min-width:100%}}
+</style>
+<script>
+(function () {
+  // The client picker raises "change" when a client is chosen or cleared (§96): show that client's at once.
+  var id = document.getElementById('actClientId');
+  if (id) id.addEventListener('change', function () { document.getElementById('actFilter').submit(); });
+  var box = document.getElementById('actList');
+  if (!box || box.dataset.live !== '1') return;   // an older page stays as it is
+  var busy = false, again = false;
+  function refresh() {
+    if (busy) { again = true; return; }
+    busy = true;
+    fetch(box.dataset.list + '&seen=' + (document.hidden ? 'false' : 'true'), { credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.text() : null; })
+      .then(function (html) { if (html != null) box.innerHTML = html; })
+      .catch(function () { })
+      .finally(function () { busy = false; if (again) { again = false; refresh(); } });
+  }
+  // chat.js hears the server and says so on the page (event: activity) — one connection for the whole portal.
+  // Only when there IS something new: a count of nought is the answer to this page's own look, and fetching again on
+  // it would look again, and be answered again, for ever.
+  var behind = false;
+  document.addEventListener('rsp-activity', function (e) {
+    if (!e.detail || !(e.detail.count > 0)) return;
+    if (document.hidden) { behind = true; return; }
+    refresh();
+  });
+  // Something came while the tab was in the background: it is seen when the tab is looked at.
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && behind) { behind = false; refresh(); } });
+})();
+</script>

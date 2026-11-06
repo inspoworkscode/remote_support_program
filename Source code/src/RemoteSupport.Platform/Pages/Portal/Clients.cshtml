@@ -1,0 +1,125 @@
+@page "/portal/clients"
+@model RemoteSupport.Platform.Pages.Portal.ClientsModel
+@{ ViewData["Title"] = "Clients"; ViewData["Section"] = "portal"; }
+<section class="portal"><div class="wrap">
+    <h1>Clients <span class="pill pill-muted" id="clientCount">@Model.Clients.Count</span>
+        @if (Model.CanImport) { <a class="btn btn-sm" href="/portal/clients/import" style="float:right">Import clients</a> }
+    </h1>
+    <p class="muted">Your customers. Tickets link to a client so all their work and history sits together.</p>
+    @if (!string.IsNullOrEmpty(Model.Message)) { <div class="alert alert-ok">@Model.Message</div> }
+    @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad">@Model.Error</div> }
+
+    @*
+        The list has the full width, and Add a client folds away above it. Contact person, phone,
+        email and address are each a column of their own (Clint, 2026-09-28) — squeezed beside the
+        form, an email address broke after every few letters. The form is open when there is nothing
+        to list yet, which is when adding one is the only thing to do.
+    *@
+    <details class="card form" style="margin-bottom:18px" open="@(Model.Clients.Count == 0 && string.IsNullOrEmpty(Model.Search))">
+        <summary style="cursor:pointer;font-weight:700;font-size:17px">Add a client</summary>
+        <div style="max-width:640px;margin-top:10px">
+            <form method="post" asp-page-handler="Add">
+                <label>Name (company or person)</label>
+                <input name="name" id="newName" required autocomplete="off" oninput="lookAhead(this.value)">
+                @* live matches as you type, so an existing customer is never entered twice *@
+                <div id="matches" style="margin-top:6px"></div>
+                <label>Contact person</label><input name="contact">
+                <div class="row">
+                    <div><label>Phone</label><input name="phone"></div>
+                    <div><label>Email</label><input name="email" type="email"></div>
+                </div>
+                <label>Address</label><textarea name="address" rows="2"></textarea>
+                <label>Notes</label><textarea name="notes" rows="2"></textarea>
+                <div class="actions"><button class="btn btn-accent" type="submit">Add client</button></div>
+            </form>
+            <p class="muted" style="font-size:13px;margin-top:10px">If the name already exists, we reuse that client instead of creating a duplicate.</p>
+        </div>
+    </details>
+
+    @* The list narrows as you type (Clint, 2026-09-29: "as you start to type characters it brings up
+       clients with those characters automatically same as the add client works"). It asks THIS page
+       for its own search result and swaps the list in, so both boxes match by the same rule —
+       ClientService.SearchAsync — and Search still works by Enter, and in a browser with no script. *@
+    <form method="get" style="margin-bottom:14px;display:flex;gap:10px" onsubmit="return searchNow()">
+        <input name="search" id="clientSearch" value="@Model.Search" placeholder="Search name, contact, phone or email" autocomplete="off"
+               oninput="searchAsYouType()" style="flex:1;padding:11px 13px;border:1px solid var(--line);border-radius:10px">
+        <button class="btn" type="submit">Search</button>
+        <a class="btn" href="/portal/clients" id="clientClear" onclick="return clearSearch()" style="@(string.IsNullOrEmpty(Model.Search) ? "display:none" : "")">Clear</a>
+    </form>
+    <div id="clientResults">
+    @if (Model.Clients.Count == 0)
+    {
+        <div class="card">@(string.IsNullOrEmpty(Model.Search) ? "No clients yet. Add your first one above, or import your list." : "No client matches that search.")</div>
+    }
+    else
+    {
+        <table>
+            <tr><th>Name</th><th>Contact person</th><th>Phone</th><th>Email</th><th>Address</th><th>Tickets</th><th></th></tr>
+            @foreach (var c in Model.Clients)
+            {
+                var counts = Model.CountsFor(c.Id);
+                <tr>
+                    <td><a href="@(PortalAddresses.Client(c.Number))"><strong>@c.Name</strong></a></td>
+                    <td>@c.ContactName</td>
+                    <td style="white-space:nowrap">@c.Phone</td>
+                    <td style="font-size:13px;overflow-wrap:anywhere">@c.Email</td>
+                    <td style="font-size:13px;white-space:pre-line">@c.Address</td>
+                    <td>@counts.all @if (counts.open > 0) { <span class="pill pill-warn">@counts.open open</span> }</td>
+                    <td><a class="btn btn-sm" href="@(PortalAddresses.Client(c.Number))">Open</a></td>
+                </tr>
+            }
+        </table>
+    }
+    </div>
+</div></section>
+<script>
+// ---- the search bar, as you type ----
+var searchTimer, searchSeq = 0;
+function searchAsYouType() { clearTimeout(searchTimer); searchTimer = setTimeout(runSearch, 200); }
+function searchNow() { clearTimeout(searchTimer); runSearch(); return false; }
+function clearSearch() { document.getElementById('clientSearch').value = ''; searchNow(); document.getElementById('clientSearch').focus(); return false; }
+async function runSearch() {
+  var term = document.getElementById('clientSearch').value.trim();
+  var url = '/portal/clients' + (term ? '?search=' + encodeURIComponent(term) : '');
+  var mine = ++searchSeq;
+  try {
+    var res = await fetch(url, { credentials: 'same-origin' });
+    if (!res.ok || res.redirected) { location.href = url; return; }   // signed out: let the page say so
+    var page = new DOMParser().parseFromString(await res.text(), 'text/html');
+    if (mine !== searchSeq) return;                                  // a later keystroke has already asked
+    var fresh = page.getElementById('clientResults');
+    if (!fresh) { location.href = url; return; }
+    document.getElementById('clientResults').innerHTML = fresh.innerHTML;
+    if (window.phoneTables) phoneTables.label();                     // the new rows as cards on a phone, too
+    var count = page.getElementById('clientCount');
+    if (count) document.getElementById('clientCount').textContent = count.textContent;
+    document.getElementById('clientClear').style.display = term ? '' : 'none';
+    history.replaceState(null, '', url);                              // a refresh or Back keeps the search
+  } catch (e) { location.href = url; }
+}
+
+// Same type-ahead as the new-ticket form, for the same reason: catch the existing customer
+// before a second record is created, including a match on contact, phone or email.
+var lookAheadTimer;
+function lookAhead(term) {
+  clearTimeout(lookAheadTimer);
+  lookAheadTimer = setTimeout(async function () {
+    var box = document.getElementById('matches');
+    term = (term || '').trim();
+    if (term.length < 2) { box.innerHTML = ''; return; }
+    try {
+      var res = await fetch('/api/portal/clients?term=' + encodeURIComponent(term));
+      var list = await res.json();
+      if (!list.length) {
+        box.innerHTML = '<p class="muted" style="font-size:13px">No existing client matches — this will create a new one.</p>';
+        return;
+      }
+      box.innerHTML = '<p class="muted" style="font-size:13px;margin:6px 0 4px">Already on file — open one instead of adding it again:</p>' +
+        list.map(function (c) {
+          return '<a class="btn btn-sm" style="margin:3px 4px 0 0" href="/portal/c/' + c.number + '">' +
+                 c.display.replace(/</g, '&lt;') + '</a>';
+        }).join('');
+    } catch (e) { box.innerHTML = ''; }
+  }, 200);
+}
+</script>

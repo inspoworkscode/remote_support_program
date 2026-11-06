@@ -1,0 +1,45 @@
+@model RemoteSupport.Platform.Pages.Portal.ActivityModel
+@using RemoteSupport.Shared
+@using M = RemoteSupport.Platform.Pages.Portal.ActivityModel
+@* Latest activity's list (HANDOVER §164): drawn with the page, and again by itself when something new is posted. *@
+@{ var r = Model.Result; }
+@if (r.NoSuchClient || Model.ClientNumber is > 0 && Model.ClientName.Length == 0)
+{
+    <p class="muted">That client is not on file.</p>
+}
+else if (r.Entries.Count == 0)
+{
+    <div class="card"><p class="muted" style="margin:0">
+        @(Model.Before != null ? "Nothing older." : Model.Filtered ? "Nothing matches these choices yet." : Model.Mine ? "Nothing on your tickets yet. Updates appear here as they are posted." : "Nothing yet. Updates appear here as they are posted.")
+    </p></div>
+}
+else
+{
+    int fresh = r.Entries.Count(e => e.IsNew);
+    @if (Model.Before == null && fresh > 0) { <p class="muted" style="margin:0 0 10px">@fresh new since you last looked.</p> }
+    <div class="act-list">
+        @foreach (var e in r.Entries)
+        {
+            <a class="act-item @M.KindClass(e)@(e.IsNew ? " new" : "")@(e.Undone ? " act-undone" : "")" href="@M.LinkOf(e)" data-key="@e.Key">
+                <div class="act-when" title="@e.AtUtc.Local().ToString("yyyy-MM-dd HH:mm")">
+                    @Model.Ago(e)
+                    @if (e.IsNew) { <div><span class="pill pill-warn">new</span></div> }
+                </div>
+                <div>
+                    <div class="act-title">#@e.TicketNumber @e.Subject@if (e.Client.Length > 0) { <span class="muted" style="font-weight:400"> · @e.Client</span> }</div>
+                    <div class="act-what">
+                        <strong>@e.Who</strong> · @e.Headline
+                        @if (e.ForYou.Length > 0) { <span class="pill pill-bad">@e.ForYou</span> }
+                        @if (e.Files > 0) { <span class="pill pill-muted">@e.Files file@(e.Files == 1 ? "" : "s")</span> }
+                        @if (e.Undone) { <span class="pill pill-muted">gone back over</span> }
+                    </div>
+                    @if (e.Text.Length > 0) { <div class="act-text">@e.Text</div> }
+                </div>
+            </a>
+        }
+    </div>
+    @if (r.More)
+    {
+        <p style="margin-top:14px"><a class="btn" href="@Model.Address(before: r.Entries[^1].AtUtc.Ticks)">Show older</a></p>
+    }
+}

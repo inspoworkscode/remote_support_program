@@ -1,0 +1,96 @@
+@page "/owner/updates"
+@model RemoteSupport.Platform.Pages.Owner.UpdatesModel
+@using RemoteSupport.Platform.Services
+@using RemoteSupport.Shared
+@{ ViewData["Title"] = "Updates"; ViewData["Section"] = "owner"; }
+<section class="portal"><div class="wrap">
+    <h1>Updates</h1>
+    <p class="muted">What each server hands out, and how far it has gone. Machines update themselves silently, when nobody is connected;
+        each checks that every file is signed by us and newer than what it has, and puts its old files back if its new agent does not
+        come back within five minutes. A release starts with <strong>our own company</strong>; move it on to <strong>the pilots</strong>,
+        then <strong>everybody</strong>, once it has done well. It pauses itself, and emails every Full admin and Owner, when machines roll
+        back. Times are UTC.</p>
+    @if (Model.Message.Length > 0) { <div class="alert alert-ok" id="updatesMessage">@Model.Message</div> }
+    @if (Model.Problem.Length > 0) { <div class="alert alert-bad" id="updatesProblem">@Model.Problem</div> }
+
+    @foreach (var v in Model.Fleet)
+    {
+        var u = v.Report?.Update;
+        <div class="card" style="margin-bottom:18px" data-server="@v.Row.Name" data-release="@(u?.Version ?? "")" data-ring="@(u?.Ring ?? -1)" data-paused="@((u?.Paused ?? false) ? "true" : "false")">
+            <h2>@v.Row.Name</h2>
+            @if (v.Report == null) { <p class="muted">Not answering: @v.Error</p> continue; }
+            @if (u == null) { <p class="muted">Nothing to hand out: this server is not a released (stamped) build, or is older than auto-update.</p> continue; }
+            <p>
+                <strong>Release @u.Version</strong>
+                @if (AppVersion.BuiltUtc(u.Version) is { } built) { <span class="muted"> · built @built.ToString("d MMM yyyy HH:mm")</span> }
+                @if (u.Client != null) { <span class="muted"> · customer app @((u.Client.Size / 1048576.0).ToString("0")) MB</span> }
+                @if (u.Console != null) { <span class="muted"> · console @((u.Console.Size / 1048576.0).ToString("0")) MB</span> }
+            </p>
+            <p>
+                Offered to: <strong id="ringNow">@(u.Ring switch { 0 => "our own company only", 1 => "our own company and the pilots", _ => "everybody" })</strong>
+                @if (u.Paused) { <span class="pill pill-bad" id="pausedPill">Paused @u.PausedWhy</span> }
+                <span class="muted" style="font-size:12px"> · last changed @u.ChangedUtc.ToString("d MMM HH:mm") by @u.ChangedBy</span>
+            </p>
+            @if (Model.CanRun)
+            {
+                <div class="actions" style="display:flex;gap:8px;flex-wrap:wrap">
+                    @if (u.Ring < 1)
+                    {
+                        <form method="post" asp-page-handler="Act" class="inline" onsubmit="return confirm('Offer @u.Version to the pilot companies\' machines too?')">
+                            <input type="hidden" name="server" value="@v.Row.Id"><input type="hidden" name="id" value="0">
+                            <input type="hidden" name="act" value="update-ring"><input type="hidden" name="ring" value="1">
+                            <button class="btn btn-accent" type="submit" id="toPilots">Offer it to the pilots</button>
+                        </form>
+                    }
+                    @if (u.Ring < 2)
+                    {
+                        <form method="post" asp-page-handler="Act" class="inline" onsubmit="return confirm('Offer @u.Version to EVERY company\'s machines?')">
+                            <input type="hidden" name="server" value="@v.Row.Id"><input type="hidden" name="id" value="0">
+                            <input type="hidden" name="act" value="update-ring"><input type="hidden" name="ring" value="2">
+                            <button class="btn @(u.Ring == 1 ? "btn-accent" : "")" type="submit" id="toEverybody">Offer it to everybody</button>
+                        </form>
+                    }
+                    <form method="post" asp-page-handler="Act" class="inline">
+                        <input type="hidden" name="server" value="@v.Row.Id"><input type="hidden" name="id" value="0">
+                        <input type="hidden" name="act" value="@(u.Paused ? "update-resume" : "update-pause")">
+                        <button class="btn" type="submit" id="@(u.Paused ? "resume" : "pause")">@(u.Paused ? "Resume" : "Pause")</button>
+                    </form>
+                </div>
+            }
+            <table class="update-rings" style="margin-top:12px">
+                <tr><th>Machines of</th><th>All</th><th>On @u.Version</th><th>Offered</th><th>Under way</th><th>Rolled back</th><th>Refused</th><th>Need a reinstall</th></tr>
+                @foreach (var c in u.Rings)
+                {
+                    <tr data-ring="@c.Ring" class="@(c.Ring > u.Ring ? "muted" : "")">
+                        <td>@UpdateService.RingName(c.Ring)@(c.Ring > u.Ring ? " (not yet)" : "")</td>
+                        <td>@c.Machines.ToString("N0")</td>
+                        <td>@c.OnIt.ToString("N0")</td>
+                        <td>@c.Offered.ToString("N0")</td>
+                        <td>@c.InProgress.ToString("N0")</td>
+                        <td>@if (c.RolledBack > 0) { <span class="pill pill-bad">@c.RolledBack</span> } else { <text>0</text> }</td>
+                        <td>@if (c.Refused > 0) { <span class="pill pill-warn">@c.Refused</span> } else { <text>0</text> }</td>
+                        <td title="Installed before auto-update: one more reinstall by hand, and they update themselves from then on">@c.NeedReinstall.ToString("N0")</td>
+                    </tr>
+                }
+            </table>
+        </div>
+    }
+
+    <h2>What machines on this server said</h2>
+    @if (Model.Recent.Count == 0) { <div class="card">Nothing yet.</div> }
+    else
+    {
+        <table id="updateEvents">
+            <tr><th>When</th><th>Company</th><th>Machine</th><th>Version</th><th>Step</th><th>Detail</th></tr>
+            @foreach (var (e, company) in Model.Recent)
+            {
+                <tr data-step="@e.Step">
+                    <td class="muted" style="font-size:12px">@e.AtUtc.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                    <td>@company</td><td>@e.MachineName</td><td>@e.Version</td>
+                    <td><span class="pill @(e.Step == UpdateSteps.Installed ? "pill-ok" : e.Step is UpdateSteps.RolledBack or UpdateSteps.Refused ? "pill-bad" : e.Step == UpdateSteps.Failed ? "pill-warn" : "pill-muted")">@UpdateSteps.Words(e.Step)</span></td>
+                    <td class="muted" style="font-size:12px">@e.Detail</td>
+                </tr>
+            }
+        </table>
+    }
+</div></section>

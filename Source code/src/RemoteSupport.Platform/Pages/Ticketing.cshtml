@@ -1,0 +1,78 @@
+@page "/ticketing"
+@{
+    ViewData["Title"] = "Job card and ticketing software";
+    ViewData["Description"] = "Job card software for IT companies, repair shops and call-out work: workshop jobs, call-outs, walk-ins, remote sessions, quotes and a billing queue.";
+    ViewData["Keywords"] = "job card software, job card app, online job card, workshop job card, ticketing system, repair shop software, call-out job cards, South Africa";
+}
+<section class="page-head">
+    <div class="wrap">
+        <h1>Job cards and ticketing</h1>
+        <p class="lede">A job card for every job: workshop repairs, call-outs, walk-ins and remote sessions, each following a route made
+            for that kind of work — booked in, done, invoiced. Every remote session opens its own job card with the time spent, and
+            every finished job lands in the office's billing queue. For IT companies, repair shops, call-out businesses and anyone
+            else who works on other people's things.</p>
+        <div class="next-links"><partial name="_SiteCta" /></div>
+    </div>
+</section>
+
+<section class="section" style="padding-bottom:0">
+    <div class="wrap">
+        <figure class="shot-figure shot-wide">
+            <partial name="_Shot" model="SitePages.Shots.Tickets" />
+            <figcaption>A workshop job in the console: its story step by step, with only the next steps as buttons. The same ticket is in the
+                web portal for the office.</figcaption>
+        </figure>
+    </div>
+</section>
+
+<section class="section">
+    <div class="wrap">
+        <h2>A route for every kind of job</h2>
+        <div class="facts" style="margin-top:18px">
+            <div class="card fact"><h3>Workshop</h3><p>Booked in with three photos, inspection findings, repairable or not, quote, the work done written into the job, collection or delivery with photos out. A damage report when it cannot be repaired.</p></div>
+            <div class="card fact"><h3>Call-out</h3><p>Booked, rescheduled when it has to be, the work and time recorded on site, paid there by cash or card machine — or brought back to the workshop on the same ticket.</p></div>
+            <div class="card fact"><h3>Walk-in and remote support</h3><p>Fixed at the counter or over a session, invoiced or paid there, or linked into a bigger job for the same client.</p></div>
+            <div class="card fact"><h3>Recurring tasks</h3><p>Set up a daily, weekly or monthly task once — maintenance, billing, meter readings — and its ticket opens by itself each time, with the right people on it.</p></div>
+        </div>
+        <p style="margin-top:18px">Each ticket reads like a story: what happened at each step, by whom, with the next steps as buttons. Made a mistake?
+            Go back a step. Several people can be on one ticket, and an @@mention stays flagged until the person answers.</p>
+    </div>
+</section>
+
+<section class="section alt">
+    <div class="wrap grid2">
+        <div>
+            <h2>Quotes to your suppliers</h2>
+            <p>List the parts — with photos and serial numbers if you like — tick the suppliers, and a quote request goes out asking price,
+                stock and delivery, signed with your own signature. One supplier goes in To; several go in Bcc, so nobody sees the others.</p>
+        </div>
+        <div>
+            <h2>The office knows what to invoice</h2>
+            <p>A finished job moves to the billing queue, and the office administrators are told at once. Nothing is closed until it has been
+                invoiced or marked as not to be — so nothing is forgotten.</p>
+        </div>
+    </div>
+</section>
+
+<section class="section">
+    <div class="wrap">
+        <h2>Tickets that come to you</h2>
+        <ul class="feature-list" style="margin-top:18px">
+            <li>An email to your support address opens a ticket, and replies land on it</li>
+            <li>A contact form for your website that opens tickets</li>
+            <li>Update the client from a ticket by email — their reply comes back onto it</li>
+            <li>Every session on a customer's computer is its own ticket</li>
+            <li>A support request from your app arrives with a picture of their screen</li>
+            <li>Import your clients from a spreadsheet you already have</li>
+        </ul>
+    </div>
+</section>
+
+<section class="section alt">
+    <div class="wrap">
+        <h2>The whole team, one place</h2>
+        <p>Owners, supervisors, technicians and office administrators each see what they need — tick the boxes a person needs, and one person
+            can be several. Office chat for the team, a ding for a new message, a ring for a customer waiting. Works on a phone.</p>
+        <div class="next-links"><a class="btn" href="/knowledge-base">The knowledge base</a> <a class="btn" href="/health-checks">Monthly health checks</a></div>
+    </div>
+</section>

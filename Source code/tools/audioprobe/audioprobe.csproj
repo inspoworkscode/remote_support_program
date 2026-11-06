@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Portal credentials helper, shared by the harnesses; keeps the password out of the repo. -->
+    <Compile Include="..\Common\RsCredentials.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\RemoteSupport.Shared\RemoteSupport.Shared.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The script lives with hostinfo's, because it is the same kind of thing and gets read
+         alongside it. Linked rather than copied so there is only ever one of it. -->
+    <None Include="..\hostinfo\audioprobe.ps1" Link="audioprobe.ps1" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The loopback capture half of the same question, selected by the listen switch. -->
+    <None Include="..\hostinfo\audiolisten.ps1" Link="audiolisten.ps1" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

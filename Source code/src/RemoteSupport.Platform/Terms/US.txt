@@ -1,0 +1,14 @@
+Country: the United States
+Tax: Any sales or use taxes are [to be confirmed before we open in the United States].
+LiabilityExtra:
+---PRIVACY---
+The United States has no single privacy law; the laws of your state and of your customers' states apply.
+
+- **Your customers' information.** For the personal information of your customers and their staff that passes through the service, we act **on your behalf and on your instructions only**. Where the California Consumer Privacy Act as amended by the CPRA, or a similar state law, applies, we are your **service provider** (or processor): we do not sell or share that information, do not use it for any purpose except providing the service to you, do not combine it with other information except as that law allows, and tell you if we can no longer meet these obligations.
+- **Your own information.** For the information about your company and your staff that we need to run your account and bill you, we use it only for that, and we never sell it.
+- **Where it is kept.** Your data is kept on servers in **the United States**.
+- **Breaches.** We will tell you without undue delay about a security breach affecting your customers' information, so that you can give any notice your state's law requires.
+- **Authorized access only.** Accessing a computer without authorization may violate the federal Computer Fraud and Abuse Act and state law. Section 3 of these terms — having permission for every computer — matters.
+- **Warranty disclaimer.** TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SERVICE IS PROVIDED "AS IS" AND WE DISCLAIM ALL IMPLIED WARRANTIES, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
+---LAW---
+These terms are governed by the law of the State of [Delaware — to be confirmed], without regard to its conflict-of-laws rules, and the state and federal courts in [county and state — to be confirmed] have exclusive jurisdiction.

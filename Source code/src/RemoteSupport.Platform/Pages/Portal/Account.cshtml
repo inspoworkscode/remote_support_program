@@ -1,0 +1,22 @@
+@page "/portal/account"
+@model RemoteSupport.Platform.Pages.Portal.AccountModel
+@{ ViewData["Title"] = "My account"; ViewData["Section"] = "portal"; }
+<section class="portal"><div class="wrap" style="max-width:560px">
+    <h1>My account</h1>
+    <p class="muted">Signed in as <strong>@Model.Me</strong> (@Model.Email), @Model.Tenant.CompanyName.</p>
+    @if (!string.IsNullOrEmpty(Model.Message)) { <div class="alert alert-ok">@Model.Message</div> }
+    @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad">@Model.Error</div> }
+    <div class="card form">
+        <h3>Change my password</h3>
+        <form method="post">
+            <input value="@Model.Email" autocomplete="username" hidden>
+            <label>Current password</label><input name="current" type="password" required autocomplete="current-password">
+            <label>New password (8 or more characters)</label><input name="password" type="password" required minlength="8" autocomplete="new-password">
+            <label>The same again</label><input name="again" type="password" required minlength="8" autocomplete="new-password">
+            <label>Code from your authenticator app</label><input name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="16">
+            <p class="muted" style="font-size:13px">Lost your phone? Type one of your recovery codes instead.</p>
+            <div class="actions"><button class="btn btn-accent" type="submit">Change password</button></div>
+        </form>
+    </div>
+    <p class="muted" style="margin-top:16px;font-size:13px">Forgotten the current one? Sign out and use <a href="/forgot">Forgot password</a>.</p>
+</div></section>

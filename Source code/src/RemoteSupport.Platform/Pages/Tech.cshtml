@@ -1,0 +1,121 @@
+@page "/tech/{slug}"
+@model TechModel
+@{
+    ViewData["Title"] = Model.Tenant == null ? "Not found" : $"{Model.Tenant.CompanyName} technician console";
+    Layout = null;
+}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="/site.css?v=@RemoteSupport.Platform.Services.BuildStamp.Value">
+</head>
+<body>
+@if (Model.Tenant == null)
+{
+    <section class="getpage"><div class="wrap"><h1>Page not found</h1><p class="muted">This link isn't active.</p></div></section>
+}
+else
+{
+    var t = Model.Tenant;
+    <section class="getpage">
+        <div class="wrap">
+            <div class="tbanner" style="background:@t.PrimaryColor">
+                @if (Model.HasLogo) { <img src="/logo/@t.Slug" alt="@t.CompanyName"> } else { <span style="font-size:28px;font-weight:800">@t.CompanyName</span> }
+            </div>
+            <h1>@t.CompanyName technician console</h1>
+            <p class="muted" style="font-size:18px;max-width:640px;margin:0 auto 24px">For @t.CompanyName's technicians. Install it on any PC you work from.</p>
+
+            @if (!Model.SignedInHere)
+            {
+                @* Sign in first, on this page: the link is safe to paste anywhere, and only somebody
+                   with an account gets the console. Same email and password as the console itself. *@
+                <div class="card" style="max-width:420px;margin:0 auto;text-align:left">
+                    <h3 style="margin-top:0">Sign in to download</h3>
+                    <p class="muted" style="font-size:14px">Use the email and password you sign in to the console with.</p>
+                    @if (Model.Error.Length > 0) { <div class="alert alert-bad">@Model.Error</div> }
+                    @if (Model.Step.Mode.Length > 0)
+                    {
+                        <partial name="_TwoFactorStep" model="Model.Step" />
+                    }
+                    else
+                    {
+                    <form method="post" class="form">
+                        <label>Email</label><input name="Email" type="email" value="@Model.Email" required autofocus autocomplete="username">
+                        <label>Password</label><input name="Password" type="password" required autocomplete="current-password">
+                        <div class="actions"><button class="btn btn-accent btn-lg" type="submit">Sign in</button></div>
+                    </form>
+                    <p class="muted" style="font-size:13px;margin-top:10px">New here? Use the invitation email your company sent you. &middot; <a href="/forgot">Forgot your password?</a></p>
+                    }
+                </div>
+            }
+            else if (!Model.Allowed)
+            {
+                <div class="alert alert-warn" style="display:inline-block;max-width:560px">
+                    You are signed in as @Model.Name, an office administrator. The console is for technicians, so
+                    there is nothing to download for this account — everything you need is in the
+                    <a href="/portal">portal</a>.
+                </div>
+            }
+            else if (!Model.Available)
+            {
+                <div class="alert alert-warn" style="display:inline-block">The console isn't available to download yet. Please ask your administrator.</div>
+            }
+            else if (Model.ExeAvailable)
+            {
+                @* One .exe (2026-10-01): it sets itself up for this Windows user — the zip's unblock,
+                   unzip, run and pin, done for them. *@
+                <a class="btn btn-lg" style="background:@t.AccentColor;border-color:@t.AccentColor;color:#fff" href="/downloads/@t.Slug/technician.exe">Download the technician console</a>
+                <form method="post" action="/logout" class="muted" style="margin-top:10px;font-size:13px">
+                    Windows 10 / 11 &middot; signed in as @Model.Name &middot;
+                    <input type="hidden" name="back" value="/tech/@t.Slug"><a href="#" onclick="this.closest('form').submit();return false;">not you?</a>@Html.AntiForgeryToken()
+                </form>
+
+                <div class="steps card">
+                    <h3>Then</h3>
+                    <ol style="padding-left:18px;line-height:1.9">
+                        <li>Open the downloaded file. It sets itself up for you — no administrator needed — with a shortcut on your desktop and in the Start menu, already pointed at @t.CompanyName's account.</li>
+                        <li>Sign in with the same email and password as above. It remembers your email next time.</li>
+                    </ol>
+                    <p class="muted" style="font-size:13px;margin-top:8px">
+                        <strong>Updating?</strong> Close the console (right-click its icon by the clock &rarr; Exit), then download and open the new one. It replaces the old one in place.
+                    </p>
+                </div>
+            }
+            else
+            {
+                <a class="btn btn-lg" style="background:@t.AccentColor;border-color:@t.AccentColor;color:#fff" href="/downloads/@t.Slug/technician.zip">Download the technician console</a>
+                <form method="post" action="/logout" class="muted" style="margin-top:10px;font-size:13px">
+                    Windows 10 / 11 &middot; signed in as @Model.Name &middot;
+                    <input type="hidden" name="back" value="/tech/@t.Slug"><a href="#" onclick="this.closest('form').submit();return false;">not you?</a>@Html.AntiForgeryToken()
+                </form>
+
+                <div class="steps card">
+                    @* The same ten seconds as the customers' page: until the apps are code-signed
+                       (roadmap stage 5), unblocking the zip is what stops Windows warning about every
+                       file inside it. *@
+                    <div style="border-left:4px solid @t.AccentColor;padding:10px 14px;margin-bottom:14px;text-align:left;background:var(--panel-hi);border-radius:6px">
+                        <div style="font-weight:800;font-size:15px">First: right-click the downloaded file &rarr; Properties &rarr; tick <em>Unblock</em> &rarr; OK</div>
+                        <p class="muted" style="margin:6px 0 0;font-size:13px">
+                            Windows marks files downloaded from the internet and warns that the publisher cannot be
+                            verified. Unblocking the zip before you unzip it clears that for everything inside.
+                        </p>
+                    </div>
+                    <h3>Then</h3>
+                    <ol style="padding-left:18px;line-height:1.9">
+                        <li>Unzip it into a folder that will stay, such as <strong>Documents\Technician Console</strong> — not inside the zip itself.</li>
+                        <li>Double-click <strong>RemoteSupport.Technician.exe</strong>. It is already pointed at @t.CompanyName's account.</li>
+                        <li>Sign in with the same email and password as above. It remembers your email next time.</li>
+                        <li>Right-click it in the taskbar &rarr; <strong>Pin to taskbar</strong>, so you never need this page again.</li>
+                    </ol>
+                    <p class="muted" style="font-size:13px;margin-top:8px">
+                        <strong>Updating?</strong> Close the console, then unzip the new download over the old folder and say yes to replacing the files.
+                    </p>
+                </div>
+            }
+        </div>
+    </section>
+}
+</body>
+</html>

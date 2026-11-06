@@ -1,0 +1,70 @@
+@page "/portal/websupport"
+@model RemoteSupport.Platform.Pages.Portal.WebSupportModel
+@using RemoteSupport.Platform.Services
+@{ ViewData["Title"] = "Browser support"; ViewData["Section"] = "portal"; var t = Model.Tenant; }
+<section class="portal"><div class="wrap">
+    <h1>Browser support</h1>
+    <p class="muted" style="max-width:760px">
+        A link your customers open in their web browser: they fill in who they are and what is wrong, it rings
+        your technicians like the support app does, and they can share their screen. Your technicians can
+        <strong>see and chat</strong>, but not take control — no browser allows that. It is also a way for a
+        new customer to try you before installing anything, and for someone whose PC will not run the app.
+    </p>
+    @if (!string.IsNullOrEmpty(Model.Message)) { <div class="alert alert-ok">@Model.Message</div> }
+    @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad">@Model.Error</div> }
+
+    <div class="card" style="margin-bottom:18px">
+        <h3 style="margin-top:0">The link to give customers</h3>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <code id="helpLink" style="font-size:15px;overflow-wrap:anywhere">@Model.Link</code>
+            <button type="button" class="btn btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('helpLink').textContent);this.textContent='Copied'">Copy</button>
+            <a class="btn btn-sm" href="@Model.Link" target="_blank" rel="noopener">Open it</a>
+        </div>
+        <p class="muted" style="margin:10px 0 0">
+            Right now it is
+            @if (!t.WebSupportEnabled) { <span class="pill pill-muted">switched off</span> }
+            else if (Model.OpenNow) { <span class="pill pill-ok">open — it rings through</span> }
+            else { <span class="pill pill-warn">closed — outside your hours</span> }
+            . Outside your hours it shows them the hours, and your phone and email from Branding.
+        </p>
+    </div>
+
+    <form method="post" class="form card" style="max-width:760px">
+        <label style="display:flex;gap:10px;align-items:center;font-weight:800">
+            <input type="checkbox" name="enabled" value="true" style="width:auto" checked="@t.WebSupportEnabled"> Take support requests from the browser link
+        </label>
+
+        <h3>Hours</h3>
+        <p class="muted" style="margin-top:0">When the link rings through. They can be longer than your office hours. A closing time before the opening time runs past midnight.</p>
+        <table class="table" style="box-shadow:none">
+            <thead><tr><th>Day</th><th>Open</th><th>From</th><th>To</th></tr></thead>
+            <tbody>
+            @for (int i = 0; i < 7; i++)
+            {
+                var d = Model.Days[i];
+                <tr>
+                    <td><strong>@WebSupportHours.Days[i]</strong></td>
+                    <td>
+                        @* The tick first and its "false" after: the binder takes the FIRST value, so the other way round is always false. *@
+                        <input type="checkbox" name="open[@i]" value="true" style="width:auto" checked="@(d != null)" onchange="dayOn(@i, this.checked)">
+                        <input type="hidden" name="open[@i]" value="false">
+                    </td>
+                    <td><input type="time" name="from[@i]" id="from@(i)" value="@(d is { } a ? WebSupportHours.Hm(a.Open) : "08:00")" style="opacity:@(d == null ? ".45" : "1")"></td>
+                    <td><input type="time" name="to[@i]" id="to@(i)" value="@(d is { } b ? (b.Close >= TimeSpan.FromHours(24) ? "23:59" : WebSupportHours.Hm(b.Close)) : "17:00")" style="opacity:@(d == null ? ".45" : "1")"></td>
+                </tr>
+            }
+            </tbody>
+        </table>
+
+        <label for="zone">Time zone</label>
+        <select name="zone" id="zone">
+            @foreach (var z in WebSupportHours.Zones) { <option value="@z.Id" selected="@(z.Id == t.WebSupportTimeZone)">@z.Label</option> }
+        </select>
+
+        <div class="actions"><button class="btn btn-accent" type="submit">Save</button></div>
+    </form>
+</div></section>
+<script>
+// Dimmed, never disabled: a disabled box is not posted, and a gap in an indexed list stops the binder there.
+function dayOn(i, on){ document.getElementById('from' + i).style.opacity = document.getElementById('to' + i).style.opacity = on ? '1' : '.45'; }
+</script>

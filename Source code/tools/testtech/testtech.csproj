@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>testtech</AssemblyName>
+    <RootNamespace>RemoteSupport.Tools.TestTech</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Through the real model and the real Passwords helper, so the account it writes is one the
+         server will actually accept. A tool with its own copy of the hashing would drift out of
+         step and write accounts nobody can sign in to. -->
+    <ProjectReference Include="..\..\src\RemoteSupport.Platform\RemoteSupport.Platform.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,148 @@
+@page "/owner/payfast"
+@model RemoteSupport.Platform.Pages.Owner.PayfastModel
+@using RemoteSupport.Platform.Data
+@using RemoteSupport.Platform.Services
+@{ ViewData["Title"] = "PayFast"; ViewData["Section"] = "owner"; var s = Model.Settings; }
+@if (Model.Checkout is { } co)
+{
+    @* Straight on to PayFast. action= is written out, so no antiforgery token is added — an extra field would be
+       outside PayFast's signature and the checkout would be refused. *@
+    <section class="portal"><div class="wrap">
+        <h1>Going to PayFast…</h1>
+        <form id="toPayfast" method="post" action="@co.Action">
+            @foreach (var f in co.Fields)
+            {
+                <input type="hidden" name="@f.Key" value="@f.Value">
+            }
+            <p class="muted">Reference <code>@co.Subscription.Reference</code>. If nothing happens, press the button.</p>
+            <button class="btn btn-accent" type="submit">Continue to PayFast</button>
+        </form>
+        <script>document.getElementById('toPayfast').submit();</script>
+    </div></section>
+    return;
+}
+<section class="portal"><div class="wrap">
+    <h1>PayFast</h1>
+    <p class="muted">
+        How this server takes payment. The account is set on the server's command line
+        (<code>deploy\Set-PayfastKeys.ps1</code>), so its key and passphrase never pass through a web page.
+        Times are UTC.
+    </p>
+
+    @if (!string.IsNullOrEmpty(Model.Message))
+    {
+        <div class="alert @(Model.IsError ? "alert-bad" : "alert-ok")">@Model.Message</div>
+    }
+
+    <div class="card" id="payfastAccount" data-mode="@(s.PayfastConfigured ? (s.PayfastSandbox ? "sandbox" : "live") : "none")">
+        <h3>The account</h3>
+        @if (!s.PayfastConfigured)
+        {
+            <p><strong>Not set up.</strong> Nothing can be paid for on this server until it is.</p>
+        }
+        else
+        {
+            <p>
+                @if (s.PayfastSandbox) { <span class="pill pill-warn">SANDBOX — no money moves</span> }
+                else { <span class="pill pill-ok">LIVE</span> }
+                Merchant <strong>@s.PayfastMerchantId</strong>; key and passphrase stored.
+                @if (s.PayfastUpdatedUtc is { } u) { <span class="muted">Set @u.ToString("yyyy-MM-dd HH:mm").</span> }
+            </p>
+        }
+        <p class="muted">PayFast's notices come to <code>@Model.NotifyUrl</code> — sent with every checkout, so PayFast's own "ITN" switch can stay off.</p>
+        @if (Model.MayRun && s.PayfastConfigured)
+        {
+            <form method="post" asp-page-handler="Ping" class="inline"><button class="btn" type="submit">Test PayFast's API</button></form>
+        }
+    </div>
+
+    @if (Model.MayRun && s.PayfastConfigured && s.PayfastSandbox)
+    {
+        <form method="post" asp-page-handler="Test" class="form card" style="max-width:720px" id="testCheckout">
+            <h3>A sandbox test checkout</h3>
+            <p class="muted">
+                Goes to PayFast's sandbox as that company, with its test card. The defaults take nothing now, R5.00
+                tomorrow, and R5.00 again a month later — PayFast runs subscriptions monthly at the most often.
+            </p>
+            <label>Company</label>
+            <select name="tenantId">
+                @foreach (var c in Model.Companies) { <option value="@c.Key">@c.Value</option> }
+            </select>
+            <label>Now (rand)</label>
+            <input name="initial" value="0.00">
+            <label>Each charge after that (rand, R5.00 at least)</label>
+            <input name="amount" value="5.00">
+            <label>First charge on (yyyy-mm-dd)</label>
+            <input name="billingDate" value="@Model.Tomorrow">
+            <label>How often</label>
+            <select name="frequency">
+                <option value="3" selected>Monthly</option>
+                <option value="6">Yearly</option>
+            </select>
+            <label>How many charges (0 = until cancelled)</label>
+            <input name="cycles" type="number" min="0" value="2">
+            <button class="btn btn-accent" type="submit">Start the test checkout</button>
+        </form>
+    }
+
+    <h2>Subscriptions</h2>
+    @if (Model.Subscriptions.Count == 0) { <div class="card">None yet.</div> }
+    else
+    {
+        <div class="table-scroll"><table id="payfastSubscriptions">
+            <tr><th>Made</th><th>Company</th><th>Reference</th><th>Why</th><th>Status</th><th>Each charge</th><th>Next</th><th>Last paid</th>@if (Model.MayRun) { <th></th> }</tr>
+            @foreach (var x in Model.Subscriptions)
+            {
+                <tr data-ref="@x.Reference" data-status="@x.Status" data-token="@(x.Token ?? "")">
+                    <td style="white-space:nowrap">@x.CreatedUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                    <td>@Model.Companies.GetValueOrDefault(x.TenantId, "#" + x.TenantId)</td>
+                    <td><code>@x.Reference</code>@if (x.Sandbox) { <span class="muted"> sandbox</span> }</td>
+                    <td>@x.Purpose</td>
+                    <td>@(x.Status switch { PayfastStatus.AwaitingCard => "Awaiting card", PayfastStatus.Active => "Active", _ => "Cancelled" })</td>
+                    <td>R@(PayfastWire.Rand(x.AmountCents)) @PayfastWire.FrequencyName(x.Frequency)@if (x.AmountProblem.Length > 0) { <div class="muted" data-amount-problem="yes">New amount not taken: @x.AmountProblem</div> }</td>
+                    <td>@(x.NextRunDate.Length > 0 ? x.NextRunDate : x.BillingDate)</td>
+                    <td>@(x.LastPaymentUtc?.ToString("yyyy-MM-dd HH:mm") ?? "—")</td>
+                    @if (Model.MayRun)
+                    {
+                        <td>@if (x.Token != null) { <form method="post" asp-page-handler="Check" class="inline"><input type="hidden" name="id" value="@x.Id"><button class="btn btn-sm" type="submit">Check with PayFast</button></form> }</td>
+                    }
+                </tr>
+            }
+        </table></div>
+    }
+
+    <h2>Payments</h2>
+    @if (Model.Payments.Count == 0) { <div class="card">None yet.</div> }
+    else
+    {
+        <div class="table-scroll"><table id="payfastPayments">
+            <tr><th>When</th><th>Company</th><th>PayFast id</th><th>Status</th><th>Amount</th><th>Fee</th><th>Acted on</th></tr>
+            @foreach (var p in Model.Payments)
+            {
+                <tr data-pf="@p.PfPaymentId" data-status="@p.Status" data-applied="@(p.Applied ? "yes" : "no")">
+                    <td style="white-space:nowrap">@p.ReceivedUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                    <td>@Model.Companies.GetValueOrDefault(p.TenantId, "#" + p.TenantId)</td>
+                    <td>@p.PfPaymentId@if (p.Sandbox) { <span class="muted"> sandbox</span> }</td>
+                    <td>@p.Status</td>
+                    <td>R@(PayfastWire.Rand(Math.Max(0, p.AmountGrossCents)))</td>
+                    <td>R@(PayfastWire.Rand(Math.Abs(p.AmountFeeCents)))</td>
+                    <td>@(p.Applied ? "Yes" : "No")@if (p.Problem.Length > 0) { <div class="muted">@p.Problem</div> }</td>
+                </tr>
+            }
+        </table></div>
+    }
+
+    <h2>Notices refused</h2>
+    <p class="muted">Since this server last started — the log keeps them all. A forged or stray notice belongs here; a genuine one here is a fault.</p>
+    @if (Model.Refusals.Count == 0) { <div class="card">None.</div> }
+    else
+    {
+        <div class="table-scroll"><table id="payfastRefusals">
+            <tr><th>When</th><th>From</th><th>Why</th></tr>
+            @foreach (var r in Model.Refusals)
+            {
+                <tr><td style="white-space:nowrap">@r.when.ToString("yyyy-MM-dd HH:mm:ss")</td><td>@r.from</td><td>@r.why</td></tr>
+            }
+        </table></div>
+    }
+</div></section>

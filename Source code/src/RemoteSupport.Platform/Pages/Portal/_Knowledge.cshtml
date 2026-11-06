@@ -1,0 +1,26 @@
+@model RemoteSupport.Platform.Pages.Portal.TicketModel
+@* The knowledge base on a ticket (3.8.5) — drawn by BOTH the story page and the classic page, as
+   everything shown on a ticket must be (§61). Three things, each only when it is true: the client's
+   articles (Clint's recommendation 2 — found without having to think to look), the articles written
+   up from this ticket, and "Add to knowledge base" once the work is recorded as done. *@
+@{
+    var k = Model.Knowledge;
+    var t = Model.Ticket!;
+}
+@if (k != null && (k.ClientCount > 0 || k.FromTicket.Count > 0 || k.Offered))
+{
+    <div class="kb-ticket" id="kbTicket">
+        @if (k.ClientCount > 0)
+        {
+            <a class="kb-ref" href="@(PortalAddresses.KbFor(k.ClientNumber))">📘 Knowledge base for @k.ClientName (@k.ClientCount)</a>
+        }
+        @foreach (var a in k.FromTicket)
+        {
+            <span class="muted">Written up:</span> <a href="@(PortalAddresses.Article(a.Number))">@a.Title</a>
+        }
+        @if (k.Offered)
+        {
+            <a class="btn btn-sm" href="/portal/kb/edit?t=@t.Number">@(k.FromTicket.Count > 0 ? "Add another to the knowledge base" : "Add to knowledge base")</a>
+        }
+    </div>
+}

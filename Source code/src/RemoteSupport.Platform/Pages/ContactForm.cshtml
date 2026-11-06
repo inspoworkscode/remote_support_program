@@ -1,0 +1,108 @@
+@page "/contact/{slug}"
+@model ContactFormModel
+@{ Layout = null; var t = Model.Tenant; var s = Model.S; bool open = t != null && s.FormEnabled && t.IsServiceEnabled; }
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>@(t == null ? "Contact" : $"Contact {t.CompanyName}")</title>
+@* Its own small stylesheet, light, in the company's colour: it sits on THEIR website, not in our portal. *@
+<style>
+  :root { --fill: @Model.Fill; --ink: #1b2430; --muted: #5a6b7d; --line: #d5dce5; --soft: #f4f6f9; --bad: #b42318; --ok: #067647; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink); background: #fff; }
+  main { max-width: 560px; margin: 0 auto; padding: @(Model.Embedded ? "4px 2px" : "28px 16px"); }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .intro { color: var(--muted); margin: 0 0 14px; }
+  label { display: block; font-weight: 600; margin: 12px 0 4px; font-size: 14px; }
+  label span { font-weight: 400; color: var(--muted); }
+  input, textarea { width: 100%; font: inherit; color: var(--ink); padding: 10px 11px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+  input:focus, textarea:focus { outline: 2px solid var(--fill); outline-offset: 1px; border-color: transparent; }
+  textarea { resize: vertical; min-height: 130px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @@media (max-width: 480px) { .two { grid-template-columns: 1fr; } }
+  .btn { background: var(--fill); color: #fff; border: 0; border-radius: 10px; padding: 12px 18px; font: inherit; font-weight: 700; cursor: pointer; margin-top: 16px; width: 100%; }
+  .btn:disabled { opacity: .55; cursor: default; }
+  .err { color: var(--bad); background: #fef3f2; border: 1px solid #fecdca; border-radius: 10px; padding: 10px 12px; margin: 10px 0; }
+  .note { color: var(--muted); background: var(--soft); border-radius: 10px; padding: 10px 12px; margin: 10px 0; font-size: 14px; }
+  .thanks { text-align: center; padding: 30px 10px; }
+  .thanks strong { display: block; font-size: 18px; margin-bottom: 6px; color: var(--ok); }
+  .trap { position: absolute; left: -5000px; width: 1px; height: 1px; overflow: hidden; }
+  .small { color: var(--muted); font-size: 12px; margin-top: 10px; text-align: center; }
+</style>
+</head>
+<body>
+<main>
+@if (t == null)
+{
+    <p>This form isn't available.</p>
+}
+else if (Model.Thanked)
+{
+    <div class="thanks" role="status">
+        <strong>@Model.ThanksText</strong>
+        @if (Model.Number > 0 && Model.Replied) { <p>We have emailed you a copy with the ticket number. If you need to add anything, simply reply to it.</p> }
+    </div>
+}
+else
+{
+    <h1>@(s.FormHeading.Length > 0 ? s.FormHeading : "Contact us")</h1>
+    @if (s.FormIntro.Length > 0) { <p class="intro">@s.FormIntro</p> }
+    @if (!open && !Model.Preview)
+    {
+        <p class="note">This form is not taking messages at the moment.@if (t.SupportEmail.Length > 0) { <text> Please email <a href="mailto:@t.SupportEmail">@t.SupportEmail</a></text> }@if (t.SupportPhone.Length > 0) { <text> or phone @t.SupportPhone</text> }.</p>
+    }
+    else
+    {
+        @if (Model.Preview) { <p class="note">This is how the form looks on your website.@(s.FormEnabled ? "" : " It is switched off at the moment, so it tells visitors it is not taking messages.") Nothing is sent from this preview.</p> }
+        @if (Model.Error.Length > 0) { <p class="err" role="alert">@Model.Error</p> }
+        <form method="post" asp-antiforgery="false" id="cf">
+            <input type="hidden" name="o" value="@Model.Opened">
+            <input type="hidden" name="from" value="@Model.From">
+            @if (Model.Embedded) { <input type="hidden" name="embed" value="1"> }
+            <div class="trap" aria-hidden="true"><label>Website <input name="Website" tabindex="-1" autocomplete="off"></label></div>
+            <div class="two">
+                <div><label for="Name">Your name</label><input id="Name" name="Name" value="@Model.Name" required maxlength="80" autocomplete="name"></div>
+                <div><label for="Email">Email address</label><input id="Email" name="Email" type="email" value="@Model.Email" required maxlength="200" autocomplete="email"></div>
+            </div>
+            @if (s.FormPhone != "off" || s.FormCompany)
+            {
+                <div class="two">
+                    @if (s.FormPhone != "off")
+                    {
+                        <div><label for="Phone">Phone @if (s.FormPhone == "optional") { <span>(optional)</span> }</label>
+                            <input id="Phone" name="Phone" type="tel" value="@Model.Phone" maxlength="40" autocomplete="tel" required="@(s.FormPhone == "required")"></div>
+                    }
+                    @if (s.FormCompany)
+                    {
+                        <div><label for="Company">Company <span>(optional)</span></label><input id="Company" name="Company" value="@Model.Company" maxlength="120" autocomplete="organization"></div>
+                    }
+                </div>
+            }
+            <label for="Subject">Subject <span>(optional)</span></label>
+            <input id="Subject" name="Subject" value="@Model.Subject" maxlength="200">
+            <label for="Message">How can we help?</label>
+            <textarea id="Message" name="Message" required maxlength="@RemoteSupport.Platform.Services.TicketIntake.FormTextMax">@Model.Message</textarea>
+            <button class="btn" type="submit" disabled="@Model.Preview">Send</button>
+            <p class="small">We will reply to the email address you give us.</p>
+        </form>
+    }
+}
+</main>
+<script>
+// In a frame on the company's website, say how tall the page is, so the frame fits it without a scroll bar.
+(function () {
+  // One press sends once: the button goes grey as the form goes.
+  var f = document.getElementById('cf');
+  if (f) f.addEventListener('submit', function () { var b = f.querySelector('button[type=submit]'); setTimeout(function () { if (b) b.disabled = true; }, 0); });
+  if (window.parent === window) return;
+  var last = 0;
+  function tell() { var h = document.documentElement.scrollHeight; if (h !== last) { last = h; window.parent.postMessage({ rspContactHeight: h }, '*'); } }
+  window.addEventListener('load', tell); window.addEventListener('resize', tell);
+  new MutationObserver(tell).observe(document.body, { childList: true, subtree: true });
+  tell();
+})();
+</script>
+</body>
+</html>

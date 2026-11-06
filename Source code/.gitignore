@@ -1,0 +1,84 @@
+# ---------------------------------------------------------------------------------------------
+# The Remote Support Program
+#
+# Three things must never be committed: build output (large and regenerable), the staged payloads
+# (~1 GB of self-contained exes), and anything secret — the tenant key, the SQLite database and
+# the Data Protection keys that encrypt stored workshop passwords.
+# ---------------------------------------------------------------------------------------------
+
+# ---- build output ----------------------------------------------------------------------------
+# Note: patterns are lowercase-explicit where a case-insensitive match could bite. Do NOT add a
+# bare "data/" rule — on Windows git is case-insensitive by default and it would also swallow
+# src/RemoteSupport.Platform/Data/, which is source (PlatformDb.cs and the EF migrations).
+[Bb]in/
+[Oo]bj/
+.vs/
+*.user
+*.suo
+TestResults/
+
+# ---- staged payloads (regenerate with .\build.ps1) --------------------------------------------
+/dist/
+/demo/
+
+# The deploy-client folder is a hand-assembled package: keep the scripts and branding, leave out
+# the 170 MB of binaries that build.ps1 produces.
+/deploy-client/*.exe
+
+# ---- secrets and live data --------------------------------------------------------------------
+# brand.json carries the tenant key, which authenticates devices to a tenant. Copy it back from
+# the portal, or from branding/brand.example.json, after a fresh clone.
+**/branding/brand.json
+
+# The platform's SQLite database, uploaded tenant logos, and the Data Protection keys. Losing the
+# keys loses every stored workshop password, so back them up somewhere private — but not here.
+**/data/keys/
+**/data/logos/
+*.db
+*.db-shm
+*.db-wal
+
+# Legacy single-tenant server's runtime state
+/src/RemoteSupport.Server/data/
+
+# ---- misc --------------------------------------------------------------------------------------
+*.log
+Thumbs.db
+desktop.ini
+
+# Local portal credentials for the diagnostic harnesses in tools/. Never commit this.
+/tools/rs-credentials.json
+# The harnesses' own PostgreSQL account (tools/Setup-TestPostgres.ps1). Test-only, but a password all the same.
+/tools/rs-postgres.txt
+# Clint's PayFast SANDBOX account for tools/payfastcheck (tools/Save-PayfastSandbox.ps1), encrypted to this Windows user.
+/tools/payfast-sandbox.xml
+
+# Timestamped copies that tools/deploy-client-payload.ps1 keeps before editing appsettings.json.
+# They are a local safety net, not source, and one of them carries whatever PublicUrl was set
+# on that machine at the time.
+*.bak-*
+
+# Publish-Landing.ps1 -PreviewOnly renders the finished holding page here, phone number and
+# all. It is a local preview of a generated file, never the source.
+landing/preview.html
+
+# THEME PREVIEW — tools\Preview-Theme.ps1 regenerates these from landing/index.html every run.
+# Generated, never deployed, and they carry the phone number filled in.
+landing/preview-dark-*.html
+
+# Publish-Landing.ps1 -ForUpload renders the page here, named index.html, ready to put through
+# konsoleH by hand. Generated from landing/index.html, so the source is the thing to edit.
+landing/upload/
+
+# Contracts and company paperwork. Anchored to the repository root and named in full, so it
+# cannot catch a src/.../Legal/ folder if one is ever added. These are private documents that
+# happen to sit beside the code; keep them backed up somewhere else, because git is not backing
+# them up.
+/legal/
+
+# ---- the test checklist remembers where the shared drive is, per PC ----------------------------
+/tools/testchecklist/share-path.txt
+# Harness runs on each database (tools/Run-DbHarnesses.ps1): output, not source.
+/tools/dbruns/
+# Server reports (deploy/Get-ServerReport.ps1): a picture of the live server, kept locally.
+/deploy/reports/

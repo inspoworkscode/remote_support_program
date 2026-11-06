@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>signincheck</AssemblyName>
+    <RootNamespace>RemoteSupport.Tools.SignInCheck</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\RemoteSupport.Shared\RemoteSupport.Shared.csproj" />
+    <ProjectReference Include="..\..\src\RemoteSupport.UI\RemoteSupport.UI.csproj" />
+    <ProjectReference Include="..\..\src\RemoteSupport.Technician\RemoteSupport.Technician.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Which database its throwaway platform runs on: SQLite, or PostgreSQL with RSP_TEST_DB=postgres (HANDOVER 118). -->
+    <Compile Include="..\Common\HarnessDb.cs" />
+    <Compile Include="..\Common\TestPostgres.cs" />
+    <PackageReference Include="Npgsql" Version="10.0.3" />
+  </ItemGroup>
+</Project>

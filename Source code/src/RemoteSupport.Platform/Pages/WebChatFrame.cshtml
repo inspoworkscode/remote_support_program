@@ -1,0 +1,114 @@
+@page "/webchat/{slug}/frame"
+@model WebChatFrameModel
+@{ Layout = null; var t = Model.Tenant; }
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chat</title>
+@* Its own small stylesheet, light, in the company's colour: it sits on THEIR website, not in our portal. *@
+<style>
+  :root { --fill: @Model.Fill; --ink: #1b2430; --muted: #5a6b7d; --line: #e3e8ef; --soft: #f4f6f9; --bad: #b42318; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink); background: #fff; display: flex; flex-direction: column; }
+  header { background: var(--fill); color: #fff; padding: 14px 16px; display: flex; align-items: center; gap: 10px; flex: none; }
+  header .who { flex: 1; min-width: 0; }
+  header strong { display: block; font-size: 16px; }
+  header span { font-size: 13px; opacity: .92; }
+  header button { background: transparent; border: 0; color: #fff; font-size: 24px; line-height: 1; cursor: pointer; padding: 4px 6px; border-radius: 8px; }
+  header button:focus-visible { outline: 2px solid #fff; }
+  main { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px; }
+  .view[hidden] { display: none !important; }
+  form.details label { display: block; font-weight: 600; margin: 10px 0 4px; font-size: 13px; }
+  form.details input, form.details textarea, .compose textarea { width: 100%; font: inherit; color: var(--ink); padding: 9px 10px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+  form.details textarea { resize: vertical; min-height: 80px; }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 3px; }
+  .btn { background: var(--fill); color: #fff; border: 0; border-radius: 10px; padding: 10px 16px; font: inherit; font-weight: 700; cursor: pointer; }
+  .btn:disabled { opacity: .6; cursor: default; }
+  .btn.wide { width: 100%; margin-top: 14px; }
+  .link { background: none; border: 0; color: var(--muted); font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; padding: 0; }
+  .err { color: var(--bad); font-size: 13px; margin-top: 8px; min-height: 1em; }
+  .trap { position: absolute; left: -5000px; width: 1px; height: 1px; overflow: hidden; }
+  .lines { display: flex; flex-direction: column; gap: 8px; }
+  .line { max-width: 85%; padding: 8px 11px; border-radius: 14px; background: var(--soft); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .line.mine { align-self: flex-end; background: var(--fill); color: #fff; }
+  .line.mine a { color: #fff; }
+  .line .meta { display: block; font-size: 11px; opacity: .75; margin-bottom: 2px; }
+  .line.note { align-self: center; max-width: 95%; background: none; color: var(--muted); font-size: 12px; font-style: italic; text-align: center; padding: 2px 8px; }
+  .status { text-align: center; color: var(--muted); font-size: 12px; margin: 10px 0 2px; }
+  .compose { border-top: 1px solid var(--line); padding: 10px 12px; display: flex; gap: 8px; align-items: flex-end; flex: none; }
+  .compose textarea { resize: none; height: 44px; max-height: 120px; }
+  .compose[hidden] { display: none; }
+  footer { flex: none; text-align: center; padding: 6px 0 10px; }
+  .thanks { text-align: center; padding: 30px 10px; }
+  .thanks strong { display: block; font-size: 16px; margin-bottom: 6px; }
+</style>
+</head>
+<body data-slug="@(t?.Slug ?? "")" data-mode="@Model.Mode" data-page="@Model.Visited" data-company="@Model.Company">
+@if (t == null)
+{
+    <main><p>This chat isn't available.</p></main>
+}
+else
+{
+    <header>
+        <div class="who">
+            <strong>@Model.Company</strong>
+            <span id="sub">@(Model.Mode == "open" ? "We usually reply within a minute or two." : "Leave us a message and we'll get back to you.")</span>
+        </div>
+        <button type="button" id="close" aria-label="Close the chat">&times;</button>
+    </header>
+    <main id="main">
+        @* Starting a chat: who they are, then their question. An email OR a phone — Clint's choice. *@
+        <form class="details view" id="start" hidden novalidate>
+            <p style="margin-top:0">Hi! Ask us anything — somebody from @Model.Company will answer here.</p>
+            <label for="s-name">Your name</label><input id="s-name" autocomplete="name" maxlength="80" required>
+            <label for="s-email">Email</label><input id="s-email" type="email" autocomplete="email" maxlength="200">
+            <label for="s-phone">or phone</label><input id="s-phone" type="tel" autocomplete="tel" maxlength="40">
+            <div class="hint">One of the two, so we can get back to you if you have to go.</div>
+            <label for="s-text">Your question</label><textarea id="s-text" maxlength="2000" required></textarea>
+            <div class="trap" aria-hidden="true"><label>Website <input id="s-website" tabindex="-1" autocomplete="off"></label></div>
+            <div class="err" id="s-err" role="alert"></div>
+            <button class="btn wide" type="submit" id="s-go">Start chat</button>
+        </form>
+
+        @* Nobody to answer, or outside the hours: a message, which becomes a ticket. *@
+        <form class="details view" id="leave" hidden novalidate>
+            <p style="margin-top:0" id="l-why">Nobody is available to chat right now. Leave a message and we'll get back to you.</p>
+            @if (Model.Hours.Count > 0)
+            {
+                <p class="hint" style="margin-top:-4px">We chat live: @string.Join("; ", Model.Hours).</p>
+            }
+            <label for="l-name">Your name</label><input id="l-name" autocomplete="name" maxlength="80" required>
+            <label for="l-email">Email</label><input id="l-email" type="email" autocomplete="email" maxlength="200">
+            <label for="l-phone">or phone</label><input id="l-phone" type="tel" autocomplete="tel" maxlength="40">
+            <div class="hint">One of the two, so we can get back to you.</div>
+            <label for="l-text">Your message</label><textarea id="l-text" maxlength="2000" required></textarea>
+            <div class="trap" aria-hidden="true"><label>Website <input id="l-website" tabindex="-1" autocomplete="off"></label></div>
+            <div class="err" id="l-err" role="alert"></div>
+            <button class="btn wide" type="submit" id="l-go">Send message</button>
+        </form>
+
+        <div class="thanks view" id="sent" hidden>
+            <strong>Thank you — your message is with us.</strong>
+            We'll get back to you as soon as we can.
+        </div>
+
+        <div class="view" id="chat" hidden>
+            <div class="lines" id="lines" aria-live="polite"></div>
+            <div class="status" id="status"></div>
+        </div>
+
+        <div class="thanks view" id="off" hidden><strong>Chat isn't available right now.</strong></div>
+    </main>
+    <form class="compose" id="compose" hidden>
+        <textarea id="c-text" maxlength="2000" placeholder="Type a message…" aria-label="Your message"></textarea>
+        <button class="btn" type="submit" id="c-go">Send</button>
+    </form>
+    <footer id="foot" hidden><button type="button" class="link" id="end">End chat</button> <button type="button" class="link" id="again" hidden>Start a new chat</button></footer>
+    <script src="/sounds.js?v=@RemoteSupport.Platform.Services.BuildStamp.Value"></script>
+    <script src="/webchat.js?v=@RemoteSupport.Platform.Services.BuildStamp.Value"></script>
+}
+</body>
+</html>

@@ -1,0 +1,58 @@
+@page "/guest/web"
+@{
+    // Outside help, step 4 (3.9, 2026-10-06): a guest connects from this page, with nothing to download.
+    // Everything happens in wwwroot/guestview.js; the server enforces everything (GuestVisitor, and the
+    // visitor allow-lists in TenantHub.Outsiders.cs) whatever this page does.
+    ViewData["Title"] = "Connect with a code";
+}
+<style>
+.gv{max-width:1200px}
+.gv form{max-width:520px}
+.gv label{display:block;font-weight:700;margin:12px 0 4px}
+.gv input,.gv select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--solid);color:var(--ink);font:inherit}
+.gv-code{font-size:22px;letter-spacing:.08em}
+.gv-status{margin:14px 0;color:var(--muted);min-height:1.4em}
+.gv-status.bad{color:var(--bad,#dc2626);font-weight:700}
+.gv-bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.gv-bar label{margin:0}
+.gv-wrap{position:relative;width:100%;background:#000;border-radius:10px;overflow:hidden;line-height:0}
+.gv-wrap canvas{width:100%;height:auto;display:block}
+#gvCursor{position:absolute;inset:0;outline:none;cursor:none}
+#gvCursor:focus{box-shadow:inset 0 0 0 3px #3b82f6}
+</style>
+<section class="section">
+    <div class="wrap gv">
+        <h1>Connect to a computer with a code</h1>
+        <p class="muted" style="max-width:760px">
+            Somebody has given you a nine-digit code so that you can help them. Type it here with your name: whoever gave it
+            to you is shown your name and lets you in, and their IT company is told and can watch and end it. You will see
+            the screen and can use the mouse and keyboard — no files here and no tools. Nothing is installed.
+            Prefer a program? <a href="/guest">Download the guest console</a> instead.
+        </p>
+
+        <form id="gvForm" autocomplete="off">
+            <label for="gvName">Your name</label>
+            <input id="gvName" maxlength="60" placeholder="e.g. Jane Smith">
+            <label for="gvCompany">Your company (if any)</label>
+            <input id="gvCompany" maxlength="80" placeholder="e.g. Smith &amp; Co Accountants">
+            <label for="gvCode">The code</label>
+            <input id="gvCode" class="gv-code" maxlength="15" inputmode="numeric" placeholder="123 456 789">
+            <div style="margin-top:16px"><button id="gvGo" class="btn btn-accent" type="submit">Connect</button></div>
+        </form>
+        <div id="gvStatus" class="gv-status" role="status"></div>
+
+        <div id="gvStage" hidden>
+            <div class="gv-bar">
+                <span hidden><label for="gvMonitor">Screen</label> <select id="gvMonitor" style="width:auto"></select></span>
+                <span class="muted" style="flex:1">Click the picture to type into it. Some keys (Ctrl+Alt+Del, Windows key shortcuts) stay with your own computer.</span>
+                <button id="gvLeave" class="btn btn-sm" type="button">Leave</button>
+            </div>
+            <div id="gvWrap" class="gv-wrap">
+                <canvas id="gvScreen" width="1280" height="720"></canvas>
+                <canvas id="gvCursor" width="1280" height="720" tabindex="0" aria-label="The other computer's screen. Click to type into it."></canvas>
+            </div>
+        </div>
+    </div>
+</section>
+<script src="/e2e.js?v=@RemoteSupport.Platform.Services.BuildStamp.Value"></script>
+<script src="/guestview.js?v=@RemoteSupport.Platform.Services.BuildStamp.Value"></script>

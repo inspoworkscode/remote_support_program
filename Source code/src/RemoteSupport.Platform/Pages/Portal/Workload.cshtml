@@ -1,0 +1,91 @@
+@page "/portal/workload"
+@using RemoteSupport.Platform.Data
+@using RemoteSupport.Platform.Services
+@using M = RemoteSupport.Platform.Pages.Portal.WorkloadModel
+@model RemoteSupport.Platform.Pages.Portal.WorkloadModel
+@{ ViewData["Title"] = "Who has what"; ViewData["Section"] = "portal"; }
+<section class="portal"><div class="wrap">
+    <h1>Who has what</h1>
+    <p class="muted">Every technician and the work they are carrying, busiest first. Anything nobody has been given is at the bottom — that is the part that goes unnoticed.</p>
+
+    <div class="stats" style="grid-template-columns:repeat(3,1fr)">
+        <div class="stat"><div class="n">@Model.TotalOpen</div><div class="l">Open altogether</div></div>
+        <div class="stat"><div class="n">@Model.Loads.Count(l => l.Open.Count > 0)</div><div class="l">People with work</div></div>
+        <div class="stat"><div class="n">@Model.Pool.Count</div><div class="l">Waiting for somebody</div></div>
+    </div>
+
+    @foreach (var l in Model.Loads)
+    {
+        <div class="card" style="margin-bottom:18px">
+            <h3>
+                @l.Name
+                @if (l.Disabled) { <span class="pill pill-muted">no longer listed</span> }
+                @if (l.Open.Count == 0) { <span class="pill pill-ok">nothing open</span> }
+                else
+                {
+                    <span class="pill pill-muted">@l.Open.Count open</span>
+                    @if (l.InProgress > 0) { <span class="pill pill-muted">@l.InProgress in progress</span> }
+                    @if (l.OnHold > 0) { <span class="pill pill-warn">@l.OnHold on hold</span> }
+                    @if (l.Urgent > 0) { <span class="pill pill-bad">@l.Urgent high or urgent</span> }
+                    @if (l.OldestDays >= 7) { <span class="pill @M.AgePill(l.OldestDays)">oldest @l.OldestDays days</span> }
+                }
+                @if (l.ClosedThisMonth > 0) { <span class="pill pill-ok">@l.ClosedThisMonth closed this month</span> }
+            </h3>
+
+            @if (l.Open.Count == 0)
+            {
+                <p class="muted">Nothing open.</p>
+            }
+            else
+            {
+                <table>
+                    <tr><th>#</th><th>Subject</th><th>Client</th><th>Status</th><th>Priority</th><th>Age</th></tr>
+                    @foreach (var t in l.Open)
+                    {
+                        <tr>
+                            <td><a href="@(PortalAddresses.Ticket(t.Number))"><strong>#@t.Number</strong></a></td>
+                            <td>@t.Subject
+                                @if (!string.IsNullOrWhiteSpace(t.MachineName)) { <br><span class="muted" style="font-size:12px">@t.MachineName</span> }
+                            </td>
+                            <td class="muted" style="font-size:12px">@(string.IsNullOrWhiteSpace(t.ContactName) ? "—" : t.ContactName)</td>
+                            <td>@M.StatusName(t.Status)</td>
+                            <td>@t.Priority</td>
+                            <td><span class="pill @M.AgePill(M.Age(t.CreatedUtc))">@M.Age(t.CreatedUtc) d</span></td>
+                        </tr>
+                    }
+                </table>
+            }
+        </div>
+    }
+
+    <div class="card" style="margin-bottom:26px">
+        <h3>Waiting for somebody
+            @if (Model.Pool.Count > 0) { <span class="pill pill-warn">@Model.Pool.Count</span> }
+            else { <span class="pill pill-ok">none</span> }
+        </h3>
+        @if (Model.Pool.Count == 0)
+        {
+            <p class="muted">Everything open is with somebody.</p>
+        }
+        else
+        {
+            <p class="muted">Nobody has been given these. Technicians can see them and pick them up, but nothing makes that happen.</p>
+            <table>
+                <tr><th>#</th><th>Subject</th><th>Client</th><th>Status</th><th>Priority</th><th>Age</th></tr>
+                @foreach (var t in Model.Pool)
+                {
+                    <tr>
+                        <td><a href="@(PortalAddresses.Ticket(t.Number))"><strong>#@t.Number</strong></a></td>
+                        <td>@t.Subject
+                            @if (!string.IsNullOrWhiteSpace(t.MachineName)) { <br><span class="muted" style="font-size:12px">@t.MachineName</span> }
+                        </td>
+                        <td class="muted" style="font-size:12px">@(string.IsNullOrWhiteSpace(t.ContactName) ? "—" : t.ContactName)</td>
+                        <td>@M.StatusName(t.Status)</td>
+                        <td>@t.Priority</td>
+                        <td><span class="pill @M.AgePill(M.Age(t.CreatedUtc))">@M.Age(t.CreatedUtc) d</span></td>
+                    </tr>
+                }
+            </table>
+        }
+    </div>
+</div></section>

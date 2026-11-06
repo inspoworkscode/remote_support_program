@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>printcheck</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The real host (its print redirect and helper) and, through it, Media's PDF reader and printer. -->
+    <ProjectReference Include="..\..\src\RemoteSupport.Host\RemoteSupport.Host.csproj" />
+    <ProjectReference Include="..\..\src\RemoteSupport.Media\RemoteSupport.Media.csproj" />
+    <ProjectReference Include="..\..\src\RemoteSupport.Shared\RemoteSupport.Shared.csproj" />
+  </ItemGroup>
+</Project>

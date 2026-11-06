@@ -1,0 +1,71 @@
+@page "/portal/items"
+@model RemoteSupport.Platform.Pages.Portal.ItemsModel
+@{ ViewData["Title"] = "Items"; ViewData["Section"] = "portal"; }
+<section class="portal"><div class="wrap">
+    <h1>Items <span class="pill pill-muted">@Model.Items.Count</span></h1>
+    <p class="muted">Everything your company quotes for, shared by everyone. Add items here or while quoting; this is also where the list is kept tidy.
+        Two items with the same words in a different order are never added twice. When two different names mean the same part, merge them.</p>
+    @if (!string.IsNullOrEmpty(Model.Message)) { <div class="alert alert-ok">@Model.Message</div> }
+    @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad">@Model.Error</div> }
+    @if (!Model.CanEdit) { <div class="alert alert-warn">A supervisor, the owner or the office administrator can rename and merge items.</div> }
+
+    <details class="card form" style="margin-bottom:18px" open="@(Model.Items.Count == 0 || Model.Pending.Name.Length > 0)">
+        <summary style="cursor:pointer;font-weight:700;font-size:17px">Add an item</summary>
+        @if (Model.Similar.Count > 0)
+        {
+            <div class="alert alert-warn">
+                <strong>"@Model.Pending.Name"</strong> looks like an item already on the list:
+                @foreach (var s in Model.Similar) { <div>@s.Name@(s.LastPartNumber.Length > 0 ? $" — {s.LastPartNumber}" : "")</div> }
+                <form method="post" asp-page-handler="Add" style="margin-top:8px">
+                    <input type="hidden" name="confirmNew" value="true">
+                    <input type="hidden" name="name" value="@Model.Pending.Name"><input type="hidden" name="partNumber" value="@Model.Pending.LastPartNumber">
+                    <button class="btn btn-sm btn-accent" type="submit">No — it is different. Add "@Model.Pending.Name"</button>
+                </form>
+            </div>
+        }
+        <form method="post" asp-page-handler="Add" style="max-width:640px;margin-top:10px">
+            <div class="row">
+                <div><label>Item</label><input name="name" required value="@Model.Pending.Name" placeholder="e.g. DDR4 memory 8GB"></div>
+                <div><label>Part number (optional)</label><input name="partNumber" value="@Model.Pending.LastPartNumber"></div>
+            </div>
+            <div class="actions"><button class="btn btn-accent" type="submit">Add item</button></div>
+        </form>
+        <p class="muted" style="font-size:13px;margin-top:10px">The same words in another order are never added twice. The part number is offered the first time the item is quoted.</p>
+    </details>
+
+    @if (Model.Items.Count == 0) { <div class="card">No items yet. Add the first one above, or while quoting.</div> }
+    else
+    {
+        <table>
+            <tr><th>Item</th><th>Last part number</th><th>Quoted</th>@if (Model.CanEdit) { <th>Rename</th><th>Merge into</th> }</tr>
+            @foreach (var i in Model.Items)
+            {
+                <tr>
+                    <td><strong>@i.Name</strong><br><span class="muted" style="font-size:12px">added by @i.CreatedBy</span></td>
+                    <td>@(i.LastPartNumber.Length > 0 ? i.LastPartNumber : "—")</td>
+                    <td>@(Model.Uses.TryGetValue(i.Id, out var n) ? n : 0)</td>
+                    @if (Model.CanEdit)
+                    {
+                        <td>
+                            <form method="post" asp-page-handler="Rename" style="display:flex;gap:6px">
+                                <input type="hidden" name="itemId" value="@i.Id">
+                                <input name="name" value="@i.Name" style="flex:1;min-width:160px;padding:6px;border:1px solid var(--line);border-radius:8px">
+                                <button class="btn btn-sm" type="submit">Save</button>
+                            </form>
+                        </td>
+                        <td>
+                            <form method="post" asp-page-handler="Merge" style="display:flex;gap:6px"
+                                  onsubmit="return confirm('Merge @i.Name into the one you picked? It disappears from the list; quotes that used it keep what they said.')">
+                                <input type="hidden" name="fromId" value="@i.Id">
+                                <select name="intoId" style="padding:6px;border:1px solid var(--line);border-radius:8px">
+                                    @foreach (var o in Model.Items.Where(o => o.Id != i.Id)) { <option value="@o.Id">@o.Name</option> }
+                                </select>
+                                <button class="btn btn-sm" type="submit">Merge</button>
+                            </form>
+                        </td>
+                    }
+                </tr>
+            }
+        </table>
+    }
+</div></section>

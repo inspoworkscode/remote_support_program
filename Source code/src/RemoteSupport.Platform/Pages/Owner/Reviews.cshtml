@@ -1,0 +1,37 @@
+@page "/owner/reviews"
+@model RemoteSupport.Platform.Pages.Owner.ReviewsModel
+@using RemoteSupport.Platform.Data
+@{ ViewData["Title"] = "Reviews"; ViewData["Section"] = "owner"; }
+<section class="portal"><div class="wrap">
+    <h1>Reviews</h1>
+    <p class="muted">What companies have written about us. Nothing is on the website until it is published here; the home page shows the
+        six newest. Times are UTC.</p>
+    @if (Model.Message.Length > 0) { <div class="alert @(Model.IsError ? "alert-bad" : "alert-ok")" id="reviewsMessage">@Model.Message</div> }
+    @if (Model.Rows.Count == 0) { <div class="card">No reviews yet.</div> }
+    @foreach (var (r, company) in Model.Rows)
+    {
+        <div class="card" style="margin-bottom:14px" data-review="@r.Id" data-status="@r.Status">
+            <p style="margin-top:0">
+                <span class="review-stars" aria-label="@r.Stars of 5 stars">@(new string('★', r.Stars))@(new string('☆', 5 - r.Stars))</span>
+                <span class="pill @(r.Status == ReviewStatus.Published ? "pill-ok" : r.Status == ReviewStatus.Declined ? "pill-bad" : "pill-warn")">@(r.Status == ReviewStatus.Waiting ? "Waiting for approval" : r.Status.ToString())</span>
+            </p>
+            <blockquote style="margin:0 0 10px;white-space:pre-wrap">@r.Words</blockquote>
+            <p class="muted" style="margin:0">— @r.ShownName, @r.BusinessName@if (r.BusinessUrl.Length > 0) { <text> · </text><a href="@r.BusinessUrl" rel="ugc nofollow noopener" target="_blank">@r.BusinessUrl</a> }
+                <br>Company on the platform: @company · written by @r.WrittenBy (@r.WrittenByEmail) on @r.WrittenUtc.ToString("yyyy-MM-dd HH:mm")
+                @if (r.DecidedUtc is { } d) { <text> · @r.Status.ToString().ToLowerInvariant() by @r.DecidedBy on @d.ToString("yyyy-MM-dd HH:mm")</text> }</p>
+            @if (Model.MayDecide)
+            {
+                <div class="next-links">
+                    @if (r.Status != ReviewStatus.Published)
+                    {
+                        <form method="post" class="inline"><input type="hidden" name="id" value="@r.Id"><input type="hidden" name="act" value="publish"><button class="btn btn-sm btn-accent" type="submit">Publish on the website</button></form>
+                    }
+                    @if (r.Status != ReviewStatus.Declined)
+                    {
+                        <form method="post" class="inline"><input type="hidden" name="id" value="@r.Id"><input type="hidden" name="act" value="decline"><button class="btn btn-sm btn-danger" type="submit">@(r.Status == ReviewStatus.Published ? "Take it down" : "Decline")</button></form>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div></section>

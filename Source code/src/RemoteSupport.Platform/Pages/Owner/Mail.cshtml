@@ -1,0 +1,123 @@
+@page "/owner/mail"
+@model RemoteSupport.Platform.Pages.Owner.MailModel
+@{ ViewData["Title"] = "Platform mail"; ViewData["Section"] = "owner"; var s = Model.Settings; }
+<section class="portal"><div class="wrap">
+    <h1>Platform mailbox</h1>
+    <p class="muted">
+        The address the product writes from when it has something to say to a customer company — at the
+        moment, that their trial is about to end. This is <strong>not</strong> a tenant's own mail server:
+        that one is for writing to <em>their</em> customers, and a company still on trial has almost
+        certainly not set it up.
+    </p>
+
+    @if (!string.IsNullOrEmpty(Model.Message))
+    {
+        <div class="alert @(Model.IsError ? "alert-bad" : "alert-ok")">@Model.Message</div>
+    }
+    @if (!s.MailConfigured)
+    {
+        <div class="alert alert-warn">
+            No mailbox is set, so <strong>no trial warnings are being sent to anyone</strong>. The portal
+            banner still warns each company when they sign in, but nobody is told by email.
+        </div>
+    }
+
+    <form method="post" class="form card" style="max-width:720px">
+        <h3>Mail server</h3>
+        <label>SMTP host</label>
+        <input name="smtpHost" value="@s.SmtpHost" placeholder="smtp.example.com">
+
+        <label>Port</label>
+        <input name="smtpPort" type="number" min="1" max="65535" value="@s.SmtpPort">
+
+        <label><input type="checkbox" name="smtpUseSsl" value="true" checked="@s.SmtpUseSsl" style="width:auto"> Use SSL/TLS</label>
+
+        <label>Username</label>
+        <input name="smtpUser" value="@s.SmtpUser" autocomplete="off">
+
+        <label>Password</label>
+        <input name="smtpPassword" type="password" autocomplete="new-password"
+               placeholder="@(Model.HasPassword ? "•••••••• (stored — leave blank to keep it)" : "not set")">
+        <p class="muted" style="font-size:13px;margin-top:-4px">
+            Leaving this blank keeps the password already stored; it is only replaced when you type a new
+            one. It is encrypted with Data Protection, the same as a tenant's mail password, which ties it
+            to <code>data/keys</code> — back that folder up and keep it private.
+        </p>
+        @if (Model.HasPassword)
+        {
+            <label><input type="checkbox" name="clearPassword" value="true" style="width:auto"> Delete the stored password</label>
+        }
+
+        <h3 style="margin-top:22px">How it appears</h3>
+        <label>From address</label>
+        <input name="smtpFrom" value="@s.SmtpFrom" placeholder="leave blank to use the username">
+
+        <label>From name</label>
+        <input name="smtpFromName" value="@s.SmtpFromName" placeholder="The Remote Support Program">
+
+        <label>Blind-copy every notice to</label>
+        <input name="noticeCopyTo" value="@s.NoticeCopyTo" placeholder="you@example.com">
+        <p class="muted" style="font-size:13px;margin-top:-4px">
+            Optional. A copy of every trial notice, so you know a company is lapsing without waiting for
+            them to notice. Several addresses can be separated by commas.
+        </p>
+
+        <button class="btn btn-accent" style="margin-top:16px">Save</button>
+        @if (s.UpdatedUtc.HasValue)
+        {
+            <span class="muted" style="margin-left:12px">Last changed @s.UpdatedUtc.Value.Local().ToString("yyyy-MM-dd HH:mm")</span>
+        }
+    </form>
+
+    @* Tickets by email (3.8.4): the mailbox companies forward to when we do not read theirs. *@
+    <form method="post" asp-page-handler="Forwarding" class="form card" style="max-width:720px;margin-top:22px">
+        <h3>Forwarding mailbox — tickets by email</h3>
+        <p class="muted">
+            A mailbox on our own domain that companies forward their support address to — the way in for Microsoft 365,
+            and for anybody who would rather not give us their mailbox's password. It is checked every minute and each
+            message goes to the company whose <em>confirmed</em> address it was sent to. Use a mailbox that is for this
+            and nothing else. Until both the address and its server are filled in, the portal does not offer forwarding.
+        </p>
+        @if (s.IntakeLastProblem.Length > 0) { <div class="alert @(s.IntakePaused ? "alert-bad" : "alert-warn")">@(s.IntakePaused ? "Stopped: " : "")@s.IntakeLastProblem</div> }
+        else if (s.ForwardingOffered && s.IntakeLastCheckUtc.HasValue) { <p class="muted">Last looked at @s.IntakeLastCheckUtc.Value.Local().ToString("yyyy-MM-dd HH:mm").</p> }
+        <label>The address companies forward to</label>
+        <input name="intakeAddress" value="@s.IntakeAddress" placeholder="tickets@theremotesupportprogram.com">
+        <label>Mail server (IMAP)</label>
+        <input name="intakeHost" value="@s.IntakeImapHost" placeholder="mail.theremotesupportprogram.com">
+        <label>Port</label>
+        <input name="intakePort" type="number" min="1" max="65535" value="@s.IntakeImapPort">
+        <label>Security</label>
+        <select name="intakeSecurity">
+            <option value="ssl" selected="@(s.IntakeImapSecurity != "starttls")">SSL (993)</option>
+            <option value="starttls" selected="@(s.IntakeImapSecurity == "starttls")">STARTTLS (143)</option>
+        </select>
+        <label>Username</label>
+        <input name="intakeUser" value="@s.IntakeImapUser" autocomplete="off">
+        <label>Password</label>
+        <input name="intakePassword" type="password" autocomplete="new-password"
+               placeholder="@(s.IntakeImapPasswordEnc.Length > 0 ? "•••••••• (stored — leave blank to keep it)" : "not set")">
+        <button class="btn btn-accent" style="margin-top:16px">Save and test</button>
+    </form>
+
+    <div class="card" style="max-width:720px;margin-top:22px">
+        <h3>Prove it works</h3>
+        <p class="muted">
+            Mail that has never been tried is mail that does not work. The first time these settings matter
+            is the moment a customer's trial is lapsing, which is the worst possible time to find out the
+            password was wrong.
+        </p>
+        <form method="post" asp-page-handler="Test" class="form">
+            <label>Send a test message to</label>
+            <input name="testTo" type="email" placeholder="you@example.com">
+            <button class="btn btn-sm" style="margin-top:10px">Send test</button>
+        </form>
+        <hr style="margin:18px 0;border:0;border-top:1px solid #e5e7eb">
+        <form method="post" asp-page-handler="RunTrialPass">
+            <p class="muted" style="margin-bottom:10px">
+                The trial check runs by itself every hour. This runs it now. It respects everything the
+                scheduled pass respects — each warning still goes out only once — so it is safe to press.
+            </p>
+            <button class="btn btn-sm">Run the trial check now</button>
+        </form>
+    </div>
+</div></section>

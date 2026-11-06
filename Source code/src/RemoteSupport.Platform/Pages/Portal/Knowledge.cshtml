@@ -1,0 +1,222 @@
+@page "/portal/kb"
+@model RemoteSupport.Platform.Pages.Portal.KnowledgeModel
+@{
+    ViewData["Title"] = Model.Folder != null ? $"Knowledge base — {Model.Folder.Name}" : Model.ClientName.Length > 0 ? $"Knowledge base — {Model.ClientName}" : "Knowledge base";
+    ViewData["Section"] = "portal";
+    var here = Model.Folder?.Id;
+    var sectionName = Model.ClientFilter > 0 ? Model.ClientName : "General";
+    var newArticle = "/portal/kb/edit" + (Model.Folder != null ? $"?folder={Model.Folder.Id}" : Model.ClientFilter > 0 ? $"?c={Model.NumberOf(Model.ClientFilter.Value)}" : "");
+}
+@functions {
+    private static string E(string s) => System.Net.WebUtility.HtmlEncode(s);
+
+    // One article in a list. The whole card is the link. A search result says where it lives.
+    private Microsoft.AspNetCore.Html.IHtmlContent Item(RemoteSupport.Platform.Services.KnowledgeBaseService.Listed l, bool showWhere)
+    {
+        var where = showWhere ? Model.WhereIs(l.Article) : "";
+        return new Microsoft.AspNetCore.Html.HtmlString(
+            $"<a class=\"kb-item\" href=\"{PortalAddresses.Article(l.Article.Number)}\"><div class=\"kb-t\">{E(l.Article.Title)}</div>"
+            + (l.Snippet.Length > 0 ? $"<div class=\"kb-s\">{E(l.Snippet)}</div>" : "")
+            + $"<div class=\"kb-m\">{(where.Length > 0 ? "📁 " + E(where) + " · " : "")}{E(RemoteSupport.Platform.Pages.Portal.KnowledgeModel.Meta(l))}</div></a>");
+    }
+
+    // One folder in a list: opening it shows what is in it.
+    private Microsoft.AspNetCore.Html.IHtmlContent FolderCard(RemoteSupport.Platform.Data.KbFolder f)
+    {
+        int n = Model.CountInside(f), sub = Model.FoldersIn(f.ClientId, f.Id).Count;
+        var what = new List<string>();
+        if (n > 0) what.Add(n == 1 ? "1 article" : $"{n} articles");
+        if (sub > 0) what.Add(sub == 1 ? "1 folder" : $"{sub} folders");
+        return new Microsoft.AspNetCore.Html.HtmlString(
+            $"<a class=\"kb-folder\" href=\"/portal/kb?folder={f.Id}\"><span class=\"kb-fi\" aria-hidden=\"true\">📁</span>"
+            + $"<span><span class=\"kb-t\">{E(f.Name)}</span><span class=\"kb-m\">{(what.Count > 0 ? string.Join(" · ", what) : "Empty")}</span></span></a>");
+    }
+}
+<section class="portal"><div class="wrap">
+    <h1>Knowledge base <span class="pill pill-muted" id="kbCount">@Model.Articles.Count</span>
+        @if (Model.CanWrite) { <a class="btn btn-accent btn-sm kb-new" href="@newArticle">New article@(Model.Folder != null ? " here" : "")</a> }
+    </h1>
+    @if (!Model.InSection)
+    {
+        <p class="muted">How things are done — in General, and for each client, in folders as you like. Anybody here can write and edit an article, and every version is kept. <strong>Never put a password in one</strong>: everybody at the company can read them.</p>
+    }
+    @if (!string.IsNullOrEmpty(Model.Message)) { <div class="alert alert-ok">@Model.Message</div> }
+    @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad">@Model.Error</div> }
+
+    @if (Model.InSection)
+    {
+        @* Where you are: Knowledge base › General › Printers › HP — every step a way back. *@
+        <nav class="kb-crumbs" aria-label="Where you are">
+            <a href="/portal/kb">Knowledge base</a>
+            <span aria-hidden="true">›</span>
+            @if (Model.Folder == null) { <strong>@sectionName</strong> }
+            else { <a href="@Model.SectionAddress(Model.HereClient)">@sectionName</a> }
+            @foreach (var f in Model.FolderPath)
+            {
+                <span aria-hidden="true">›</span>
+                if (f.Id == here) { <strong>@f.Name</strong> } else { <a href="/portal/kb?folder=@f.Id">@f.Name</a> }
+            }
+            @if (Model.ClientFilter > 0) { <span class="kb-crumb-side"><a href="@(PortalAddresses.Client(Model.NumberOf(Model.ClientFilter.Value)))">Open the client</a></span> }
+        </nav>
+    }
+
+    @* Narrows as you type, by asking THIS page — the Clients page's way (2026-09-29), so Enter and a
+       browser with no script still work, and the address keeps the search for refresh and Back.
+       Inside a section or a folder it looks through everything below it. *@
+    <form method="get" style="margin-bottom:14px;display:flex;gap:10px" onsubmit="return kbSearchNow()">
+        @if (Model.Folder != null) { <input type="hidden" name="folder" value="@Model.Folder.Id"> }
+        else if (Model.ClientFilter != null) { <input type="hidden" name="c" value="@(Model.ClientFilter > 0 ? Model.NumberOf(Model.ClientFilter.Value) : 0)"> }
+        <input name="search" id="kbSearch" value="@Model.Search" autocomplete="off"
+               placeholder="@(Model.Folder != null ? $"Search in {Model.Folder.Name}" : Model.ClientFilter != null ? $"Search in {sectionName}" : "Search titles, steps and client names")"
+               oninput="kbSearchSoon()" aria-label="Search the knowledge base" style="flex:1;min-width:0;padding:11px 13px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)">
+        <button class="btn" type="submit">Search</button>
+        <a class="btn" href="@(Model.Folder != null ? $"/portal/kb?folder={Model.Folder.Id}" : Model.ClientFilter != null ? Model.SectionAddress(Model.ClientFilter.Value) : "/portal/kb")" id="kbClear" onclick="return kbClear()" style="@(Model.Searching ? "" : "display:none")">Clear</a>
+    </form>
+
+    <div id="kbResults">
+    @if (Model.Searching)
+    {
+        @* A search: every match below here, each saying which folder it is in. *@
+        if (Model.Articles.Count == 0)
+        {
+            <div class="card">Nothing @(Model.Folder != null ? $"in {Model.Folder.Name} " : Model.ClientFilter != null ? $"in {sectionName} " : "")matches "@Model.Search".</div>
+        }
+        else if (Model.InSection)
+        {
+            <div class="kb-list">@foreach (var l in Model.Articles) { @Item(l, true) }</div>
+        }
+        else
+        {
+            var general = Model.General;
+            <h2 class="kb-client">General <span class="pill pill-muted">@general.Count</span></h2>
+            if (general.Count == 0) { <p class="muted">Nothing in General matches.</p> }
+            else { <div class="kb-list">@foreach (var l in general) { @Item(l, true) }</div> }
+            <h2 class="kb-client" style="margin-top:34px">Clients <span class="pill pill-muted">@(Model.Articles.Count - general.Count)</span></h2>
+            if (Model.ClientsShown.Count == 0) { <p class="muted">No client's articles match.</p> }
+            foreach (var c in Model.ClientsShown)
+            {
+                var theirs = Model.Articles.Where(a => a.Article.ClientId == c.id).ToList();
+                <h3 class="kb-client" style="margin-top:18px">@c.name <span class="pill pill-muted">@theirs.Count</span>
+                    <a href="@Model.SectionAddress(c.id)">Open</a></h3>
+                <div class="kb-list">@foreach (var l in theirs) { @Item(l, true) }</div>
+            }
+        }
+    }
+    else if (Model.InSection)
+    {
+        @* A section's top, or one folder: its folders, then its articles — like a folder on a PC. *@
+        var folders = Model.FoldersIn(Model.HereClient, here);
+        var articles = Model.ArticlesIn(Model.HereClient, here);
+        if (Model.CanWrite)
+        {
+            <div class="kb-folder-tools">
+                <details class="kb-tool" open="@(Model.PendingName.Length > 0)">
+                    <summary class="btn btn-sm">New folder@(Model.Folder != null ? " inside" : "")</summary>
+                    <form method="post" asp-page-handler="NewFolder" asp-route-folder="@here" asp-route-c="@(here == null ? (Model.HereClient > 0 ? Model.NumberOf(Model.HereClient) : 0).ToString() : null)" class="kb-inline">
+                        <input name="name" required maxlength="@RemoteSupport.Platform.Services.KnowledgeBaseService.MaxFolderName" value="@Model.PendingName"
+                               placeholder="@(Model.Folder != null ? $"A folder inside {Model.Folder.Name}" : $"A folder in {sectionName} — e.g. Printers")" aria-label="The new folder's name">
+                        <button class="btn btn-sm btn-accent" type="submit">Make it</button>
+                    </form>
+                </details>
+                @if (Model.Folder != null)
+                {
+                    var targets = Model.MoveTargets(Model.Folder);
+                    <details class="kb-tool" open="@Model.EditOpen">
+                        <summary class="btn btn-sm">Rename or move</summary>
+                        <form method="post" asp-page-handler="EditFolder" asp-route-folder="@here" class="kb-inline">
+                            <input name="name" required maxlength="@RemoteSupport.Platform.Services.KnowledgeBaseService.MaxFolderName" value="@Model.Folder.Name" aria-label="The folder's name">
+                            <label class="kb-note" style="margin:0">in
+                                <select name="parentId" aria-label="The folder it is in">
+                                    <option value="0" selected="@(Model.Folder.ParentId == null)">@sectionName — at the top</option>
+                                    @foreach (var (f, depth) in targets)
+                                    {
+                                        <option value="@f.Id" selected="@(Model.Folder.ParentId == f.Id)">@RemoteSupport.Platform.Services.KnowledgeBaseService.TreeLabel(f.Name, depth)</option>
+                                    }
+                                </select>
+                            </label>
+                            <button class="btn btn-sm btn-accent" type="submit">Save</button>
+                        </form>
+                    </details>
+                    var isEmpty = folders.Count == 0 && articles.Count == 0;
+                    if (isEmpty || Model.CanRemoveFull)
+                    {
+                        var upTo = Model.FolderPath.Count > 1 ? Model.FolderPath[^2].Name : sectionName;
+                        <form method="post" asp-page-handler="RemoveFolder" asp-route-folder="@here" class="inline"
+                              data-confirm="@(isEmpty ? $"Remove the empty folder “{Model.Folder.Name}”?" : $"Remove the folder “{Model.Folder.Name}”? Nothing is deleted: what is in it moves up into {upTo}.")"
+                              onsubmit="return confirm(this.dataset.confirm)">
+                            <button class="btn btn-sm btn-danger" type="submit">Remove folder</button>
+                        </form>
+                    }
+                }
+            </div>
+        }
+        if (folders.Count > 0) { <div class="kb-folders">@foreach (var f in folders) { @FolderCard(f) }</div> }
+        if (articles.Count > 0) { <div class="kb-list">@foreach (var l in articles) { @Item(l, false) }</div> }
+        if (folders.Count == 0 && articles.Count == 0)
+        {
+            <div class="card">
+                @if (Model.Folder != null) { <text>This folder is empty. Make a folder inside it, or write an article here with <strong>New article here</strong>.</text> }
+                else if (Model.ClientFilter > 0) { <text>Nothing written for @Model.ClientName yet. When a job for them is done, <em>Add to knowledge base</em> on its ticket starts one — or write one now with <strong>New article</strong>, and sort them into folders as they grow.</text> }
+                else { <text>Nothing in General yet. Write one with <strong>New article</strong>, or make a folder first.</text> }
+            </div>
+        }
+    }
+    else if (Model.Articles.Count == 0 && Model.Folders.Count == 0)
+    {
+        <div class="card">Nothing here yet. Write the first article with <strong>New article</strong>, or open a finished ticket and press <em>Add to knowledge base</em>.</div>
+    }
+    else
+    {
+        @* Everything: each section's top — its folders, then the articles in no folder. *@
+        var gFolders = Model.FoldersIn(0, null);
+        var gArticles = Model.ArticlesIn(0, null);
+        <h2 class="kb-client">General <span class="pill pill-muted">@Model.General.Count</span>
+            <a href="/portal/kb?c=0">Open General</a></h2>
+        if (gFolders.Count == 0 && gArticles.Count == 0) { <p class="muted">Nothing in General yet. <a href="/portal/kb?c=0">Open General</a> to make a folder or write the first article.</p> }
+        if (gFolders.Count > 0) { <div class="kb-folders">@foreach (var f in gFolders) { @FolderCard(f) }</div> }
+        if (gArticles.Count > 0) { <div class="kb-list">@foreach (var l in gArticles) { @Item(l, false) }</div> }
+
+        <h2 class="kb-client" style="margin-top:34px">Clients <span class="pill pill-muted">@(Model.Articles.Count - Model.General.Count)</span></h2>
+        if (Model.ClientsShown.Count == 0) { <p class="muted">No client has an article yet. Open a client's page and choose <em>New article for them</em>.</p> }
+        foreach (var c in Model.ClientsShown)
+        {
+            var cFolders = Model.FoldersIn(c.id, null);
+            var cArticles = Model.ArticlesIn(c.id, null);
+            <h3 class="kb-client" style="margin-top:18px">@c.name <span class="pill pill-muted">@Model.Articles.Count(a => a.Article.ClientId == c.id)</span>
+                <a href="@Model.SectionAddress(c.id)">Open</a></h3>
+            if (cFolders.Count > 0) { <div class="kb-folders">@foreach (var f in cFolders) { @FolderCard(f) }</div> }
+            if (cArticles.Count > 0) { <div class="kb-list">@foreach (var l in cArticles) { @Item(l, false) }</div> }
+        }
+    }
+    </div>
+</div></section>
+
+<script>
+var kbTimer, kbSeq = 0;
+function kbSearchSoon() { clearTimeout(kbTimer); kbTimer = setTimeout(kbRun, 200); }
+function kbSearchNow() { clearTimeout(kbTimer); kbRun(); return false; }
+function kbClear() { document.getElementById('kbSearch').value = ''; kbSearchNow(); document.getElementById('kbSearch').focus(); return false; }
+async function kbRun() {
+  var term = document.getElementById('kbSearch').value.trim();
+  var params = new URLSearchParams(location.search);
+  if (term) params.set('search', term); else params.delete('search');
+  // Only where you are travels with a search — never a notice, or the form a refused folder came from.
+  ['deleted', 'done', 'handler'].forEach(function (k) { params.delete(k); });
+  var qs = params.toString();
+  var url = '/portal/kb' + (qs ? '?' + qs : '');
+  var mine = ++kbSeq;
+  try {
+    var res = await fetch(url, { credentials: 'same-origin' });
+    if (!res.ok || res.redirected) { location.href = url; return; }   // signed out: let the page say so
+    var page = new DOMParser().parseFromString(await res.text(), 'text/html');
+    if (mine !== kbSeq) return;                                      // a later keystroke has already asked
+    var fresh = page.getElementById('kbResults');
+    if (!fresh) { location.href = url; return; }
+    document.getElementById('kbResults').innerHTML = fresh.innerHTML;
+    var count = page.getElementById('kbCount');
+    if (count) document.getElementById('kbCount').textContent = count.textContent;
+    document.getElementById('kbClear').style.display = term ? '' : 'none';
+    history.replaceState(null, '', url);
+  } catch (e) { location.href = url; }
+}
+</script>

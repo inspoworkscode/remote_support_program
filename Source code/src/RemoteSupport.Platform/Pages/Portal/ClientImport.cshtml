@@ -1,0 +1,128 @@
+@page "/portal/clients/import"
+@using RemoteSupport.Platform.Services
+@using O = RemoteSupport.Platform.Services.ClientImportService.Outcome
+@model RemoteSupport.Platform.Pages.Portal.ClientImportModel
+@{ ViewData["Title"] = "Import clients"; ViewData["Section"] = "portal"; }
+<section class="portal"><div class="wrap">
+    <p class="muted" style="margin-bottom:6px"><a href="/portal/clients">← All clients</a></p>
+    <h1>Import clients</h1>
+    @if (!string.IsNullOrEmpty(Model.Message)) { <div class="alert alert-ok">@Model.Message <a href="/portal/clients">See your clients</a></div> }
+    @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad">@Model.Error</div> }
+
+    @if (!Model.CanImport)
+    {
+        <div class="alert alert-warn">The owner, a supervisor or the office administrator can import clients.</div>
+    }
+    else if (Model.Plan != null && Model.Parsed != null)
+    {
+        var p = Model.Plan;
+        <p class="muted">Nothing has been saved yet. This is what importing <strong>@Model.FileName</strong> will do.</p>
+        <div class="stats">
+            <div class="stat"><div class="n">@p.New</div><div class="l">New clients</div></div>
+            <div class="stat"><div class="n">@p.AddsToExisting</div><div class="l">On file, details added</div></div>
+            <div class="stat"><div class="n">@p.NothingNew</div><div class="l">On file, nothing new</div></div>
+            <div class="stat"><div class="n">@p.ContactsAdded</div><div class="l">Contact people</div></div>
+        </div>
+        @if (p.Errors > 0) { <div class="alert alert-warn">@p.Errors row@(p.Errors == 1 ? "" : "s") cannot go in and will be left out — they are at the top of the list below.</div> }
+
+        <form method="post" asp-page-handler="Import" class="card" style="margin-bottom:22px">
+            <input type="hidden" name="payload" value="@Model.Payload">
+            <p style="margin-top:0"><strong>Columns read:</strong> @string.Join(", ", Model.Parsed.ColumnsUsed)
+                @if (Model.Parsed.ColumnsIgnored.Count > 0) { <br><span class="muted">Ignored, because they are not one of ours: @string.Join(", ", Model.Parsed.ColumnsIgnored)</span> }
+            </p>
+            @if (Model.Shared.Count > 0)
+            {
+                <p><strong>These email addresses are on several different clients</strong>, which usually means they were
+                    put in to fill a blank. Ticked ones are left out, so those clients get no email. Untick one to keep it.</p>
+                @foreach (var s in Model.Shared)
+                {
+                    <label style="display:block;margin:4px 0;font-weight:normal">
+                        <input type="checkbox" name="leaveOut" value="@s.email" checked> @s.email <span class="muted">— on @s.clients clients</span>
+                    </label>
+                }
+            }
+            <div class="actions">
+                @if (p.New + p.AddsToExisting > 0)
+                {
+                    <button class="btn btn-accent" type="submit">Import @(p.New + p.AddsToExisting) client@(p.New + p.AddsToExisting == 1 ? "" : "s")</button>
+                }
+                else { <span class="muted">There is nothing in this file that is not already on file.</span> }
+                <a class="btn" href="/portal/clients/import">Choose a different file</a>
+            </div>
+        </form>
+
+        <table>
+            @* One column per field, as the client will hold them; what the import did or found goes on
+               a line of its own under the row, so six columns fit and nothing is pushed off the side. *@
+            <tr><th>Client</th><th></th><th>Contact person</th><th>Phone</th><th>Email</th><th>Address</th></tr>
+            @foreach (var c in p.Clients.OrderBy(x => x.Outcome == O.Error ? 0 : x.Warnings.Count > 0 ? 1 : x.Fixes.Count > 0 ? 2 : 3).ThenBy(x => x.Lines.FirstOrDefault()))
+            {
+                var (pill, said) = c.Outcome switch
+                {
+                    O.New => ("pill-ok", "New"),
+                    O.AddsToExisting => ("pill-warn", "Adds details"),
+                    O.NothingNew => ("pill-muted", "Already on file"),
+                    _ => ("pill-bad", "Left out"),
+                };
+                bool notes = c.Error.Length > 0 || c.Fills.Count > 0 || c.Warnings.Count > 0 || c.Fixes.Count > 0;
+                <tr style="@(notes ? "border-bottom:none" : "")">
+                    <td><strong>@c.Name</strong><br><span class="muted" style="font-size:12px">row @string.Join(", ", c.Lines)@(c.Archived ? " · archived" : "")</span></td>
+                    <td><span class="pill @pill" style="white-space:nowrap">@said</span></td>
+                    <td style="font-size:13px">
+                        @c.Contact
+                        @if (c.NewContacts.Count > 1 || (c.NewContacts.Count == 1 && c.NewContacts[0] != c.Contact))
+                        { <br><span class="muted">people: @string.Join(", ", c.NewContacts)</span> }
+                    </td>
+                    <td style="font-size:13px;white-space:nowrap">@c.Phone</td>
+                    <td style="font-size:13px;overflow-wrap:anywhere">@c.Email</td>
+                    <td style="font-size:13px;white-space:pre-line">@c.Address</td>
+                </tr>
+                @if (notes)
+                {
+                    <tr>
+                        <td colspan="6" style="font-size:12px;padding-top:0">
+                            @if (c.Error.Length > 0) { <div style="color:var(--bad)">@c.Error</div> }
+                            @if (c.Fills.Count > 0) { <div>Fills in: @string.Join(", ", c.Fills)</div> }
+                            @foreach (var w in c.Warnings) { <div style="color:var(--warn)">@w</div> }
+                            @foreach (var f in c.Fixes) { <div class="muted">@f</div> }
+                        </td>
+                    </tr>
+                }
+            }
+        </table>
+    }
+    else if (Model.Done == null)
+    {
+        <div class="grid2">
+            <div>
+                <p>Bring your clients over from another program in one go. Export them to Excel, put them in these columns,
+                    and upload the file. You will see exactly what will happen before anything is saved.</p>
+                <table>
+                    <tr><th>Column</th><th></th><th>What goes in it</th></tr>
+                    <tr><td><strong>Client</strong></td><td><span class="pill pill-warn">required</span></td><td>The company, or the customer's own name if they are a private person.</td></tr>
+                    <tr><td><strong>Contact person</strong></td><td></td><td>Who you deal with there. Put a company on several rows, one per person, and it becomes one client with several contact people.</td></tr>
+                    <tr><td><strong>Phone</strong></td><td></td><td>As you would dial it — <code style="white-space:nowrap">082 123 4567</code>.</td></tr>
+                    <tr><td><strong>Email</strong></td><td></td><td>Their email address.</td></tr>
+                    <tr><td><strong>Address</strong></td><td></td><td>Their physical address.</td></tr>
+                    <tr><td><strong>Notes</strong></td><td></td><td>Anything else worth keeping.</td></tr>
+                </table>
+                <p class="muted" style="font-size:13px;margin-top:12px">
+                    The first row must be the headings. Similar headings are understood too — <em>Company</em>, <em>Phone number</em>,
+                    <em>Email address</em>, <em>Mobile</em> — and any other column is ignored. A client already on file is never
+                    overwritten: only its blank details are filled in, so importing the same file twice adds nothing the second time.
+                </p>
+            </div>
+            <div class="card form">
+                <h3>1. Get the template</h3>
+                <p class="muted" style="font-size:13px">An Excel file with the columns ready. Its Phone column keeps the leading 0.</p>
+                <p><a class="btn" href="/portal/clients/import?handler=Template">Download the template</a></p>
+                <h3 style="margin-top:22px">2. Upload your list</h3>
+                <form method="post" asp-page-handler="Preview" enctype="multipart/form-data">
+                    <label>Excel workbook (.xlsx) or CSV</label>
+                    <input type="file" name="file" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required>
+                    <div class="actions"><button class="btn btn-accent" type="submit">Preview the import</button></div>
+                </form>
+            </div>
+        </div>
+    }
+</div></section>

@@ -1,0 +1,1020 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The Remote Support Program — Guide</title>
+<!--
+  The generic guide (2026-10-24): for anybody thinking of using or investing in the product — not the pilot guide
+  (docs/pilot-brochure), which stays as it is. Printed to "The Remote Support Program - Guide.pdf" with Edge headless by
+  Print-Guide.ps1 beside it. A page that grows past A4 is cut off, not moved on — look at every page after a change.
+  Every screenshot is of a made-up company (Coastal IT Solutions) and made-up customers. Never a real customer or a real screen.
+  Page numbers and the contents page are filled in by the script at the end.
+-->
+<style>
+@page { size: A4; margin: 0; }
+:root{
+  --ink:#0f172a; --muted:#475569; --soft:#64748b; --line:#e2e8f0;
+  --brand:#6d28d9; --brand2:#7c3aed; --brand-soft:#f3efff; --teal:#0e7490;
+  --paper:#ffffff; --tint:#faf8ff;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#fff;color:var(--ink);
+  font-family:"Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;font-size:10.4pt;line-height:1.45;
+  -webkit-print-color-adjust:exact;print-color-adjust:exact}
+.page{width:210mm;height:297mm;position:relative;overflow:hidden;page-break-after:always;padding:16mm 15mm 18mm;background:var(--paper)}
+.page:last-child{page-break-after:auto}
+.page.tint{background:linear-gradient(180deg,#fbf9ff 0,#ffffff 60%)}
+.foot{position:absolute;left:15mm;right:15mm;bottom:8mm;display:flex;justify-content:space-between;font-size:8pt;color:var(--soft);border-top:1px solid var(--line);padding-top:3mm}
+.mark{display:inline-flex;align-items:center;justify-content:center;width:9mm;height:9mm;border-radius:2.4mm;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;font-weight:800;font-size:10pt;letter-spacing:.3px}
+.kicker{font-size:8.5pt;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--brand)}
+h1{font-family:"Segoe UI Variable Display","Segoe UI",sans-serif;font-size:25pt;line-height:1.1;margin:1.5mm 0 3mm;font-weight:800;letter-spacing:-.01em}
+h2{font-size:12.5pt;margin:0 0 1.5mm;font-weight:700}
+p.lead{font-size:11.3pt;color:var(--muted);margin:0 0 5mm;max-width:170mm}
+p.body{margin:0 0 3mm;color:var(--muted)}
+ul{margin:0;padding-left:4.6mm}
+li{margin:0 0 1.5mm}
+li b{color:var(--ink)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:6mm}
+.cols3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5mm}
+.shot{border-radius:2.6mm;overflow:hidden;box-shadow:0 1.2mm 5mm rgba(15,23,42,.16),0 0 0 .25mm rgba(15,23,42,.10);background:#fff}
+.shot img{display:block;width:100%;height:100%;object-fit:cover;object-position:top center}
+.shot.contain img{object-fit:contain;background:#fff}
+.shot.auto img{height:auto}
+.cap{font-size:8.3pt;color:var(--soft);margin:1.8mm 0 0}
+.box{background:var(--brand-soft);border-radius:3mm;padding:4mm 5mm}
+.note{font-size:8.5pt;color:var(--soft)}
+.tip{border-left:1mm solid var(--teal);background:#ecfeff;border-radius:0 2mm 2mm 0;padding:2.5mm 4mm;font-size:9.3pt;color:#164e63;margin-top:3mm}
+.tip b{color:#0e3b48}
+.frame{border-radius:2.6mm;box-shadow:0 1.2mm 5mm rgba(15,23,42,.16),0 0 0 .25mm rgba(15,23,42,.10);background:#fff;padding:3mm;overflow:hidden}
+.frame img{display:block;width:100%;height:auto}
+
+/* cover */
+.cover{background:radial-gradient(120% 80% at 85% 0%,#4c1d95 0%,#1e1b4b 45%,#0b1020 100%);color:#fff;padding:20mm 17mm}
+.cover .kicker{color:#c4b5fd}
+.cover h1{font-size:36pt;margin:6mm 0 4mm;color:#fff}
+.cover p.lead{color:#ddd6fe;font-size:13pt;max-width:155mm}
+.cover .hero{position:absolute;left:17mm;right:-30mm;top:132mm;height:150mm}
+.cover .hero .a{position:absolute;left:0;top:0;width:150mm;height:90mm}
+.cover .hero .b{position:absolute;left:62mm;top:48mm;width:150mm;height:94mm}
+.cover .shot{box-shadow:0 4mm 14mm rgba(0,0,0,.55),0 0 0 .3mm rgba(255,255,255,.15)}
+.cover .brandline{display:flex;align-items:center;gap:3mm;font-weight:700;font-size:12pt}
+.cover .mark{width:11mm;height:11mm;font-size:12pt}
+.cover .who{position:absolute;left:17mm;bottom:12mm;font-size:9pt;color:#c4b5fd}
+
+/* tiles */
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:3.4mm}
+.tile{border:.3mm solid var(--line);border-radius:3mm;padding:3mm 4.5mm;background:#fff}
+.tile h2{font-size:11pt;display:flex;align-items:center;gap:2.5mm}
+.tile h2 i{width:3mm;height:3mm;border-radius:1mm;background:var(--brand2);display:inline-block}
+.tile p{margin:0;color:var(--muted);font-size:9.1pt}
+
+/* three parts */
+.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4mm;margin-top:2mm}
+.three > div{border:.3mm solid var(--line);border-radius:3mm;padding:4mm;background:#fff}
+.three h2{font-size:11pt;color:var(--brand)}
+.three p{margin:0;color:var(--muted);font-size:9.2pt}
+.three .who{font-size:8pt;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--soft);margin-bottom:1mm}
+
+/* parts and contents */
+.part{background:radial-gradient(120% 80% at 85% 0%,#4c1d95 0%,#1e1b4b 45%,#0b1020 100%);color:#fff;display:flex;flex-direction:column;justify-content:center}
+.part .kicker{color:#c4b5fd}
+.part h1{color:#fff;font-size:34pt}
+.part p.lead{color:#ddd6fe}
+.part li{color:#e9e5ff}
+.part li b{color:#fff}
+.toc{margin-top:6mm;display:grid;grid-template-columns:1fr;gap:2mm;max-width:160mm}
+.toc a{display:flex;justify-content:space-between;color:var(--ink);text-decoration:none;border-bottom:.3mm dashed var(--line);padding-bottom:1.3mm;font-size:11pt}
+.toc .grp{font-size:8.5pt;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--brand);margin-top:4mm}
+
+/* price */
+.price{display:grid;grid-template-columns:1fr 1fr;gap:6mm;margin-top:2mm}
+.plan{border-radius:4mm;padding:6mm;background:#fff;border:.4mm solid var(--line)}
+.plan.main{border:.6mm solid var(--brand2);background:linear-gradient(180deg,#faf7ff,#fff)}
+.plan .amount{font-size:30pt;font-weight:800;color:var(--brand);line-height:1;margin:2mm 0 1mm}
+.plan .per{color:var(--muted);font-size:10pt;margin-bottom:3mm}
+table.t{width:100%;border-collapse:collapse;font-size:9.2pt;margin-top:2mm}
+table.t th{text-align:left;background:var(--brand-soft);color:var(--brand);padding:1.6mm 2.4mm;font-weight:700}
+table.t td{padding:1.6mm 2.4mm;border-bottom:.3mm solid var(--line);vertical-align:top;color:var(--muted)}
+table.t td:first-child{color:var(--ink);font-weight:700;white-space:nowrap}
+.stepno{display:inline-flex;align-items:center;justify-content:center;width:6.5mm;height:6.5mm;border-radius:50%;background:var(--brand2);color:#fff;font-weight:800;font-size:9pt;margin-right:2mm;vertical-align:1px}
+.steps{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2.4mm 4mm;margin-top:2mm}
+.steps div{border:.3mm solid var(--line);border-radius:2.6mm;padding:2.6mm 3.6mm;background:#fff;font-size:9.3pt;color:var(--muted)}
+.steps div b{display:block;color:var(--ink);font-size:10pt;margin-bottom:.6mm}
+</style>
+</head>
+<body>
+
+<!-- ============================ COVER ============================ -->
+<section class="page cover">
+  <div class="brandline"><img src="img/rsp-logo-white.svg" alt="The Remote Support Program" style="height:12mm"></div>
+  <div style="margin-top:22mm" class="kicker">The guide · October 2026</div>
+  <h1>Remote support and job tracking, in one program</h1>
+  <p class="lead">Made for businesses that look after other people's computers and jobs — IT companies first. Connect to your customers' computers, track every job from booking in to invoice, and give your customers a small app with <b>your</b> name on it. This guide shows everything it does, with real screenshots.</p>
+  <div class="hero">
+    <div class="shot a"><img src="img/c-dashboard.png" alt=""></div>
+    <div class="shot b"><img src="img/c-session.png" alt=""></div>
+  </div>
+  <div class="who">theremotesupportprogram.com</div>
+</section>
+
+<!-- ============================ WHAT IT IS ============================ -->
+<section class="page tint" id="what">
+  <div class="kicker">What it is</div>
+  <h1>One program instead of three</h1>
+  <p class="lead">Most small IT companies, and the other businesses doing the same kind of work, pay for a remote control tool, a separate job card system, and something else again for chat. The Remote Support Program does all of it, in one place, at one price — and every job you do on a computer is written down for you.</p>
+  <h2>It has three parts</h2>
+  <div class="three">
+    <div><div class="who">For your technicians</div><h2>The console</h2><p>A Windows program. Every customer's computers in one list, green when they are on. Double-click one to see its screen and fix it. Tickets, chat and the knowledge base are a click away.</p><div class="shot" style="height:34mm;margin-top:3mm"><img src="img/c-dashboard.png" alt="" style="object-position:0 0"></div></div>
+    <div><div class="who">For your office</div><h2>The web portal</h2><p>Runs in any browser, also on a phone. Book jobs in, follow them step by step, quote, invoice, manage clients, people and your branding.</p><div class="shot" style="height:34mm;margin-top:3mm"><img src="img/p-tickets.png" alt="" style="object-position:0 0"></div></div>
+    <div><div class="who">For your customers</div><h2>The customer app</h2><p>A small app with your logo. One click asks you for help. Installed, it lets you in when they allow it, or when they are away if they switch that on.</p><div class="shot" style="height:34mm;margin-top:3mm"><img src="img/u-main.png" alt="" style="object-position:0 0"></div></div>
+  </div>
+  <div class="cols" style="margin-top:7mm;align-items:start">
+    <div>
+      <h2>Who it is for</h2>
+      <ul>
+        <li><b>IT companies</b>, with a workshop, call outs and remote support.</li>
+        <li><b>Software and point-of-sale suppliers</b>, <b>in-house IT teams</b>, <b>repair shops</b> and <b>call-out businesses</b>.</li>
+        <li>Five people on jobs, plus the owner; more on request.</li>
+        <li>Reaching <b>your own computers</b>, at a branch or a shop: <b>the Basic Version for Remote Workers</b>, R50 a month, or <b>the Free Version</b> for one (page <span data-pageof="free"></span>).</li>
+      </ul>
+    </div>
+    <div>
+      <h2>Why it is different</h2>
+      <ul>
+        <li><b>Built from the ground up.</b> The remote control, the picture, the protocol and the portal are all our own work. Nothing is licensed from anyone else.</li>
+        <li><b>Your brand, not ours.</b> Your customers see your name, logo and colours.</li>
+        <li><b>The paperwork does itself.</b> Every remote session becomes a ticket, with the time it took.</li>
+        <li><b>Made in South Africa</b>, hosted in South Africa, priced in rand.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="box" style="margin-top:7mm">
+    <h2>What you need</h2>
+    <p style="margin:0;color:var(--muted)">Windows 10 or 11 for the console and for your customers' computers. Any web browser for the portal. A phone with an authenticator app (Microsoft or Google Authenticator) for signing in. Nothing to host or maintain yourself.</p>
+  </div>
+  <div class="foot"><span>The Remote Support Program</span><span></span></div>
+</section>
+
+<!-- ============================ CONTENTS ============================ -->
+<section class="page" id="contents">
+  <div class="kicker">Contents</div>
+  <h1>In this guide</h1>
+  <div class="toc">
+    <a><span>Everything at a glance</span><span data-pageof="glance"></span></a>
+    <div class="grp">Remote support</div>
+    <a><span>Seeing and controlling a computer</span><span data-pageof="remote"></span></a>
+    <a><span>During a session: files, printing, talking and more</span><span data-pageof="session"></span></a>
+    <a><span>The technician console</span><span data-pageof="console"></span></a>
+    <a><span>Processes and performance, without connecting</span><span data-pageof="watch"></span></a>
+    <a><span>Your customer's side</span><span data-pageof="customer"></span></a>
+    <a><span>Outside help</span><span data-pageof="outside"></span></a>
+    <div class="grp">Jobs and tickets</div>
+    <a><span>Every job follows its own route</span><span data-pageof="tickets"></span></a>
+    <a><span>Built around how a workshop really works</span><span data-pageof="workshop"></span></a>
+    <a><span>Damage reports, going back, files on comments</span><span data-pageof="steps"></span></a>
+    <a><span>Use only the jobs and steps you need</span><span data-pageof="jobtypes"></span></a>
+    <a><span>Recurring tasks and keeping the client in the loop</span><span data-pageof="recurring"></span></a>
+    <a><span>Quotes from your suppliers</span><span data-pageof="quotes"></span></a>
+    <a><span>The monthly health check</span><span data-pageof="health"></span></a>
+    <a><span>Clients and their computers</span><span data-pageof="clients"></span></a>
+    <a><span>The knowledge base</span><span data-pageof="kb"></span></a>
+    <a><span>Chat, and every way a customer can reach you</span><span data-pageof="chat"></span></a>
+    <a><span>Tickets by email, and your data to take with you</span><span data-pageof="email"></span></a>
+    <div class="grp">Your company</div>
+    <a><span>Your team and your brand</span><span data-pageof="team"></span></a>
+    <a><span>Security</span><span data-pageof="security"></span></a>
+    <a><span>Always up to date, and where it runs</span><span data-pageof="runs"></span></a>
+    <a><span>The price, and getting started</span><span data-pageof="price"></span></a>
+    <a><span>The Basic version for remote workers</span><span data-pageof="free"></span></a>
+  </div>
+  <div class="foot"><span>The Remote Support Program</span><span></span></div>
+</section>
+
+<!-- ============================ AT A GLANCE ============================ -->
+<section class="page tint" id="glance">
+  <div class="kicker">At a glance</div>
+  <h1>What is in the box</h1>
+  <p class="lead">Everything below comes in the one package. There are no modules to buy separately.</p>
+  <div class="tiles">
+    <div class="tile"><h2><i></i>Remote control</h2><p>A sharp, fast picture that adjusts to slow connections. Full control, admin (UAC) prompts, Ctrl+Alt+Del and Windows shortcuts. Every screen. Restarts and reconnects by itself. Two computers at once.</p></div>
+    <div class="tile"><h2><i></i>Files, clipboard and tools</h2><p>Copy and paste text and files both ways, drag and drop, printing both ways, scripts, sound, listening and talking, recording and a privacy screen.</p></div>
+    <div class="tile"><h2><i></i>A console that gets out of the way</h2><p>Computers grouped by customer, attended and unattended tabs, requests for help that pop up, office chat, website chat and tickets.</p></div>
+    <div class="tile"><h2><i></i>Processes and performance</h2><p>See any computer's processes, processor, memory, disk and network live, without connecting and without disturbing the person using it.</p></div>
+    <div class="tile"><h2><i></i>Your customer's app</h2><p>One download, with your name. Get help now or install. Ask for help with a picture of the screen. The customer holds the switch for unattended access.</p></div>
+    <div class="tile"><h2><i></i>Outside help</h2><p>Bring in somebody from outside your company, such as an accountant's software supplier, with a one-time code. Your customer can do it too.</p></div>
+    <div class="tile"><h2><i></i>Tickets with a route</h2><p>Workshop, call out, walk in, remote support, general and recurring jobs, each with its own steps, and you switch off the ones you don't use. Photos, quotes, delivery, invoicing, emailing the client.</p></div>
+    <div class="tile"><h2><i></i>Monthly health check</h2><p>Automatic maintenance and a plain-English report for each chosen computer, with your logo, sent to your customer every month.</p></div>
+    <div class="tile"><h2><i></i>Knowledge base</h2><p>How things are done, in general and for each client, in folders. Write it from a ticket, keep every version, find it while you work.</p></div>
+    <div class="tile"><h2><i></i>Every way in</h2><p>Office chat, a chat bubble for your website, support straight from a web browser, and tickets from email or a contact form, including Microsoft 365.</p></div>
+    <div class="tile"><h2><i></i>Security first</h2><p>Sessions encrypted end to end, two-factor sign-in for everyone, customer consent, unattended passwords, signed apps, and an outside security review.</p></div>
+    <div class="tile"><h2><i></i>Yours to take with you</h2><p>Export everything your company keeps in one zip, at any time: clients, tickets with their whole story, photos and the knowledge base.</p></div>
+  </div>
+  <div class="box" style="margin-top:5mm">
+    <h2>Your brand, not ours</h2>
+    <p style="margin:0;color:var(--muted)">Your customers see your company name, logo and colours in the app, the download page, the chat bubble on your website and the monthly report. Change your branding and it reaches the computers that already have the app. The apps keep themselves up to date, so what you see in this guide is what every computer has.</p>
+  </div>
+  <div class="foot"><span>The Remote Support Program</span><span></span></div>
+</section>
+
+<!-- ============================ PART: REMOTE SUPPORT ============================ -->
+<section class="page part">
+  <div class="kicker">Part 1</div>
+  <h1>Remote support</h1>
+  <p class="lead">Seeing a customer's screen and fixing it as if you were sitting in front of it. With their permission, or when they are away if they allow that.</p>
+</section>
+
+<!-- ============================ REMOTE CONTROL ============================ -->
+<section class="page tint" id="remote">
+  <div class="kicker">Remote control</div>
+  <h1>See it and fix it, as if you were there</h1>
+  <p class="lead">Double-click a computer and you are on it. The picture is sharp and quick on a good line, and steps itself down on a poor one rather than freezing.</p>
+  <div class="shot auto"><img src="img/c-session.png" alt=""></div>
+  <p class="cap">A session window. Bottom left, a green lock says the session is encrypted end to end. The customer's knowledge base is one click away.</p>
+  <div class="cols" style="margin-top:5mm">
+    <ul>
+      <li><b>A video-quality picture</b>, using the graphics card where there is one. A scrolling page needs a small fraction of the data older methods use, and the customer's computer barely notices.</li>
+      <li><b>Adapts to the connection</b>: on a slow line it lowers the quality rather than stalling, and a still screen sharpens itself within two seconds.</li>
+      <li><b>The customer's real mouse pointer</b>, in its real shape.</li>
+      <li><b>Every screen</b>: pick the monitor, go full screen, or pop the picture out.</li>
+      <li><b>Admin (UAC) prompts and the Ctrl+Alt+Del screen</b> can be seen and clicked.</li>
+      <li><b>Windows shortcuts go to their computer</b>: the Windows key, Alt+Tab, Ctrl+Shift+Esc and the rest.</li>
+    </ul>
+    <div>
+      <div class="shot contain" style="height:31mm;width:72mm"><img src="img/c-system-menu.png" alt=""></div>
+      <p class="cap">The System menu.</p>
+      <ul style="margin-top:2mm">
+        <li><b>Restart the computer</b> and the session waits, then <b>reconnects by itself</b>. A dropped connection recovers on its own too.</li>
+        <li><b>Two computers at once</b>, one on each of your monitors. <b>Copy files on one and paste on the other</b>: they go straight between the two computers, never through yours.</li>
+        <li><b>Several technicians</b> can join the same session.</li>
+        <li><b>Wake up</b> a computer that is switched off, from the right-click menu.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot"><span>The Remote Support Program</span><span></span></div>
+</section>
+
+<!-- ============================ DURING A SESSION ============================ -->
+<section class="page" id="session">
+  <div class="kicker">During a session</div>
+  <h1>Everything you need, without a cluttered screen</h1>
+  <p class="lead">The tools live in one Tools menu. Each opens as its own small window you can move anywhere, so the customer's screen stays big.</p>
+  <div class="cols" style="grid-template-columns:1fr 70mm;align-items:start">
+    <ul>
+      <li><b>Copy and paste, both ways</b>: text, files and whole folders, as if the two computers were one.</li>
+      <li><b>Drag and drop</b> files onto their screen, or off it onto yours.</li>
+      <li><b>Files</b>: browse their computer, send and fetch files.</li>
+      <li><b>Scripts</b>: run PowerShell on their computer and watch the result.</li>
+      <li><b>Sound</b>: says in plain English why there is no sound, and plays a test tone.</li>
+      <li><b>Listen</b> to the computer, and <b>talk to the customer</b>. They are asked each time before their microphone is used.</li>
+      <li><b>Record this session</b>, saved as a video on the ticket.</li>
+      <li><b>Privacy screen</b>: their monitor goes black while you work.</li>
+      <li><b>Print on my printer</b>: their computer gets a printer with your name on it, and whatever they print comes out on yours.</li>
+      <li><b>Print a file on their printer</b>: send a document and it prints at their end.</li>
+      <li><b>Get outside help</b>: bring somebody from outside your company into this session with a code (page <span data-pageof="outside"></span>).</li>
+    </ul>
+    <div>
+      <div class="shot" style="height:65mm"><img src="img/u-allow.png" alt=""></div>
+      <p class="cap">On an attended computer, the person there is asked first, by name, and presses Allow.</p>
+    </div>
+  </div>
+  <div class="box" style="margin-top:5mm">
+    <h2>Everything is written down for you</h2>
+    <p style="margin:0 0 3mm;color:var(--muted)">Every remote session gets its own ticket. Who connected, to which computer, for how long, files sent, scripts run and text copied (only its size, never the words, because clipboards often hold passwords) all go onto it by themselves. Reconnect within 30 minutes and it carries on the same ticket.</p>
+    <div class="shot" style="height:62mm"><img src="img/p-ticket11.png" alt="" style="object-position:50% 78%"></div>
+  </div>
+  <div class="foot"><span>The Remote Support Program</span><span></span></div>
+</section>
+
+<!-- ============================ THE CONSOLE ============================ -->
+<section class="page tint" id="console">
+  <div class="kicker">The technician console</div>
+  <h1>Your whole day on one screen</h1>
+  <p class="lead">The console is home base. Computers are grouped under the customer who owns them, with what each one is running and which version of our app it has.</p>
+  <div class="shot auto"><img src="img/c-dashboard.png" alt=""></div>
+  <div class="cols" style="margin-top:5mm;grid-template-columns:1fr 62mm">
+    <ul>
+      <li><b>Attended and Unattended tabs.</b> Unattended shows the computers whose owners let you in when nobody is there.</li>
+      <li><b>Green or grey at a glance</b>, with the person, computer, Windows version, processor, memory and disk.</li>
+      <li><b>Requests for help pop up</b> with what is wrong in the customer's own words, and a picture of their screen if they sent one. Accept, and you are connected.</li>
+      <li><b>Right-click a computer</b> to connect, chat, see processes or performance, file it under a customer, set its health check or wake it up.</li>
+      <li><b>Active sessions</b>: double-click to join a colleague.</li>
+      <li>Buttons for <b>tickets, the knowledge base, office chat and website chat</b>, each with a count of what is waiting. A soft ding for a message and a ring while someone waits; the bell mutes them.</li>
+      <li><b>Your logo on every window</b>, and light or dark for each person.</li>
+    </ul>
+    <div>
+      <div class="shot" style="height:50mm"><img src="img/c-incoming-call.png" alt=""></div>
+      <p class="cap">A customer asking for help.</p>
+      <div class="shot contain" style="height:41mm;margin-top:3mm"><img src="img/c-rightclick.png" alt=""></div>
+      <p class="cap">Right-click on a computer.</p>
+    </div>
+  </div>
+  <div class="foot"><span>The Remote Support Program</span><span></span></div>
+</section>
+
+<!-- ============================ PROCESSES & PERFORMANCE ============================ -->
+<section class="page" id="watch">
+  <div class="kicker">Processes and performance</div>
+  <h1>Look under the bonnet without interrupting anyone</h1>
+  <p class="lead">Right-click any computer that is on and choose Processes or Performance. You see it live, every second, without connecting and without the person noticing. Look only: nothing can be changed from here.</p>
+  <div class="cols">
+    <div><div class="shot" style="height:71mm"><img src="img/c-performance.png" alt=""></div><p class="cap">Performance: processor, memory, disk and network, with live graphs.</p></div>
+    <div><div class="shot" style="height:71mm"><img src="img/c-processes.png" alt=""></div><p class="cap">Processes, busiest first. Click a heading to sort.</p></div>
+  </div>
+  <div class="cols" style="margin-top:6mm">
+    <ul>
+      <li><b>"It's slow"</b>: see straight away whether it is the processor, memory, disk or network.</li>
+      <li><b>The network card</b> shows whether the connection is Private or Public (a Public network turns file sharing off), with its IP address and Wi-Fi name.</li>
+    </ul>
+    <ul>
+      <li>How long the computer has been running, and how many programs it has open.</li>
+      <li>A program that opens or closes shows up straight away.</li>
+      <li>Several technicians can watch the same computer.</li>
+    </ul>
+  </div>
+  <h2 style="margin-top:7mm">Who is this computer?</h2>
+  <div class="shot auto"><img src="img/c-dashboard-unlinked.png" alt=""></div>
+  <p class="cap">New computers, named by the person who installed the app or asked for help, in grey until you file them.</p>
+  <div style="margin-top:3mm">
+    <ul>
+      <li>A brand-new computer is not "DESKTOP-7QK2M4P" for long. The <b>name the customer gave</b> when they installed the app, or last asked for help, shows in <i>grey italics</i>.</li>
+      <li>File it under a client in two clicks, and that person is <b>added as a contact</b> at that client, by their email if they gave one.</li>
+    </ul>
+  </div>
+  <div class="foot"><span>The Remote Support Program</span><span></span></div>
+</section>
+
+<!-- ============================ CUSTOMER APP ============================ -->
+<section class="page tint" id="customer">
+  <div class="kicker">Your customer's side</div>
+  <h1>Simple for them, with your name on it</h1>
+  <p class="lead">Your customers download one file from your own link. It knows it belongs to you and shows your name, logo and colours.</p>
+  <div class="cols" style="grid-template-columns:76mm 56mm 1fr;gap:5mm;align-items:start">
+    <div>
+      <div class="shot auto"><img src="img/u-launcher.png" alt=""></div>
+      <p class="cap">The first thing they see. Get help now installs nothing. Install asks who the computer is for, so you know who you are helping.</p>
+    </div>
+    <div>
+      <div class="shot auto"><img src="img/u-request.png" alt=""></div>
+      <p class="cap">Asking for help, with a picture of their screen that they see before it is sent.</p>
+    </div>
+    <div>
+      <div class="shot contain" style="height:36mm"><img src="img/u-tray-menu.png" alt=""></div>
+      <p class="cap">The menu by the clock.</p>
+      <div class="shot auto" style="margin-top:3mm"><img src="img/u-main.png" alt=""></div>
+      <p class="cap">The installed app.</p>
+    </div>
+  </div>
+  <div style="margin-top:4mm">
+    <ul>
+      <li><b>Get help now</b> needs nothing installed: good for a one-off. <b>Install</b> keeps it ready, starting with Windows.</li>
+      <li><b>Request Support</b> rings softly in every technician's console. Their name and email are remembered for next time.</li>
+      <li><b>They are asked before anyone connects</b> to an attended computer, and a banner shows while someone is connected.</li>
+      <li><b>Unattended access is their switch.</b> They tick it to let you in when nobody is there, and can set an <b>unattended password</b> you must type. Five wrong tries lock the computer for 15 minutes.</li>
+      <li><b>Chat with a technician</b> at any time, also outside a session.</li>
+      <li><b>Exit means offline</b>: nobody can connect until they open it again. <b>Uninstall</b> is in the menu too.</li>
+    </ul>
+  </div>
+  <div class="cols" style="grid-template-columns:58mm 1fr;align-items:center;margin-top:4mm">
+    <div>
+      <div class="shot" style="height:46mm"><img src="img/u-unattended-password.png" alt=""></div>
+      <p class="cap">Setting an unattended password, at the computer itself.</p>
+    </div>
+    <div class="box">
+      <h2>The customer stays in control</h2>
+      <p style="margin:0;color:var(--muted)">Unattended access is off until the customer ticks it, and they can untick it at any time. With a password set, nobody connects without it, the owner of the IT company included. Each technician types it right once per computer, and it is forgotten the moment the customer changes it.</p>
+    </div>
+  </div>
+  <div class="foot"><span>The Remote Support Program</span><span></span></div>
+</section>
+
+<!-- ============================ OUTSIDE HELP ============================ -->
+<section class="page" id="outside">
+  <div class="kicker">Outside help</div>
+  <h1>When somebody else needs to help</h1>
+  <p class="lead">Sometimes a customer needs their accounting software's supplier on their computer, or you need a specialist. Instead of a separate remote tool, that person comes in with a one-time code, and you stay in charge.</p>
+  <div class="cols" style="grid-template-columns:1fr 1fr;align-items:start">
+    <div>
+      <div class="shot" style="height:74mm"><img src="img/c-outside-help.png" alt=""></div>
+      <p class="cap">A technician asks for help: a code for this session, and a message to copy or send by WhatsApp or email.</p>
+    </div>
+    <div>
+      <div class="shot" style="height:74mm"><img src="img/u-outsider-code.png" alt=""></div>
+      <p class="cap">Or the customer makes a code in your app and sends it.</p>
+    </div>
+  </div>
+  <div class="cols" style="margin-top:5mm">
+    <div>
+      <h2>Your technician asks</h2>
+      <ul>
+        <li>In a session, <b>Tools → Get outside help</b>. The code works <b>once</b>, for <b>ten minutes</b>, for that session only.</li>
+        <li>The technician lets them in, with files only if they tick it. <b>The person at the computer is told</b>.</li>
+        <li>They leave when your technicians do, and any technician can remove them.</li>
+      </ul>
+    </div>
+    <div>
+      <h2>Your customer asks</h2>
+      <ul>
+        <li>From your app's menu: <b>Let someone else connect</b>. The customer is always asked to Allow the person, by name.</li>
+        <li><b>You are told straight away</b> in the console, and can watch or end it.</li>
+        <li><b>Off unless you switch it on</b>, for your company and then for any single computer.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="cols" style="margin-top:5mm;grid-template-columns:1fr 1fr;align-items:start">
+    <div>
+      <div class="shot" style="height:46mm"><img src="img/w-guest.png" alt=""></div>
+      <p class="cap">The other person types the code in a web browser. No account, nothing to install.</p>
+    </div>
+    <ul>
+      <li><b>Screen and control only.</b> No scripts, clipboard or sound for an outsider; files only when ticked.</li>
+      <li>They can use a browser, a small program for Windows, or, if their IT company uses our program too, their own console.</li>
+      <li>Everybody sees who they are and which company they say they are from.</li>
+    </ul>
+  </div>
+  <div class="foot"><span>The Remote Support Program</span><span></span></div>
+</section>
+
+<!-- ============================ PART: JOBS ============================ -->
+<section class="page part">
+  <div class="kicker">Part 2</div>
+  <h1>Jobs and tickets</h1>
+  <p class="lead">From the machine on the counter to the invoice. Each kind of job has its own steps, so nobody has to remember the process and nothing falls through the cracks.</p>
+</section>
+
+<!-- ============================ TICKETS ============================ -->
+<section class="page tint" id="tickets">
+  <div class="kicker">Tickets and workflows</div>
+  <h1>Every job follows its own route</h1>
+  <p class="lead">Only the next steps are offered as buttons, so a job always moves forward the right way. Each ticket reads like a story, newest first, with a comment box always at hand.</p>
+  <div class="shot" style="height:128mm"><img src="img/p-ticket4.png" alt="" style="object-position:50% 0%"></div>
+  <p class="cap">A workshop job at "Quote needed": the next steps at the top, a comment box, and the numbered story below.</p>
+  <div class="cols3" style="margin-top:4mm">
+    <div><h2>Workshop</h2><p style="font-size:9pt;color:var(--muted);margin:0">Booked in with photos, then findings, repairable or not, quote, solved and invoiced, then collected or delivered.</p></div>
+    <div><h2>Call out and walk in</h2><p style="font-size:9pt;color:var(--muted);margin:0">Appointment and address, rescheduled if needed, work done and time, paid on site, or sent to the workshop on the same ticket.</p></div>
+    <div><h2>Remote, general, recurring</h2><p style="font-size:9pt;color:var(--muted);margin:0">Invoice it, mark it as covered by a service agreement, or link it to a bigger job. Recurring tasks open themselves when due.</p></div>
+  </div>
+  <div class="shot contain" style="margin-top:5mm;padding:5mm 6mm"><img src="img/p-cat.png" alt="" style="height:auto"></div>
+  <p class="cap">A new ticket starts with the type of job. Each type has its own colour, so the right one is easy to pick.</p>
+  <div class="foot"><span>The Remote Support Program</span><span></span></div>
+</section>
+
+<!-- ============================ WORKSHOP ============================ -->
+<section class="page" id="workshop">
+  <div class="kicker">Tickets and workflows</div>
+  <h1>Built around how a workshop really works</h1>
+  <div class="cols" style="grid-template-columns:1fr 46mm;align-items:start">
+    <div>
+      <div class="shot" style="height:76mm"><img src="img/c-ticket2.png" alt=""></div>
+      <p class="cap">The same tickets inside the technician console.</p>
+    </div>
+    <div>
+      <div class="shot" style="height:76mm"><img src="img/m-ticket2.png" alt=""></div>
+      <p class="cap">And on a phone.</p>
+    </div>
+  </div>
+  <div class="cols" style="margin-top:5mm">
+    <ul>
+      <li><b>Several people on one job</b>, from the start or added at any point.</li>
+      <li><b>Ask someone with @name.</b> They stay flagged until they reply.</li>
+      <li><b>Photos in and photos out</b>, at least three of each, made smaller automatically.</li>
+      <li><b>Quotes</b> from a shared parts list, emailed to your suppliers.</li>
+      <li><b>Delivery</b> as well as collection.</li>
+      <li><b>Several machines</b> on one booking, or two machines on one job.</li>
+      <li><b>Reschedule a call out</b>: a new date and time, and why.</li>
+      <li><b>Edit</b> the subject, description, appointment or type of job, and <b>sort</b> the list by date.</li>
+    </ul>
+    <ul>
+      <li><b>The billing queue</b>: the office invoices, and a technician never closes a job.</li>
+      <li><b>The office is told</b> the moment a job is ready to invoice, with a pop-up and a count.</li>
+      <li><b>Every remote session is its own ticket</b> with its time.</li>
+      <li><b>Link a ticket to a bigger job</b>: the bigger job cannot close until its parts are done.</li>
+      <li><b>Tickets open themselves</b> from email, a contact form, the website chat or a customer's request.</li>
+      <li><b>Who has what</b>: everyone's open work, and anything nobody has been given.</li>
+    </ul>
+  </div>
+  <div class="cols" style="margin-top:4mm;grid-template-columns:62mm 1fr;align-items:start">
+    <div><div class="shot contain" style="height:36mm"><img src="img/c-billing-popup.png" alt=""></div><p class="cap">The office is told a job is ready to invoice.</p></div>
+    <div><div class="shot" style="height:36mm"><img src="img/p-ticket7.png" alt="" style="object-position:50% 0%"></div><p class="cap">A call out, with Reschedule beside Work done.</p></div>
+  </div>
+  <div class="foot"><span>The Remote Support Program</span><span></span></div>
+</section>
+
+<!-- ============================ DAMAGE / BACK / FILES ============================ -->
+<section class="page tint" id="steps">
+  <div class="kicker">Tickets and workflows</div>
+  <h1>Damage reports, going back, files on comments</h1>
+  <div class="cols" style="grid-template-columns:1fr 1fr;align-items:start;margin-top:3mm">
+    <div>
+      <h2>Damage reports</h2>
+      <p class="body">For insurance claims. A machine that is not worth repairing gets <b>Damage report needed</b>: a note for the client, the report itself, and your time and amount. The client is emailed the report and the note — never your time or amount — and the job goes to be invoiced.</p>
+      <div class="frame"><img src="img/n-damage-form.png" alt=""></div>
+      <p class="cap">The damage report step, with the report and a photo attached.</p>
+    </div>
+    <div>
+      <div class="shot" style="height:114mm"><img src="img/n-damage-done.png" alt="" style="object-position:50% 0"></div>
+      <p class="cap">The story afterwards: the report on top, and a step that was undone, crossed through.</p>
+    </div>
+  </div>
+  <div class="cols" style="grid-template-columns:1fr 1fr;align-items:start;margin-top:5mm">
+    <div>
+      <h2>Go back a step, at every stage</h2>
+      <ul>
+        <li>Pressed the wrong button? <b>Back to …</b> sits beside the next steps, and asks why.</li>
+        <li>The undone step stays in the story, crossed through, so nothing is lost.</li>
+        <li>It warns you if an invoice, a payment or an email went out with that step.</li>
+      </ul>
+      <div class="frame" style="margin-top:3mm"><img src="img/n-goback.png" alt=""></div>
+    </div>
+    <div>
+      <h2>Files and photos on any comment</h2>
+      <ul>
+        <li><b>Attach files or photos</b> under every comment box, in the portal and the console.</li>
+        <li>Tick <b>Also email this to the client</b> and they go as attachments.</li>
+        <li>Comment boxes grow as you type.</li>
+      </ul>
+      <div class="frame" style="margin-top:3mm"><img src="img/n-comment-files.png" alt=""></div>
+    </div>
+  </div>
+  <div class="cols" style="grid-template-columns:1fr 1fr 1fr;align-items:start;margin-top:5mm;gap:5mm">
+    <div>
+      <h2>Edit a ticket</h2>
+      <p class="body" style="margin:0">The subject, description, appointment or type of job, by anyone who can see it. Every change goes into the story, with what it was before.</p>
+    </div>
+    <div>
+      <h2>Sort, and due dates</h2>
+      <p class="body" style="margin:0">Click any heading in the ticket list to sort by it, in the portal and the console. Every ticket can have a due date; an overdue one shows in red.</p>
+    </div>
+    <div>
+      <h2>Latest activity</h2>
+      <p class="body" style="margin:0">Every update on your tickets as it is posted, newest first — everybody's or only yours. Put somebody on a ticket and it shows in theirs.</p>
+    </div>
+  </div>
+  <div class="foot"><span>The Remote Support Program</span><span></span></div>
+</section>
+
+<!-- ============================ JOB TYPES ============================ -->
+<section class="page" id="jobtypes">
+  <div class="kicker">Tickets and workflows</div>
+  <h1>Use only the jobs and steps you need</h1>
+  <p class="lead">Not every IT company books machines into a workshop, or photographs every one. Switch off the kinds of job and the steps you don't use, and every new ticket follows your way of working.</p>
+  <div class="cols" style="grid-template-columns:1.35fr 1fr;align-items:start;margin-top:4mm">
+    <div>
+      <div class="frame"><img src="img/p-jobtypes.png" alt=""></div>
+      <p class="cap">The Workshop card with the inspection step switched off. The line at the bottom shows how a job now goes.</p>
+    </div>
+    <div>
+      <h2>Choose, card by card</h2>
+      <ul>
+        <li>In the portal, <b>Job types</b> shows a card for each kind of job, with its steps in order.</li>
+        <li>Untick a kind of job you don't do, or a step you don't use: before-and-after photos, the inspection step, asking suppliers for prices, waiting for payment after invoicing, a supervisor approving "do not invoice", and more.</li>
+        <li>Under each card, the way a job will go, redrawn as you tick.</li>
+      </ul>
+      <h2 style="margin-top:5mm">Nothing can break</h2>
+      <ul>
+        <li>The steps a job can't do without carry a padlock and say why.</li>
+        <li>Before anything is saved, every route is checked: a job can always move on, and can never be closed without being invoiced or deliberately not.</li>
+      </ul>
+      <h2 style="margin-top:5mm">Fair to work in progress</h2>
+      <ul>
+        <li>Jobs already open finish the way they started. Only new tickets follow a change.</li>
+        <li>The portal and the console follow it the moment it is saved.</li>
+        <li>Only a supervisor or the owner can change it. Everyone else can see it.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot"><span>The Remote Support Program</span><span></span></div>
+</section>
+
+<!-- ============================ RECURRING & EMAIL ============================ -->
+<section class="page tint" id="recurring">
+  <div class="kicker">Recurring tasks and client updates</div>
+  <h1>Set it up once. Keep the client in the loop.</h1>
+  <h2 style="margin-top:3mm">Recurring tasks</h2>
+  <p class="body">For anything done on a schedule: checking a client's backups, reading printer counters, sending monthly invoices. Set it up once and forget about it.</p>
+  <div class="shot" style="height:58mm"><img src="img/p-recurring.png" alt=""></div>
+  <div class="cols" style="margin-top:3mm">
+    <ul>
+      <li><b>Daily</b> (or weekdays only), <b>weekly</b> on chosen days, or <b>monthly</b> on a date or the last day.</li>
+      <li>On the morning it is due, <b>a ticket opens by itself</b>, already given to the right people.</li>
+    </ul>
+    <ul>
+      <li>Done closes it, or send it to be invoiced.</li>
+      <li>Change it or cancel it at any time. Past tickets stay.</li>
+    </ul>
+  </div>
+  <h2 style="margin-top:6mm">Email the client from a ticket</h2>
+  <p class="body">Tick <b>Also email this to the client</b> under a comment. They get the original fault and your comment, from your own support address. When they reply, it lands on the same ticket and everyone on the job is flagged.</p>
+  <div class="shot" style="height:78mm"><img src="img/p-ticket11.png" alt="" style="object-position:50% 16%"></div>
+  <p class="cap">A comment emailed to the client (below), and her reply by email (above).</p>
+  <div class="foot"><span>The Remote Support Program</span><span></span></div>
+</section>
+
+<!-- ============================ QUOTES ============================ -->
+<section class="page" id="quotes">
+  <div class="kicker">Quotes and suppliers</div>
+  <h1>Quotes from your suppliers, quickly</h1>
+  <p class="lead">Add the parts a job needs, then press Request quote. Your suppliers get a tidy email with your reference, and the answer comes back to the right ticket.</p>
+  <div class="shot" style="height:118mm"><img src="img/p-ticket4-quote.png" alt="" style="object-position:50% 30%"></div>
+  <p class="cap">The quote on a workshop job: each item with its part number and its own photos.</p>
+  <div class="cols" style="margin-top:5mm;grid-template-columns:1fr 1fr;align-items:start">
+    <div>
+      <div class="shot" style="height:40mm"><img src="img/p-signatures.png" alt=""></div>
+      <p class="cap">Signatures on the Suppliers page: words, your logo, or both.</p>
+    </div>
+    <ul>
+      <li><b>Several photos for each item</b>, so the supplier sees exactly what is needed.</li>
+      <li><b>One supplier or several.</b> Several get the same email without seeing each other.</li>
+      <li><b>Every request asks</b> the delivery fee, whether each item is <b>in stock</b>, and <b>how soon</b> it can be delivered.</li>
+      <li><b>Signed by you</b>, with your logo if you like.</li>
+      <li>Works with Outlook and other desktop mail, or with web mail such as Gmail.</li>
+      <li>A shared list of parts that refuses near-duplicates, so "DDR memory" and "memory DDR" never both appear.</li>
+    </ul>
+  </div>
+  <div class="foot"><span>The Remote Support Program</span><span></span></div>
+</section>
+
+<!-- ============================ HEALTH CHECK ============================ -->
+<section class="page tint" id="health">
+  <div class="kicker">Monthly health check</div>
+  <h1>A report your customers will actually read</h1>
+  <p class="lead">Once a month every chosen computer tidies itself up and checks its own health. Your customer gets a report in plain English with your logo, and you see the results in the portal.</p>
+  <div class="cols" style="grid-template-columns:98mm 1fr;align-items:start">
+    <div>
+      <div class="shot auto"><img src="img/x-report.png" alt=""></div>
+      <p class="cap">The customer's monthly report, under a demonstration company's branding.</p>
+    </div>
+    <div>
+      <div class="shot auto"><img src="img/p-healthchecks.png" alt=""></div>
+      <p class="cap">The same findings in your portal, safe to read out on the phone.</p>
+      <ul style="margin-top:3mm">
+        <li><b>Backups</b>: tells a real backup apart from cloud sync, which copies a mistake or ransomware straight across.</li>
+        <li><b>Drive health</b> by the maker's own limits, and disk space.</li>
+        <li><b>Security</b>: antivirus, firewall, Windows updates, accounts without passwords.</li>
+        <li><b>Windows licence and Office version</b>, Windows 11 readiness, the computer's age, errors and unexpected shutdowns.</li>
+        <li><b>Maintenance</b>: clears temporary files and keeps drives in shape. Or choose inspection only.</li>
+        <li><b>Switch it on per client</b> (your service-agreement customers, say) and override it per computer.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot"><span>The Remote Support Program</span><span></span></div>
+</section>
+
+<!-- ============================ CLIENTS & MACHINES ============================ -->
+<section class="page" id="clients">
+  <div class="kicker">Clients and computers</div>
+  <h1>Know every customer and every computer</h1>
+  <div class="cols" style="grid-template-columns:1fr 1fr;align-items:start">
+    <div>
+      <div class="shot auto"><img src="img/p-client-riverside.png" alt=""></div>
+      <p class="cap">A client's page: people, computers, health check, open work and history.</p>
+    </div>
+    <div>
+      <div class="shot auto"><img src="img/p-devices-unlinked.png" alt=""></div>
+      <p class="cap">New computers on the Devices page, named by the person who installed the app, with a quick way to file them and add that person as a contact.</p>
+      <div class="shot contain" style="height:44mm;width:58mm;margin-top:3mm"><img src="img/c-rightclick-offline.png" alt=""></div>
+      <p class="cap">Right-click on a computer that is off.</p>
+    </div>
+  </div>
+  <div class="cols" style="margin-top:5mm;grid-template-columns:1fr 1fr;gap:6mm">
+    <ul>
+      <li><b>Clients and their people</b>: one person, or a company with many contacts.</li>
+      <li><b>Computers link to a client</b>, so every ticket from that computer lands on the right page.</li>
+      <li><b>Hardware at a glance</b>. Nearly full disks are flagged.</li>
+      <li><b>Import your clients</b> from your old system, as Excel or CSV, previewed first. Nothing you have is overwritten.</li>
+      <li>A client added twice, or spelt wrong? <b>Remove it</b>, and everything on it moves to the right client.</li>
+    </ul>
+    <ul>
+      <li><b>Remove a computer</b> with a reason. If it is on, our app uninstalls itself.</li>
+      <li><b>A reinstalled computer</b> is held back until a supervisor confirms it is the same one.</li>
+      <li><b>Wake up</b> a computer that is off.</li>
+      <li>Web addresses use <b>your own numbers</b>: your ticket #12 is ticket 12 in the address too, and gives nothing away about anybody else.</li>
+    </ul>
+  </div>
+  <div class="foot"><span>The Remote Support Program</span><span></span></div>
+</section>
+
+<!-- ============================ KNOWLEDGE BASE ============================ -->
+<section class="page tint" id="kb">
+  <div class="kicker">Knowledge base</div>
+  <h1>Write it down once, use it every time</h1>
+  <p class="lead">How things are done, in general and for each client. When a technician connects to a computer, the console points them to that client's articles.</p>
+  <div class="shot" style="height:104mm"><img src="img/p-kb1.png" alt=""></div>
+  <p class="cap">An article for one client: numbered steps, commands to copy, and a full history.</p>
+  <div class="cols" style="margin-top:5mm">
+    <ul>
+      <li><b>Folders</b>, in general and inside each client.</li>
+      <li><b>Link buttons</b>: a web address becomes a button that opens the site.</li>
+      <li><b>Add to knowledge base</b> straight from a finished ticket.</li>
+      <li>Searchable by title, steps or client name.</li>
+    </ul>
+    <ul>
+      <li><b>Everybody can edit</b>, every version is kept and can be put back, and two people saving at once never overwrite each other.</li>
+      <li><b>Pictures</b> pasted straight in. A gentle warning if someone types what looks like a password.</li>
+      <li>Only a supervisor or the owner can delete.</li>
+    </ul>
+  </div>
+  <div class="shot" style="height:58mm;margin-top:5mm"><img src="img/p-kb.png" alt=""></div>
+  <p class="cap">The knowledge base in folders: general first, then each client's.</p>
+  <div class="foot"><span>The Remote Support Program</span><span></span></div>
+</section>
+
+<!-- ============================ CHAT & CONTACT ============================ -->
+<section class="page" id="chat">
+  <div class="kicker">Chat and contact</div>
+  <h1>Every way a customer might reach you</h1>
+  <div class="cols" style="grid-template-columns:62mm 1fr;align-items:start">
+    <div>
+      <div class="shot" style="height:94mm"><img src="img/w-frame-chat.png" alt=""></div>
+      <p class="cap">The chat bubble on your own website, as a visitor sees it.</p>
+    </div>
+    <div>
+      <div class="shot" style="height:68mm"><img src="img/x-chats.png" alt=""></div>
+      <p class="cap">In the portal: office chat (left) and a website visitor being answered (right).</p>
+      <ul style="margin-top:3mm">
+        <li><b>Website chat</b>: paste one line onto your website. A visitor's question pops up for everyone signed in, and the first to reply takes it. <b>Hand it over</b> to a colleague if needed. Outside your hours it takes a message, which becomes a ticket.</li>
+        <li><b>Office chat</b>: one-to-one or everyone, in the console and the portal. A message to you pops up without stealing your keyboard.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="cols" style="margin-top:5mm;grid-template-columns:1fr 1fr;align-items:start">
+    <div>
+      <div class="shot" style="height:46mm"><img src="img/w-help.png" alt=""></div>
+      <p class="cap">Support in a web browser: nothing to install.</p>
+    </div>
+    <ul>
+      <li><b>Support in the browser</b>: a link for new customers. They describe the problem, a technician answers, and they can share their screen and talk, with nothing installed. View only.</li>
+      <li><b>Tickets by email</b> and a <b>contact form</b> for your website, which open tickets by themselves (next page).</li>
+      <li><b>Chat with the customer</b> during or outside a session.</li>
+    </ul>
+  </div>
+  <div class="cols" style="margin-top:5mm;grid-template-columns:80mm 1fr;align-items:center">
+    <div style="position:relative">
+      <div class="shot auto"><img src="img/c-webchat.png" alt=""></div>
+      <div style="position:absolute;right:12mm;top:27mm;width:20mm" class="shot auto"><img src="img/c-webchat-handover.png" alt=""></div>
+      <p class="cap">A website visitor answered from the console. Hand over… lists everyone signed in now.</p>
+    </div>
+    <ul>
+      <li><b>A ding and a ring</b>: a ding for a new message, and a soft ring while a visitor or a customer waits for an answer. One click mutes it.</li>
+      <li>The visitor sees a note when somebody else takes over.</li>
+    </ul>
+  </div>
+  <div class="foot"><span>The Remote Support Program</span><span></span></div>
+</section>
+
+<!-- ============================ EMAIL + EXPORT ============================ -->
+<section class="page tint" id="email">
+  <div class="kicker">Tickets by email · Your data</div>
+  <h1>Your mailbox in, your data out</h1>
+  <div class="cols" style="grid-template-columns:74mm 1fr;align-items:start;margin-top:3mm">
+    <div>
+      <h2>Tickets by email</h2>
+      <p class="body">Mail to your support address opens a ticket by itself, linked to the client when the address is on file. The customer gets an automatic reply with the ticket number, and their reply goes onto the same ticket. Out-of-office replies and spam never become tickets.</p>
+      <ul>
+        <li><b>Microsoft 365: Sign in with Microsoft.</b> No password is given to us, and we may read only that one mailbox.</li>
+        <li><b>Most other hosting, Gmail and Zoho</b>: we check the mailbox, read only. Nothing in it is changed or marked read.</li>
+        <li>Or simply <b>forward</b> it to an address we give you.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="shot auto"><img src="img/p-mailintake.png" alt=""></div>
+      <p class="cap">Tickets by email, with Sign in with Microsoft chosen.</p>
+    </div>
+  </div>
+  <h2 style="margin-top:7mm">Your data is yours</h2>
+  <div class="cols" style="grid-template-columns:96mm 1fr;align-items:start">
+    <div>
+      <div class="shot auto"><img src="img/p-export.png" alt=""></div>
+      <p class="cap">Export your data: one zip, made in the background.</p>
+    </div>
+    <ul>
+      <li><b>Everything in one zip</b>, whenever you like: clients and their people, every ticket with its whole story, quotes, photos and files, and the knowledge base with its pictures.</li>
+      <li>The client list comes out <b>in exactly the columns the import reads</b>, so it goes straight into another program, or back in here.</li>
+      <li>Only the owner and supervisors can make one. Device passwords from workshop bookings are never exported.</li>
+      <li>If you ever leave, we make sure you get your export.</li>
+    </ul>
+  </div>
+  <div class="foot"><span>The Remote Support Program</span><span></span></div>
+</section>
+
+<!-- ============================ PART: COMPANY ============================ -->
+<section class="page part">
+  <div class="kicker">Part 3</div>
+  <h1>Your company</h1>
+  <p class="lead">Your people, your brand, how it is kept safe, where it runs, and what it costs.</p>
+</section>
+
+<!-- ============================ TEAM & BRAND ============================ -->
+<section class="page tint" id="team">
+  <div class="kicker">Your team and your brand</div>
+  <h1>Set it up once, your way</h1>
+  <div class="shot auto"><img src="img/p-people.png" alt=""></div>
+  <p class="cap">People and roles. One person can hold several roles and still uses one seat.</p>
+  <div class="cols" style="margin-top:5mm;grid-template-columns:1fr 1fr;align-items:start">
+    <div>
+      <div class="shot" style="height:78mm"><img src="img/p-branding.png" alt=""></div>
+      <p class="cap">Branding, with a live preview of the customer's app and the console.</p>
+    </div>
+    <div>
+      <table class="t" style="margin-top:0">
+        <tr><th>Role</th><th>What they do</th></tr>
+        <tr><td>Technician</td><td>Works on computers in the console, and on their tickets.</td></tr>
+        <tr><td>Supervisor</td><td>Also runs the work: every ticket, assigning, approving, closing.</td></tr>
+        <tr><td>Office admin</td><td>Books jobs in, quotes and invoices, in the portal. No access to customers' computers.</td></tr>
+        <tr><td>Owner</td><td>Billing and people. On its own it oversees and comments, and is free.</td></tr>
+      </table>
+      <ul style="margin-top:3mm">
+        <li><b>Invitations</b>: new people choose their own password. Nobody sends passwords around.</li>
+        <li><b>Your name, logo, colours and welcome message</b> in the customer's app, the console, the download page, the website chat and the health report. Changes reach computers that already have the app.</li>
+        <li><b>Your own download links</b>, for customers and for technicians.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot"><span>The Remote Support Program</span><span></span></div>
+</section>
+
+<!-- ============================ SECURITY ============================ -->
+<section class="page" id="security">
+  <div class="kicker">Security</div>
+  <h1>Access to your customers' computers, properly guarded</h1>
+  <p class="lead">This software reaches deep into your customers' computers, so signing in and connecting are guarded seriously, and an outside reviewer has tested it.</p>
+  <div class="cols3">
+    <div><div class="shot" style="height:62mm"><img src="img/x-enrol.png" alt=""></div><p class="cap">Setting up two-factor sign-in with an authenticator app.</p></div>
+    <div><div class="shot" style="height:62mm"><img src="img/x-recovery.png" alt=""></div><p class="cap">Recovery codes, in case a phone is lost.</p></div>
+    <div><div class="shot" style="height:62mm"><img src="img/x-code.png" alt="" style="object-fit:contain;background:#0b0f19"></div><p class="cap">Signing in elsewhere signs the other place out.</p></div>
+  </div>
+  <div class="cols" style="margin-top:5mm">
+    <ul>
+      <li><b>End-to-end encryption</b>: a session is sealed between your console and the customer's computer. Our server passes it along but cannot see it. The console shows a green lock, and warns you if a computer is not the one it knew.</li>
+      <li><b>Two-factor sign-in for everyone</b>, with recovery codes. A browser you trust asks for the code once a week.</li>
+      <li><b>One sign-in per person at a time.</b> Remove someone, or change their password or role, and they are signed out at once.</li>
+      <li><b>Lockout</b> after repeated wrong passwords, without letting a stranger lock you out of your own computer.</li>
+    </ul>
+    <ul>
+      <li><b>The customer decides</b>: they allow each attended session, hold the unattended switch, and can set an unattended password.</li>
+      <li><b>A reinstalled computer waits for the office</b>: until a supervisor confirms it, nobody gets in unattended.</li>
+      <li><b>Signed apps</b>: every program carries the signature of The Remote Support Program (Pty) Ltd, so Windows shows who made it.</li>
+      <li><b>Clipboard contents are never logged</b>, and the office administrator has no remote access at all.</li>
+      <li><b>Each company's data is kept apart</b>, and addresses never reveal anything about other companies.</li>
+    </ul>
+  </div>
+  <div class="box" style="margin-top:5mm">
+    <h2>Tested from the outside</h2>
+    <p style="margin:0;color:var(--muted)">In October 2026 an independent security reviewer tested the platform from the outside. <b>No way into another company's data was found.</b> Every point raised was checked, and the ones that needed it were fixed before go-live.</p>
+  </div>
+  <div class="foot"><span>The Remote Support Program</span><span></span></div>
+</section>
+
+<!-- ============================ UPDATES & WHERE IT RUNS ============================ -->
+<section class="page tint" id="runs">
+  <div class="kicker">Always up to date · Where it runs</div>
+  <h1>Nothing to install twice, nothing to host</h1>
+  <div class="cols" style="grid-template-columns:1fr 1fr;align-items:start;margin-top:4mm">
+    <div>
+      <h2>The apps keep themselves current</h2>
+      <ul>
+        <li><b>Every app updates itself</b>: the console, the customer's app and everything behind it. Nobody has to visit a customer to install a new version.</li>
+        <li><b>Quietly, when the computer is idle</b>, never in the middle of a session.</li>
+        <li><b>Only files signed by us, and only newer ones</b>, are ever installed.</li>
+        <li><b>If an update does not come up properly, it puts the old version back by itself.</b></li>
+        <li>New versions go out <b>in stages</b>: to our own company first, then to everyone, so a fault is caught early.</li>
+        <li>The console shows which version every computer has.</li>
+      </ul>
+    </div>
+    <div>
+      <h2>Where it runs</h2>
+      <ul>
+        <li><b>Hosted for you</b>, in a data centre in South Africa. There is no server to buy, install or look after.</li>
+        <li><b>Nightly encrypted backups</b>, also kept away from the server.</li>
+        <li>All traffic is encrypted, and each company's data is kept apart from everyone else's.</li>
+        <li>Your company's own time zone for every time you see.</li>
+        <li>Windows 10 or 11 for the console and your customers' computers; any modern browser for the portal, also on a phone.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="shot auto" style="margin-top:7mm"><img src="img/c-versions.png" alt=""></div>
+  <p class="cap">The console's Version column: every computer on the same, current version, without anybody visiting it.</p>
+  <div class="cols" style="grid-template-columns:54mm 1fr;align-items:start;margin-top:6mm">
+    <div>
+      <div class="shot auto"><img src="img/c-login.png" alt=""></div>
+      <p class="cap">The console's sign-in, with your logo. A six-digit code from the phone follows.</p>
+    </div>
+    <div>
+    <div class="box">
+      <h2>Your own download links</h2>
+      <p style="margin:0;color:var(--muted)">One link for your customers, with your name and logo on the page, and one for your technicians. Each download is a single file, signed by us, that knows it belongs to your company. Nothing to configure.</p>
+    </div>
+    <div class="box" style="margin-top:4mm">
+      <h2>No charge per computer</h2>
+      <p style="margin:0;color:var(--muted)">No limit on how many customers or computers you look after. Installing on many computers at once? The download can also install silently; ask us and we will show you.</p>
+    </div>
+    </div>
+  </div>
+  <div class="foot"><span>The Remote Support Program</span><span></span></div>
+</section>
+
+<!-- ============================ PRICE ============================ -->
+<section class="page" id="price">
+  <div class="kicker">The price</div>
+  <h1>One price, everything included</h1>
+  <p class="lead">No modules, no per-computer fees and no limit on the number of customers or computers you look after.</p>
+  <div class="price">
+    <div class="plan main">
+      <div class="kicker">The full version</div>
+      <div class="amount">R500</div>
+      <div class="per">a month, for five seats</div>
+      <ul>
+        <li><b>Five seats</b>, in any mix of technicians, supervisors and office administrators. One person with several roles uses one seat.</li>
+        <li><b>Plus one owner login, free</b>, to oversee the company.</li>
+        <li><b>Everything in this guide</b>, every update, and as many customers and computers as you look after.</li>
+        <li><b>A 14-day free trial</b>; nothing is charged until it ends. <b>Cancel at any time.</b></li>
+      </ul>
+    </div>
+    <div class="plan">
+      <div class="kicker">The Basic version, for remote workers</div>
+      <div class="amount">R50</div>
+      <div class="per">a month, after a 14-day free trial</div>
+      <ul>
+        <li>For reaching <b>your own computers</b> — three included, more at R10 a month each, up to 20 — with nobody there.</li>
+        <li>One person, remote control, files, copy and paste, and printing.</li>
+        <li><b>Upgrade in place</b> to the full version, keeping everything.</li>
+      </ul>
+      <p class="note" style="margin-top:4mm">See page <span data-pageof="free"></span>.</p>
+    </div>
+  </div>
+  <div class="tip" style="margin-top:4mm"><b>Why five seats, and can we have more?</b> Our aim is to make proper IT support tools affordable for smaller IT companies, so every company starts with five seats; more are on request. An owner asks from the Billing page, and if we agree, each seat past five is R300 a month, accepted before anybody is added. You pay by card through PayFast; the card is added at sign-up and charged only after the trial. We are opening to a limited number of companies at a time, so each gets proper attention. If we are full, you join a waiting list and we email you when a place opens.</div>
+  <h2 style="margin-top:5mm">Getting started</h2>
+  <div class="steps">
+    <div><b><span class="stepno">1</span>Sign up</b>At theremotesupportprogram.com. Choose your country, accept the terms, fill in your company.</div>
+    <div><b><span class="stepno">2</span>Sign in, two-factor</b>Scan a code with your phone's authenticator app.</div>
+    <div><b><span class="stepno">3</span>Brand it</b>Your logo, colours and wording.</div>
+    <div><b><span class="stepno">4</span>Add your people</b>They are emailed and choose their own passwords.</div>
+    <div><b><span class="stepno">5</span>Install the console</b>One file, from your own link.</div>
+    <div><b><span class="stepno">6</span>Add your clients</b>One at a time, or import your list.</div>
+    <div style="grid-column:1 / span 3"><b><span class="stepno">7</span>Give customers your app</b>Send your link. Double-click a computer and you are connected; the ticket writes itself.</div>
+  </div>
+  <div class="foot"><span>The Remote Support Program</span><span></span></div>
+</section>
+
+<!-- ============================ THE BASIC VERSION ============================ -->
+<section class="page tint" id="free">
+  <div class="kicker">The Basic version for remote workers</div>
+  <h1>R50 a month, for reaching your own computers</h1>
+  <p class="lead">Not everyone is an IT company. Some people just need to reach their own computers — the one at the office while they work from home, or a branch or a shop — with nobody there, or with somebody there to click Allow. The Basic Version for Remote Workers does that for R50 a month after a 14-day free trial; for one computer, the Free Version does it for nothing.</p>
+  <div class="cols" style="grid-template-columns:1fr 1fr">
+    <div>
+      <h2>What it has</h2>
+      <ul>
+        <li><b>One person</b>, who is both the owner and the technician.</li>
+        <li><b>Three computers</b> they or their own company own, or whose owner lets them reach them — and <b>more at R10 a month each</b>, up to 20, added on Billing.</li>
+        <li><b>Unattended or attended</b>: with the computer's password, chosen when the app is installed, nobody needs to be there; without one, the person there is asked to allow you in.</li>
+        <li><b>Remote control, files, copy and paste, and printing</b> both ways.</li>
+        <li>Two-factor sign-in and end-to-end encryption, the same as the full version.</li>
+      </ul>
+    </div>
+    <div>
+      <h2>What it leaves out</h2>
+      <ul>
+        <li>No support for customers: it is for your own computers only.</li>
+        <li>No tickets, clients, knowledge base, chat or team.</li>
+        <li>No nag screens. Cancel any time, or move down to <b>the Free Version</b>: one computer, unattended, nothing to pay.</li>
+        <li><b>Upgrade in place</b>: the same account, computers and saved passwords become the full version, the full price taking over from the next payment.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="shot" style="height:40mm;position:relative;margin-top:3mm"><img src="img/f-desk.png" alt=""><img src="img/f-notice.png" alt="" style="position:absolute;left:50%;top:2.5mm;transform:translateX(-50%);width:62mm;height:auto;border-radius:1.6mm;box-shadow:0 1mm 3mm rgba(0,0,0,.35)"></div>
+  <p class="cap">Everyone at the computer knows: while someone is connected, a bar across the top of every screen says who it is. It cannot be closed, and the mouse goes straight through it.</p>
+  <div class="cols" style="margin-top:3mm;grid-template-columns:1fr 62mm;align-items:start">
+    <div><div class="shot" style="height:44mm"><img src="img/f-console.png" alt=""></div><p class="cap">The Basic console: just their own computers, and an Upgrade button.</p></div>
+    <div><div class="shot" style="height:44mm"><img src="img/f-install.png" alt=""></div><p class="cap">Installing on a computer: the password is chosen here — or left blank, to be asked each time.</p></div>
+  </div>
+  <div class="foot"><span>The Remote Support Program</span><span></span></div>
+</section>
+
+<!-- ============================ BACK ============================ -->
+<section class="page cover" style="display:flex;flex-direction:column;justify-content:center">
+  <div class="brandline"><img src="img/rsp-logo-white.svg" alt="The Remote Support Program" style="height:12mm"></div>
+  <h1 style="margin-top:10mm;font-size:30pt">Talk to us</h1>
+  <p class="lead">Whether you would like to try it in your own company, or are interested in the business behind it, we would be glad to show you the program working.</p>
+  <div style="margin-top:8mm;display:grid;grid-template-columns:1fr 1fr;gap:6mm;max-width:165mm">
+    <div style="background:rgba(255,255,255,.07);border-radius:3mm;padding:5mm"><div class="kicker">Email</div><p style="margin:2mm 0 0;color:#fff;font-size:12pt">queries@theremotesupportprogram.com</p></div>
+    <div style="background:rgba(255,255,255,.07);border-radius:3mm;padding:5mm"><div class="kicker">Phone</div><p style="margin:2mm 0 0;color:#fff;font-size:12pt">078 131 5618</p></div>
+    <div style="background:rgba(255,255,255,.07);border-radius:3mm;padding:5mm"><div class="kicker">Built from the ground up</div><p style="margin:2mm 0 0;color:#e9e5ff">The remote control, the protocol and the portal are all our own work.</p></div>
+    <div style="background:rgba(255,255,255,.07);border-radius:3mm;padding:5mm"><div class="kicker">South African</div><p style="margin:2mm 0 0;color:#e9e5ff">Made and hosted in South Africa. The Remote Support Program (Pty) Ltd.</p></div>
+  </div>
+  <p class="note" style="color:#a5b4fc;margin-top:16mm;max-width:165mm">The screenshots in this guide show demonstration companies, such as "Coastal IT Solutions" and, for the Basic version, "Karoo Wool Traders". Their clients, people, computers and part photos are made up. The health report shows real results from a real computer, renamed.</p>
+  <div class="who">theremotesupportprogram.com</div>
+</section>
+
+<script>
+// Page numbers, and the contents page's references, worked out from the pages themselves.
+(function(){
+  var pages = document.querySelectorAll('section.page');
+  pages.forEach(function(p, i){ var f = p.querySelector('.foot span:last-child'); if (f) f.textContent = i + 1; });
+  document.querySelectorAll('[data-pageof]').forEach(function(s){
+    var target = document.getElementById(s.getAttribute('data-pageof'));
+    var i = Array.prototype.indexOf.call(pages, target); if (i >= 0) s.textContent = (s.closest('.toc') ? 'page ' : '') + (i + 1);
+  });
+})();
+</script>
+</body>
+</html>

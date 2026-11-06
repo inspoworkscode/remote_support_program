@@ -1,0 +1,12 @@
+Country: Canada
+Tax: GST/HST and any provincial sales tax are [to be confirmed before we open in Canada].
+LiabilityExtra:
+---PRIVACY---
+This agreement follows the **Personal Information Protection and Electronic Documents Act (PIPEDA)** and, where they apply, provincial private-sector privacy laws such as Quebec's Act respecting the protection of personal information in the private sector (as amended by Law 25) and the Personal Information Protection Acts of Alberta and British Columbia.
+
+- **Your customers' information.** For the personal information of your customers and their staff that passes through the service, **you remain accountable** for it and we process it **on your behalf** as a third-party service provider. We use it only to provide the service and on your instructions, protect it with security safeguards appropriate to its sensitivity, and do not use or disclose it for any other purpose.
+- **Your own information.** For the information about your company and your staff that we need to run your account and bill you, we use it only for that, and we never sell it.
+- **Where it is kept.** Your data is kept on servers in **Canada**. If it is ever processed outside Canada, we will tell you first, so that you can tell the people concerned as Canadian law expects.
+- **Breaches.** We will tell you without undue delay about a breach of security safeguards affecting your customers' information, so that you can assess whether it creates a real risk of significant harm and report it to the Office of the Privacy Commissioner of Canada and the people affected.
+---LAW---
+These terms are governed by the law of the Province of [Ontario — to be confirmed] and the federal laws of Canada that apply there, and the courts of that province have jurisdiction.

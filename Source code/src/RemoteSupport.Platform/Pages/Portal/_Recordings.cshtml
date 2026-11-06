@@ -1,0 +1,31 @@
+@model RemoteSupport.Platform.Pages.Portal.TicketModel
+@* Session recordings (1.6), watched here from the server by anybody who may see this ticket, and
+   deleted only by a supervisor or the owner. ONE partial, drawn by both the story layout
+   (_Timeline, every ticket with a workflow — which since 2026-09-27 is every category) and the
+   classic page: the first version sat only in the classic page and tools/sessionextras found it
+   was never shown for a remote-support ticket. Nothing is drawn when there are none. *@
+@if (Model.Recordings.Count > 0)
+{
+    <div class="card" style="margin:14px 0">
+        <h3>Recordings <span class="pill pill-muted">@Model.Recordings.Count</span></h3>
+        @foreach (var r in Model.Recordings)
+        {
+            <div style="margin-top:12px">
+                <div class="muted" style="font-size:13px;margin-bottom:6px">
+                    @r.RecordedUtc.Local().ToString("yyyy-MM-dd HH:mm") · @RemoteSupport.Platform.Services.RecordingService.Length(r.Seconds) · @r.RecordedBy · @(r.Bytes < 1048576 ? "under 1" : (r.Bytes / 1048576.0).ToString("0")) MB
+                </div>
+                <video controls preload="metadata" style="width:100%;max-height:480px;border-radius:8px;background:#000" src="@(PortalAddresses.Recording(r.Token))"></video>
+                <div style="margin-top:6px">
+                    <a class="btn btn-sm" href="@(PortalAddresses.Recording(r.Token))" download="@(r.MachineName) @(r.RecordedUtc.Local().ToString("yyyy-MM-dd HHmm")).mp4">Download</a>
+                    @if (Model.CanDeleteRecordings)
+                    {
+                        <form method="post" action="@(PortalAddresses.Recording(r.Token))/delete?ticket=@Model.Ticket!.Number" class="inline" onsubmit="return confirm('Delete this recording for good?')">
+                            @Html.AntiForgeryToken()
+                            <button class="btn btn-sm btn-danger">Delete</button>
+                        </form>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}

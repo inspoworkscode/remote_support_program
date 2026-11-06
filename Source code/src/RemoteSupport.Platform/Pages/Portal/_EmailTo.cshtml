@@ -1,0 +1,26 @@
+@model RemoteSupport.Platform.Pages.Portal.TicketModel
+@{
+    // Who an update goes to: the client's people the server offered, or "Another address…" and a box to type
+    // it in. With nobody on file, the box is all there is.
+    var o = Model.ClientOffer;
+    var chosen = ViewData["chosen"] as string ?? o.Default;
+    var known = ViewData["known"] is bool k ? k : o.Choices.Any(c => c.Address.Equals(chosen, StringComparison.OrdinalIgnoreCase));
+    var other = !known;
+}
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+    <select name="emailTo" class="tk-in" style="flex:1;min-width:220px;width:auto" onchange="ecOther(this)" aria-label="Email it to">
+        @foreach (var c in o.Choices) { <option value="@c.Address" selected="@(!other && c.Address.Equals(chosen, StringComparison.OrdinalIgnoreCase))">@c.Label</option> }
+        <option value="other" selected="@other">Another address…</option>
+    </select>
+    <input name="emailOther" type="email" class="tk-in ec-other" style="flex:1;min-width:220px;@(other ? "" : "display:none")"
+           value="@(other ? chosen : "")" placeholder="name@theircompany.co.za" aria-label="Their email address">
+</div>
+<script>
+// "Another address…" shows the box to type it in; one of the client's people hides it again.
+window.ecOther = window.ecOther || function (sel) {
+    var box = sel.parentElement.querySelector('.ec-other');
+    if (!box) return;
+    box.style.display = sel.value === 'other' ? '' : 'none';
+    if (sel.value === 'other') box.focus();
+};
+</script>

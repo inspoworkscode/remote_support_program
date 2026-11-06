@@ -1,0 +1,435 @@
+@page "/portal/mailintake"
+@model RemoteSupport.Platform.Pages.Portal.MailIntakeModel
+@using RemoteSupport.Platform.Services
+@{
+    ViewData["Title"] = "Tickets by email"; ViewData["Section"] = "portal";
+    var s = Model.S; var p = Model.P;
+    bool forward = s.Way == "forward";
+    bool microsoft = s.Way == "microsoft";
+    // Refused by Microsoft: the token is gone, the account it was for is kept so the page can say who to sign in as again.
+    bool msRefused = microsoft && !Model.MicrosoftConnected && s.MsUser.Length > 0;
+}
+<style>
+.mi-way { display:grid; gap:10px; margin:6px 0 4px }
+.mi-way label { display:flex; gap:10px; align-items:flex-start; font-weight:400; margin:0; padding:12px 14px; border:1px solid var(--line); border-radius:12px; cursor:pointer }
+/* The portal's .form makes every input full width — a radio button included, which pushed its words aside. */
+.mi-way label input { margin-top:4px; width:auto; flex:none }
+.mi-way strong { display:block }
+.mi-fill { display:flex; gap:8px; flex-wrap:wrap; margin:4px 0 2px }
+.mi-row { display:grid; grid-template-columns: 2fr 1fr 1fr; gap:12px }
+.mi-row2 { display:grid; grid-template-columns: 1fr 1fr; gap:12px }
+@@media (max-width: 700px) { .mi-row, .mi-row2 { grid-template-columns: 1fr } }
+.mi-help details { border-top:1px solid var(--line); padding:10px 0 }
+.mi-help summary { cursor:pointer; font-weight:800 }
+.mi-help ul { margin:8px 0 0 18px; padding:0 }
+.mi-help li { margin:4px 0 }
+.mi-lines { margin:10px 0 0; padding-left:18px }
+.mi-pre { white-space:pre-wrap; background:var(--lift-hi); border-radius:10px; padding:12px; font-size:14px; margin:6px 0 0 }
+[hidden] { display:none !important }
+</style>
+<section class="portal"><div class="wrap">
+    <h1>Tickets by email and form</h1>
+    <p class="muted" style="max-width:780px">
+        A customer writes to your support address, or fills in the contact form on your website, and a <strong>General
+        ticket</strong> opens by itself — the subject, what they wrote, and who they are. If their email address is on file,
+        the ticket is linked to their client. They get a reply with the ticket number, and when they answer that reply it goes
+        onto the <strong>same</strong> ticket. Out-of-office replies, bounces, newsletters and spam never become tickets.
+    </p>
+    <p class="muted" style="max-width:780px">
+        Once email is switched on here, anybody can also <strong>update a client from a ticket</strong>: tick <em>Also email
+        this to the client</em> under a comment. The client gets the fault the ticket was opened for and that one comment,
+        with the name of whoever wrote it, from this address — never the rest of the ticket. Their reply comes back onto the
+        same ticket, and everybody on it is flagged until they open it.
+    </p>
+    @if (!string.IsNullOrEmpty(Model.Message)) { <div class="alert alert-ok">@Model.Message</div> }
+    @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad">@Model.Error</div> }
+    @if (Model.TestLines.Count > 0)
+    {
+        <div class="alert @(Model.TestOk ? "alert-ok" : "alert-bad")">
+            <strong>@(Model.TestOk ? "The test worked." : "The test found a problem.")</strong>
+            <ul class="mi-lines">@foreach (var l in Model.TestLines) { <li>@l</li> }</ul>
+        </div>
+    }
+
+    @* ---- where it is up to ---- *@
+    <div class="card" style="margin-bottom:18px">
+        <p style="margin:0">
+            Email:
+            @if (!s.EmailEnabled) { <span class="pill pill-muted">off</span> }
+            else if (forward && !s.AddressConfirmed) { <span class="pill pill-warn">waiting for you to confirm @s.Address</span> }
+            else if (msRefused) { <span class="pill pill-bad">stopped — Microsoft no longer accepts the sign-in; sign in again</span> }
+            else if (microsoft && !Model.MicrosoftConnected) { <span class="pill pill-warn">waiting for somebody to sign in with Microsoft</span> }
+            else if (s.Paused) { <span class="pill pill-bad">stopped</span> }
+            else if (s.LastProblem.Length > 0) { <span class="pill pill-warn">having trouble</span> }
+            else if (forward) { <span class="pill pill-ok">on — forwarded to us</span> }
+            else if (microsoft) { <span class="pill pill-ok">on — signed in with Microsoft as @s.MsUser</span> }
+            else { <span class="pill pill-ok">on</span> }
+            @if (s.EmailEnabled && !forward && s.LastCheckUtc.HasValue) { <span class="muted"> · last looked at @s.LastCheckUtc.Value.Local().ToString("d MMM HH:mm")</span> }
+            &nbsp; Form: @if (s.FormEnabled) { <span class="pill pill-ok">on</span> } else { <span class="pill pill-muted">off</span> }
+        </p>
+        @if ((s.EmailEnabled || msRefused) && s.LastProblem.Length > 0)
+        {
+            <p class="alert alert-bad" style="margin:12px 0 0">@s.LastProblem</p>
+        }
+        @if (forward && s.GmailConfirmation.Length > 0)
+        {
+            <div class="alert alert-warn" style="margin:12px 0 0">
+                <strong>Gmail is asking you to confirm the forwarding</strong> (it arrived here
+                @s.GmailConfirmationUtc?.Local().ToString("d MMM HH:mm")). Gmail forwards nothing until you do — open the link, or type the code into Gmail's forwarding settings:
+                <div class="mi-pre">@s.GmailConfirmation</div>
+            </div>
+        }
+    </div>
+
+    @* ---- email ---- *@
+    <form method="post" asp-page-handler="Email" class="form card" style="max-width:820px;margin-bottom:18px" id="emailForm">
+        <h2 style="margin-top:0">Email</h2>
+        <label style="display:flex;gap:10px;align-items:center;font-weight:800">
+            <input type="checkbox" name="emailEnabled" value="true" style="width:auto" checked="@s.EmailEnabled"> Turn email to our support address into tickets
+        </label>
+
+        <label for="address">Your support address — the one customers write to</label>
+        <input id="address" name="address" type="email" value="@s.Address" placeholder="support@yourcompany.co.za" autocomplete="off">
+
+        <label>How should we get your mail?</label>
+        <div class="mi-way">
+            <label>
+                <input type="radio" name="way" value="mailbox" checked="@(!forward && !microsoft)">
+                <span><strong>We check your mailbox</strong>
+                <span class="muted">You give us the mailbox's server and password. Works with cPanel and most hosting (xneelo, Afrihost, Hetzner…), Gmail and Google Workspace (with an app password), and Zoho. Nothing in your mailbox is changed — mail is not marked read, moved or deleted.</span></span>
+            </label>
+            <label>
+                <input type="radio" name="way" value="microsoft" checked="@microsoft" disabled="@(!Model.MicrosoftOffered && !microsoft)">
+                <span><strong>Microsoft 365 — sign in with Microsoft</strong>
+                <span class="muted">
+                    @if (Model.MicrosoftOffered) { <text>Sign in with the support mailbox's Microsoft account (or one that can open it, for a shared mailbox) — no password is given to us. We may only read that one mailbox and send from it, never anybody else's. Nothing in it is changed.</text> }
+                    else { <text>Not available on this server yet — use forwarding.</text> }
+                </span></span>
+            </label>
+            <label>
+                <input type="radio" name="way" value="forward" checked="@forward" disabled="@(!p.ForwardingOffered && !forward)">
+                <span><strong>You forward it to us</strong>
+                <span class="muted">
+                    @if (p.ForwardingOffered) { <text>Your mail server forwards a copy of every message to <strong>@p.IntakeAddress</strong>. Works with anything. No password is given to us.</text> }
+                    else { <text>Not available on this server yet.</text> }
+                </span></span>
+            </label>
+        </div>
+
+        @* -- Microsoft 365 (§151) -- *@
+        <div id="microsoftPart" hidden="@(!microsoft)">
+            <h3>Microsoft 365</h3>
+            @if (Model.MicrosoftConnected)
+            {
+                <p style="margin:0 0 8px"><span class="pill pill-ok">Signed in as @s.MsUser</span>
+                    <span class="muted">— by @s.MsConnectedBy, @s.MsConnectedUtc?.Local().ToString("d MMM yyyy HH:mm")</span></p>
+                @if (!s.MsUser.Equals(s.Address, StringComparison.OrdinalIgnoreCase))
+                {
+                    <p class="muted" style="font-size:14px;margin:0 0 8px">We read <strong>@s.Address</strong> as @s.MsUser — a shared mailbox, which @s.MsUser needs Full Access to (and Send as, for replies from it).</p>
+                }
+            }
+            else if (msRefused)
+            {
+                <p class="alert alert-bad" style="margin:0 0 8px"><strong>Microsoft no longer accepts the sign-in for @s.MsUser</strong>, so nothing is being read. Sign in again to carry on.</p>
+            }
+            else
+            {
+                <p class="muted" style="margin:0 0 8px">Nobody has signed in yet. Type the support address above, then press the button — Microsoft asks which account; choose the support mailbox's, or yours if it is a shared mailbox you can open.</p>
+            }
+            @if (!Model.MicrosoftConnected)
+            {
+                @* Said before the button, not only in What can go wrong: many Microsoft 365 organisations have SMTP AUTH off by default (§151). *@
+                <div class="alert alert-warn" style="margin:0 0 10px;font-size:14px">
+                    <strong>Before you sign in:</strong> in the Microsoft 365 admin centre → Users → Active users → the support mailbox → Mail →
+                    <em>Manage email apps</em>, tick <strong>IMAP</strong> (so we can read it) and <strong>Authenticated SMTP</strong> (so replies come
+                    from it). If Authenticated SMTP is greyed out or still refused, your administrator also unticks <em>Turn off SMTP AUTH protocol for
+                    your organization</em> in the Exchange admin centre → Settings → Mail flow. Without it, tickets still open, but replies come from
+                    our mailbox in your name.
+                </div>
+            }
+            <div class="mi-fill">
+                <button class="btn @(Model.MicrosoftConnected ? "" : "btn-accent")" type="submit" asp-page-handler="Microsoft" disabled="@(!Model.MicrosoftOffered)">
+                    @(Model.MicrosoftConnected ? "Sign in again, or as another account" : msRefused ? "Sign in with Microsoft again" : "Sign in with Microsoft")</button>
+                @if (Model.MicrosoftConnected || msRefused)
+                {
+                    <button class="btn" type="submit" form="msDisconnectForm" onclick="return confirm('Delete the Microsoft sign-in from our server? Nothing more is read from your mailbox until somebody signs in again.')">Disconnect</button>
+                }
+            </div>
+            @if (Model.AdminConsentUrl.Length > 0)
+            {
+                <p class="muted" style="font-size:13px;margin:8px 0 0">If your organisation lets only an administrator approve new apps, your Microsoft 365 administrator opens
+                    <a href="@Model.AdminConsentUrl" rel="noopener">this approval link</a> once (you can copy it to them), then you sign in.</p>
+            }
+        </div>
+
+        @* -- checking a mailbox -- *@
+        <div id="mailboxPart" hidden="@(forward || microsoft)">
+            <h3>Your mailbox</h3>
+            <p class="muted" style="margin:0">Fill in for:</p>
+            <div class="mi-fill">
+                <button type="button" class="btn btn-sm" onclick="fill('cpanel')">cPanel / most hosting</button>
+                <button type="button" class="btn btn-sm" onclick="fill('google')">Gmail / Google Workspace</button>
+                <button type="button" class="btn btn-sm" onclick="fill('zoho')">Zoho</button>
+                <button type="button" class="btn btn-sm" onclick="fill('microsoft')">Microsoft 365 / Outlook.com</button>
+            </div>
+            <p class="muted" id="fillNote" style="font-size:13px;margin:6px 0 0" hidden></p>
+            <div class="mi-row">
+                <div><label for="imapHost">Mail server (incoming, IMAP)</label><input id="imapHost" name="imapHost" value="@s.ImapHost" placeholder="mail.yourcompany.co.za" autocomplete="off"></div>
+                <div><label for="imapPort">Port</label><input id="imapPort" name="imapPort" type="number" min="1" max="65535" value="@s.ImapPort"></div>
+                <div><label for="imapSecurity">Security</label>
+                    <select id="imapSecurity" name="imapSecurity">
+                        <option value="ssl" selected="@(s.ImapSecurity != "starttls")">SSL (993)</option>
+                        <option value="starttls" selected="@(s.ImapSecurity == "starttls")">STARTTLS (143)</option>
+                    </select></div>
+            </div>
+            <div class="mi-row2">
+                <div><label for="imapUser">Username</label><input id="imapUser" name="imapUser" value="@s.ImapUser" placeholder="usually the full address" autocomplete="off"></div>
+                <div><label for="imapPassword">Password</label><input id="imapPassword" name="imapPassword" type="password" autocomplete="new-password"
+                    placeholder="@(Model.HasImapPassword ? "saved — leave blank to keep it" : "the mailbox's own password")"></div>
+            </div>
+            <details style="margin-top:10px"><summary class="muted" style="cursor:pointer">Another folder</summary>
+                <label for="folder">Folder</label><input id="folder" name="folder" value="@s.Folder" placeholder="INBOX">
+                <p class="muted" style="font-size:13px">Leave it as INBOX unless your mail is filed somewhere else by a rule. Mail your server puts in Spam or Junk is never looked at.</p>
+            </details>
+        </div>
+
+        @* -- forwarding -- *@
+        <div id="forwardPart" hidden="@(!forward)">
+            <h3>Forwarding</h3>
+            @if (p.ForwardingOffered)
+            {
+                <p style="margin:0 0 8px">Set your mail server to forward a copy of everything sent to your support address to:</p>
+                <p><code style="font-size:16px">@p.IntakeAddress</code>
+                    <button type="button" class="btn btn-sm" onclick="navigator.clipboard.writeText('@p.IntakeAddress');this.textContent='Copied'">Copy</button></p>
+                <p class="muted" style="font-size:14px">
+                    Before anything is made a ticket we email a link to your support address, to make sure it is yours —
+                    @if (forward && s.Address.Length > 0)
+                    {
+                        if (s.AddressConfirmed) { <span class="pill pill-ok">@s.Address is confirmed</span> }
+                        else
+                        {
+                            <span class="pill pill-warn">@s.Address is not confirmed yet</span>
+                            <button class="btn btn-sm" type="submit" form="confirmForm">Send the link again</button>
+                        }
+                    }
+                    else { <text>it is sent when you save.</text> }
+                </p>
+            }
+        </div>
+
+        @* -- the auto-reply -- *@
+        <h3>The reply</h3>
+        <label style="display:flex;gap:10px;align-items:center">
+            <input type="checkbox" name="autoReply" value="true" style="width:auto" checked="@s.AutoReply"> Reply automatically with the ticket number
+        </label>
+        <div class="mi-way" style="margin-top:10px">
+            <label>
+                <input type="radio" name="sendVia" value="own" checked="@(s.SendVia != "platform")">
+                <span><strong>From your own mail server</strong> <span class="muted">— it really comes from @(s.Address.Length > 0 ? s.Address : "your support address"), so it is not mistaken for spam.
+                    <span class="mi-ms-only" hidden="@(!microsoft)">With Microsoft 365 it is sent as the account that signed in.</span></span></span>
+            </label>
+            <label>
+                <input type="radio" name="sendVia" value="platform" checked="@(s.SendVia == "platform")">
+                <span><strong>From our mailbox, in your name</strong> <span class="muted">— shows as from @Model.Tenant.CompanyName, and replies go to your support address. Use this if your server will not let us send.</span></span>
+            </label>
+        </div>
+        <div id="smtpPart" hidden="@(s.SendVia == "platform" || microsoft)">
+            <label style="display:flex;gap:10px;align-items:center;font-weight:400" id="sameRow" hidden="@forward">
+                <input type="checkbox" name="smtpSameLogin" value="true" style="width:auto" checked="@s.SmtpSameLogin" id="smtpSame"> Send with the same login (cPanel and most hosting)
+            </label>
+            <div id="smtpFields" hidden="@(s.SmtpSameLogin && !forward)">
+                <div class="mi-row">
+                    <div><label for="smtpHost">Sending server (SMTP)</label><input id="smtpHost" name="smtpHost" value="@s.SmtpHost" placeholder="the same as reading, if blank" autocomplete="off"></div>
+                    <div><label for="smtpPort">Port</label><input id="smtpPort" name="smtpPort" type="number" min="1" max="65535" value="@s.SmtpPort"></div>
+                    <div><label for="smtpSecurity">Security</label>
+                        <select id="smtpSecurity" name="smtpSecurity">
+                            <option value="ssl" selected="@(s.SmtpSecurity != "starttls")">SSL (465)</option>
+                            <option value="starttls" selected="@(s.SmtpSecurity == "starttls")">STARTTLS (587)</option>
+                        </select></div>
+                </div>
+                <div class="mi-row2">
+                    <div><label for="smtpUser">Username</label><input id="smtpUser" name="smtpUser" value="@s.SmtpUser" autocomplete="off"></div>
+                    <div><label for="smtpPassword">Password</label><input id="smtpPassword" name="smtpPassword" type="password" autocomplete="new-password"
+                        placeholder="@(Model.HasSmtpPassword ? "saved — leave blank to keep it" : "")"></div>
+                </div>
+            </div>
+        </div>
+        <label for="autoReplyText">What it says</label>
+        <textarea id="autoReplyText" name="autoReplyText" rows="8">@(s.AutoReplyText.Length > 0 ? s.AutoReplyText : TicketIntake.DefaultReply)</textarea>
+        <p class="muted" style="font-size:13px">{name} becomes their name, {number} the ticket number, {subject} their subject and {company} @Model.Tenant.CompanyName. The subject of the reply is <em>[Ticket #1234] their subject</em> — that is how their answer finds the ticket again.</p>
+
+        <div class="actions"><button class="btn btn-accent" type="submit">Save and test</button></div>
+    </form>
+    <form method="post" asp-page-handler="Confirm" id="confirmForm"></form>
+    <form method="post" asp-page-handler="Disconnect" id="msDisconnectForm"></form>
+
+    @* ---- what can go wrong ---- *@
+    <div class="card mi-help" style="max-width:820px;margin-bottom:18px">
+        <h2 style="margin-top:0">What can go wrong, and what to do</h2>
+        <details>
+            <summary>cPanel, xneelo and most hosting</summary>
+            <ul>
+                <li>The mail server is usually <strong>mail.yourdomain</strong> (mail.anywhereit.co.za), reading on port 993 (SSL) and sending on 465 (SSL). The username is the <strong>full email address</strong>; the password is the mailbox's own, not your hosting login.</li>
+                <li>If the test says the <em>certificate</em> is for another name, your host's mail runs under the server's own name (server123.yourhost.co.za) — the test tells you which; use that as the server.</li>
+                <li>A wrong password is tried <strong>once</strong>, and then checking stops until you save again. cPanel blocks an address that keeps failing to sign in (cPHulk) — and that block would fall on our server.</li>
+                <li>If you have SpamAssassin's Spam Box on, spam goes to the Spam folder, which we never look at. If it only marks the subject <em>***SPAM***</em>, we leave those alone too.</li>
+            </ul>
+        </details>
+        <details>
+            <summary>Gmail and Google Workspace</summary>
+            <ul>
+                <li>Google does not accept your normal password from a program like this. Turn on <strong>2-Step Verification</strong>, then make an <strong>App password</strong> (Google Account → Security → App passwords) and use that. Server imap.gmail.com, 993, SSL; sending smtp.gmail.com, 465, SSL.</li>
+                <li>IMAP must be on: Gmail → Settings → <em>Forwarding and POP/IMAP</em> → Enable IMAP.</li>
+                <li>A Workspace administrator can switch app passwords off. If so, <strong>forward</strong> to us instead: Gmail emails a confirmation code to the forwarding address, and it shows at the top of this page for you to use.</li>
+            </ul>
+        </details>
+        <details>
+            <summary>Microsoft 365, Outlook.com and Hotmail</summary>
+            <ul>
+                <li>Microsoft no longer accepts a password from a program like this. <strong>Choose <em>Microsoft 365 — sign in with Microsoft</em></strong> and press the button; Microsoft asks which account and what we may do — read that one mailbox and send from it — and we never see a password.</li>
+                <li><strong>Sign in as the support mailbox</strong>, or as somebody who can open it. A <strong>shared mailbox</strong> (no password of its own) is read through a person who has <em>Full Access</em> to it, and replies from it need <em>Send as</em> — both in the Exchange admin centre → Mailboxes → the mailbox → Delegation. If support@@ is only an <em>alias</em> of somebody's mailbox, sign in as that mailbox and put its main address in the box above.</li>
+                <li><strong>IMAP switched off</strong> — the test says <em>would not let … read</em>: Microsoft 365 admin centre → Users → Active users → the mailbox → Mail → <em>Manage email apps</em> → tick IMAP. Checking stops until you save again.</li>
+                <li><strong>SMTP AUTH switched off</strong> — the test says <em>would not let … send</em>: in the same place tick <em>Authenticated SMTP</em>, and in the Exchange admin centre → Settings → Mail flow, untick <em>Turn off SMTP AUTH protocol for your organization</em>. Mail still becomes tickets without it; only the reply comes from our mailbox, in your name.</li>
+                <li><strong>"Need admin approval"</strong> at Microsoft: your organisation lets only an administrator approve new apps. Your Microsoft 365 administrator opens the approval link under the button once (or signs in themselves and ticks <em>Consent on behalf of your organisation</em>); then you sign in.</li>
+                <li><strong>"Unverified"</strong> beside our name on Microsoft's page, until Microsoft has finished verifying us as the publisher. It is The Remote Support Program (Pty) Ltd all the same — and the permissions it lists are the only ones we can use.</li>
+                <li>If Microsoft later <strong>refuses the sign-in</strong> — the password was changed, the access removed, the permission withdrawn — checking stops at once, this page says so at the top, and <em>Sign in with Microsoft again</em> carries on from where it stopped. <strong>Disconnect</strong> deletes the sign-in from our server at any time.</li>
+                <li><strong>Forwarding still works</strong> if you would rather not sign in. Microsoft 365 <strong>blocks forwarding outside your company by default</strong>: your administrator allows it in the Microsoft 365 Defender portal → Policies → Anti-spam → Outbound policy → <em>Automatic forwarding rules: On</em>, then sets the forward on the mailbox (Exchange admin centre → Mailboxes → Mail flow settings → Email forwarding). Forward on the <strong>server</strong>: an Outlook rule that <em>forwards</em> puts your address in place of the customer's, and those messages are left alone with a note here saying why.</li>
+            </ul>
+        </details>
+        <details>
+            <summary>Zoho</summary>
+            <ul>
+                <li>Server imap.zoho.com, 993, SSL; sending smtp.zoho.com, 465, SSL. IMAP access must be on in Zoho Mail settings, and with two-factor on Zoho needs an <strong>application-specific password</strong>.</li>
+            </ul>
+        </details>
+        <details>
+            <summary>Anything else</summary>
+            <ul>
+                <li><strong>Only new mail.</strong> When you switch it on, mail already in the mailbox stays as it is; only mail arriving after that becomes tickets.</li>
+                <li><strong>The reply lands in spam</strong> when it is sent from our mailbox on behalf of an address whose domain says only its own servers may send for it. Send from your own server and it cannot happen.</li>
+                <li><strong>Your website's own contact form</strong> probably already emails your support address — if so, it makes tickets without anything else: the customer is found in its Reply-To.</li>
+                <li>Every message we looked at is in the list at the bottom of this page, with what happened to it and why — nothing is dropped quietly.</li>
+                <li>One address can open @TicketIntake.PerSenderPerHour tickets an hour. More than that is a loop or a flood, and waits in your mailbox.</li>
+            </ul>
+        </details>
+    </div>
+
+    @* ---- the contact form ---- *@
+    <form method="post" asp-page-handler="Form" class="form card" style="max-width:820px;margin-bottom:18px">
+        <h2 style="margin-top:0">A contact form for your website</h2>
+        <label style="display:flex;gap:10px;align-items:center;font-weight:800">
+            <input type="checkbox" name="formEnabled" value="true" style="width:auto" checked="@s.FormEnabled"> Take messages through a form on our website
+        </label>
+        <p class="muted" style="margin:6px 0 0">The form asks for their name, email address and message, and opens a ticket the same way an email does — linked to their client if their address is on file, with the same reply.</p>
+        <div class="mi-row2">
+            <div><label for="formHeading">Heading</label><input id="formHeading" name="formHeading" value="@s.FormHeading" maxlength="80"></div>
+            <div><label for="formPhone">Ask for a phone number</label>
+                <select id="formPhone" name="formPhone">
+                    <option value="off" selected="@(s.FormPhone == "off")">No</option>
+                    <option value="optional" selected="@(s.FormPhone == "optional")">Yes, optional</option>
+                    <option value="required" selected="@(s.FormPhone == "required")">Yes, required</option>
+                </select></div>
+        </div>
+        <label for="formIntro">A line under the heading</label>
+        <input id="formIntro" name="formIntro" value="@s.FormIntro" maxlength="400">
+        <label style="display:flex;gap:10px;align-items:center;font-weight:400"><input type="checkbox" name="formCompany" value="true" style="width:auto" checked="@s.FormCompany"> Ask which company they are from</label>
+        <label for="formThanks">What it says once sent</label>
+        <input id="formThanks" name="formThanks" value="@s.FormThanks" maxlength="400" placeholder="Thank you — we have opened ticket #1234 and will be in touch soon.">
+        <div class="actions"><button class="btn btn-accent" type="submit">Save</button></div>
+
+        <h3>Put it on your website</h3>
+        <p class="muted" style="margin-top:0">Paste this line where the form should appear on your page — or give it to whoever looks after your site:</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <code id="formSnippet" style="font-size:14px;overflow-wrap:anywhere">@Model.FormSnippet</code>
+            <button type="button" class="btn btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('formSnippet').textContent);this.textContent='Copied'">Copy</button>
+        </div>
+        <p class="muted" style="margin:12px 0 0">Or link to it — a page of its own, for a button, an email signature or a social media profile:</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <a href="@Model.FormLink" target="_blank" rel="noopener" style="overflow-wrap:anywhere">@Model.FormLink</a>
+            <button type="button" class="btn btn-sm" onclick="navigator.clipboard.writeText('@Model.FormLink');this.textContent='Copied'">Copy</button>
+        </div>
+        @if (Model.Origin.StartsWith("http://")) { <p class="muted" style="font-size:13px">This server is not on the internet yet, so the form only works on this network until it is hosted.</p> }
+        <h3>How it looks</h3>
+        <iframe src="/contact/@Model.Tenant.Slug?preview=1" title="The contact form" style="width:100%;max-width:560px;height:760px;border:1px solid var(--line);border-radius:14px;background:#fff"></iframe>
+    </form>
+
+    @* ---- what happened ---- *@
+    <div class="card">
+        <h2 style="margin-top:0">Recent messages</h2>
+        @if (Model.Recent.Count == 0)
+        {
+            <p class="muted">None yet.</p>
+        }
+        else
+        {
+            <table class="table" style="box-shadow:none">
+                <thead><tr><th>When</th><th>From</th><th>Subject</th><th>What happened</th></tr></thead>
+                <tbody>
+                @foreach (var m in Model.Recent)
+                {
+                    <tr>
+                        <td style="white-space:nowrap">@m.ReceivedUtc.Local().ToString("d MMM HH:mm")<div class="muted" style="font-size:12px">@(m.Channel == "form" ? "website form" : m.Channel == "forward" ? "forwarded" : "email")</div></td>
+                        <td>@(m.FromName.Length > 0 ? m.FromName : m.FromAddress)@if (m.FromName.Length > 0) { <div class="muted" style="font-size:13px">@m.FromAddress</div> }</td>
+                        <td>@m.Subject</td>
+                        <td>
+                            <span class="pill @MailIntakeModel_Pill(m.Outcome)">@MailIntakeModel_Word(m.Outcome)</span>
+                            @if (m.TicketId != null) { <a href="@(PortalAddresses.Ticket(m.TicketNumber))">#@m.TicketNumber</a> }
+                            @if (m.Reason.Length > 0) { <div class="muted" style="font-size:13px">@m.Reason</div> }
+                            @if (m.ReplyResult.Length > 0) { <div class="muted" style="font-size:13px">Reply: @m.ReplyResult</div> }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
+    </div>
+</div></section>
+@functions {
+    string MailIntakeModel_Pill(string o) => RemoteSupport.Platform.Pages.Portal.MailIntakeModel.OutcomePill(o);
+    string MailIntakeModel_Word(string o) => RemoteSupport.Platform.Pages.Portal.MailIntakeModel.OutcomeWord(o);
+}
+<script>
+(function () {
+  const f = document.getElementById('emailForm');
+  const show = () => {
+    const way = f.querySelector('input[name=way]:checked')?.value || 'mailbox';
+    const via = f.querySelector('input[name=sendVia]:checked')?.value || 'own';
+    document.getElementById('mailboxPart').hidden = way !== 'mailbox';
+    document.getElementById('microsoftPart').hidden = way !== 'microsoft';
+    document.getElementById('forwardPart').hidden = way !== 'forward';
+    // Microsoft 365 sends as the account that signed in: there is no server or password to fill in.
+    document.getElementById('smtpPart').hidden = via !== 'own' || way === 'microsoft';
+    f.querySelectorAll('.mi-ms-only').forEach(e => e.hidden = way !== 'microsoft');
+    document.getElementById('sameRow').hidden = way !== 'mailbox';
+    document.getElementById('smtpFields').hidden = way === 'mailbox' && document.getElementById('smtpSame').checked;
+  };
+  f.addEventListener('change', show);
+  show();
+
+  // Fill in the usual settings for a kind of host, from the support address typed above.
+  window.fill = function (kind) {
+    const addr = (document.getElementById('address').value || '').trim();
+    const domain = addr.includes('@@') ? addr.split('@@')[1] : 'yourcompany.co.za';
+    const note = document.getElementById('fillNote');
+    const set = (id, v) => { const e = document.getElementById(id); if (e) e.value = v; };
+    note.hidden = false;
+    if (kind === 'microsoft') {
+      const ms = f.querySelector('input[name=way][value=microsoft]');
+      const fw = f.querySelector('input[name=way][value=forward]');
+      if (ms && !ms.disabled) { ms.checked = true; show(); note.textContent = ''; note.hidden = true; document.getElementById('microsoftPart').scrollIntoView({ block: 'nearest' }); }
+      else if (fw && !fw.disabled) { fw.checked = true; show(); note.textContent = 'Microsoft does not accept a password from a program like this — forwarding is chosen instead. See "What can go wrong" below for how to allow it.'; }
+      else note.textContent = 'Microsoft does not accept a password from a program like this, and neither signing in with Microsoft nor forwarding is available on this server yet.';
+      return;
+    }
+    const servers = {
+      cpanel: ['mail.' + domain, 'mail.' + domain, 'On cPanel the username is the full address and the password is the mailbox\'s own.'],
+      google: ['imap.gmail.com', 'smtp.gmail.com', 'Google needs an App password, not your normal one — see "What can go wrong" below.'],
+      zoho: ['imap.zoho.com', 'smtp.zoho.com', 'Turn IMAP access on in Zoho Mail\'s settings first.']
+    }[kind];
+    set('imapHost', servers[0]); set('imapPort', 993); set('imapSecurity', 'ssl');
+    set('smtpHost', servers[1]); set('smtpPort', 465); set('smtpSecurity', 'ssl');
+    if (addr) set('imapUser', addr);
+    note.textContent = servers[2];
+  };
+})();
+</script>

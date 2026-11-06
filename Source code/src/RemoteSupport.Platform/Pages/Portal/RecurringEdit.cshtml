@@ -1,0 +1,156 @@
+@page "/portal/r/{which}"
+@model RemoteSupport.Platform.Pages.Portal.RecurringEditModel
+@using RemoteSupport.Platform.Services
+@{
+    var r = Model.Task;
+    ViewData["Title"] = r == null ? "New recurring task" : r.Title;
+    ViewData["Section"] = "portal";
+    bool may = Model.MayChange;
+    string[] dayNames = { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday" };
+}
+<section class="portal"><div class="wrap">
+    <p><a href="/portal/recurring">← Recurring tasks</a></p>
+    <h1>
+        @(r == null ? "New recurring task" : r.Title)
+        @if (r != null) { <span class="pill @(r.CancelledUtc == null ? "pill-ok" : "pill-muted")">@(r.CancelledUtc == null ? "Active" : "Cancelled")</span> }
+    </h1>
+    <p class="muted">Set it up once: a ticket opens for the people on it on the morning of every day it falls due.
+        If the last one is not done by then, the next opens anyway and the old one shows as overdue.</p>
+    @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad">@Model.Error</div> }
+    @if (r != null && r.CancelledUtc != null)
+    {
+        <div class="alert alert-warn">Cancelled @r.CancelledUtc.Value.Local().ToString("d MMMM yyyy") by @r.CancelledBy: @r.CancelReason. No more tickets will be opened.</div>
+    }
+    else if (r != null && !may)
+    {
+        <div class="alert alert-warn">Only the people on this task, a supervisor or the owner may change or cancel it.</div>
+    }
+
+    <form method="post" asp-page-handler="Save" asp-route-which="@(r?.Number.ToString() ?? "new")" class="card form" style="max-width:860px">
+        <fieldset disabled="@(!may)" style="border:0;padding:0;margin:0">
+        <h3>The task</h3>
+        <label>Subject</label><input name="Subject" value="@Model.Subject" required placeholder="e.g. Monthly backup check — Smith &amp; Co">
+        <label>What needs doing</label><textarea name="Details" rows="4">@Model.Details</textarea>
+        <div class="row">
+            <div>
+                <label>Type of task</label>
+                <select name="Kind" id="Kind" onchange="kindPicked()">
+                    @foreach (var k in Model.Kinds) { <option value="@k" selected="@(Model.Kind == k)">@k</option> }
+                    @if (Model.Kind.Length > 0 && Model.Kind != "__new" && !Model.Kinds.Contains(Model.Kind)) { <option value="@Model.Kind" selected>@Model.Kind</option> }
+                    <option value="__new" selected="@(Model.Kind == "__new")">New type…</option>
+                </select>
+                <input name="NewKind" id="NewKind" value="@Model.NewKind" placeholder="Name the new type" style="margin-top:6px;display:none">
+            </div>
+            <div>
+                <label>Priority</label>
+                <select name="Priority">
+                    @for (int i = 0; i < 4; i++) { <option value="@i" selected="@(Model.Priority == i)">@RemoteSupport.Shared.TicketSummary.PriorityNames[i]</option> }
+                </select>
+            </div>
+        </div>
+
+        <label>Client <span class="muted" style="font-weight:400">— optional</span></label>
+        <div class="cpick" data-mode="id">
+            <input type="hidden" name="ClientId" value="@Model.ClientId">
+            <input class="cpick-in" value="@Model.ClientLabel" autocomplete="off" placeholder="Start typing a client's name">
+            <div class="cpick-list" hidden></div>
+        </div>
+
+        <div id="peopleBox" style="margin-top:12px"><partial name="_People" model="Model.Picker" /></div>
+
+        <h3 style="margin-top:22px">How often</h3>
+        <div class="toggle" style="flex-wrap:wrap;border-radius:18px">
+            @foreach (var (v, label) in new[] { (0, "Daily"), (1, "Weekly"), (2, "Monthly") })
+            {
+                <button type="button" class="@(Model.Repeats == v ? "on" : "")" data-rep="@v" onclick="pickRepeats(@v)">@label</button>
+            }
+        </div>
+        <input type="hidden" name="Repeats" id="Repeats" value="@Model.Repeats">
+
+        <div id="rep0" style="display:none;margin-top:10px">
+            <label style="font-weight:400"><input type="checkbox" name="WeekdaysOnly" value="true" style="width:auto" checked="@Model.WeekdaysOnly"> Weekdays only (Monday to Friday)</label>
+        </div>
+        <div id="rep1" style="display:none;margin-top:10px">
+            <label>On</label>
+            <div class="people">
+                @for (int i = 0; i < 7; i++)
+                {
+                    int bit = 1 << (int)RecurringTaskService.Week[i];
+                    <label class="person"><input type="checkbox" name="Day" value="@bit" checked="@Model.Day.Contains(bit)"> @dayNames[i]</label>
+                }
+            </div>
+        </div>
+        <div id="rep2" style="display:none;margin-top:10px">
+            <label>On the</label>
+            <select name="MonthDay" style="max-width:260px">
+                @for (int d = 1; d <= 31; d++)
+                {
+                    var o = d + (d % 100 is 11 or 12 or 13 ? "th" : (d % 10) switch { 1 => "st", 2 => "nd", 3 => "rd", _ => "th" });
+                    <option value="@d" selected="@(Model.MonthDay == d)">@o@(d >= 29 ? " (or the last day)" : "")</option>
+                }
+                <option value="0" selected="@(Model.MonthDay == 0)">Last day of the month</option>
+            </select>
+        </div>
+        </fieldset>
+
+        @if (r != null && r.CancelledUtc == null)
+        {
+            <p class="muted" style="margin-top:14px">@RecurringTaskService.Describe(r). Next: <strong>@RecurringTaskService.Day(r.NextDue)</strong>.</p>
+        }
+        @if (may)
+        {
+            <div class="actions"><button class="btn btn-accent btn-lg" type="submit">@(r == null ? "Set up recurring task" : "Save changes")</button></div>
+        }
+    </form>
+
+    @if (r != null && may)
+    {
+        <details class="card form" style="max-width:860px;margin-top:18px" open="@(Model.Reason.Length > 0 || Model.Error.Length > 0 && Model.Error.Contains("cancel"))">
+            <summary style="cursor:pointer;font-weight:700;font-size:17px">Cancel this recurring task</summary>
+            <p class="muted">No more tickets will be opened. Any that are open now stay open until they are done.</p>
+            <form method="post" asp-page-handler="Cancel" asp-route-which="@r.Number">
+                <label>Why is it no longer needed?</label>
+                <textarea name="Reason" rows="2" required>@Model.Reason</textarea>
+                <div class="actions"><button class="btn" type="submit" onclick="return confirm('Cancel this recurring task? No more tickets will be opened.')">Cancel the task</button></div>
+            </form>
+        </details>
+    }
+
+    @if (r != null)
+    {
+        <h3 style="margin-top:26px">Tickets it has opened <span class="pill pill-muted">@Model.Opened.Count</span></h3>
+        @if (Model.Opened.Count == 0) { <div class="card">None yet. The first opens on the morning of @RecurringTaskService.Day(r.NextDue).</div> }
+        else
+        {
+            <table>
+                <tr><th>Ticket</th><th>Due</th><th>Where it is</th><th>People</th></tr>
+                @foreach (var t in Model.Opened)
+                {
+                    <tr>
+                        <td><a href="@PortalAddresses.Ticket(t.Number)">#@t.Number</a></td>
+                        <td>@(t.DueOn.HasValue ? RecurringTaskService.Day(t.DueOn.Value) : "—")
+                            @if (RecurringTaskService.IsOverdue(t)) { <span class="pill pill-bad">Overdue</span> }</td>
+                        <td>@(t.Stage.Length > 0 ? Workflow.Label(t.Stage) : t.Status.ToString())</td>
+                        <td>@(t.AssignedTo.Length > 0 ? t.AssignedTo : "—")</td>
+                    </tr>
+                }
+            </table>
+        }
+    }
+</div></section>
+
+<script>
+function pickRepeats(i){
+  document.getElementById('Repeats').value = i;
+  document.querySelectorAll('.toggle button').forEach(function(b){ b.classList.toggle('on', b.dataset.rep == i); });
+  for (var k = 0; k < 3; k++) document.getElementById('rep' + k).style.display = (k == i) ? 'block' : 'none';
+}
+function kindPicked(){
+  var isNew = document.getElementById('Kind').value === '__new';
+  var box = document.getElementById('NewKind');
+  box.style.display = isNew ? 'block' : 'none';
+  box.required = isNew;
+  if (isNew) box.focus();
+}
+pickRepeats(@Model.Repeats); kindPicked();
+</script>

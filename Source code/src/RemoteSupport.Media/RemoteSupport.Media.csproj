@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- For System.Drawing in ScreenRecorder (1.6). Every project that references this one
+         (the host and the console) already uses Windows Forms, so it adds nothing to either. -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>RemoteSupport.Media</AssemblyName>
+    <RootNamespace>RemoteSupport.Media</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- For VoiceWire (3.3): the voice format is one fact, and both ends of the call read it. -->
+    <ProjectReference Include="..\RemoteSupport.Shared\RemoteSupport.Shared.csproj" />
+  </ItemGroup>
+</Project>

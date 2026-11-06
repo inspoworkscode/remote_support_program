@@ -1,0 +1,54 @@
+@page "/owner/servers"
+@model RemoteSupport.Platform.Pages.Owner.ServersModel
+@using RemoteSupport.Platform.Services
+@{ ViewData["Title"] = "Servers"; ViewData["Section"] = "owner"; var off = Model.CanRun ? null : "disabled"; }
+<section class="portal"><div class="wrap">
+    <h1>Servers <span class="pill pill-muted">@Model.Fleet.Count</span></h1>
+    <p class="muted">The servers this dashboard watches. Each is reached with its own server key, never a password — you signed in once, here.</p>
+    @if (Model.Message.Length > 0) { <div class="alert alert-ok">@Model.Message</div> }
+    @if (Model.Problem.Length > 0) { <div class="alert alert-bad">@Model.Problem</div> }
+    @if (!Model.CanRun) { <div class="alert">Only a Full admin or an Owner can change servers.</div> }
+    <table id="serverList">
+        <tr><th>Name</th><th>Address</th><th>Region</th><th>Taking new companies</th><th>Capacity (connections)</th><th></th></tr>
+        @foreach (var v in Model.Fleet)
+        {
+            var s = v.Row;
+            <tr data-server="@s.Name">
+                <form method="post" asp-page-handler="Save" id="save-@s.Id"></form>
+                <td><input type="hidden" form="save-@s.Id" name="id" value="@s.Id"><input form="save-@s.Id" name="name" value="@s.Name" maxlength="40" style="width:110px;padding:4px" disabled="@off"></td>
+                <td>@(s.IsLocal ? "this server" : s.Address)@if (v.Report == null) { <br><span class="pill pill-bad" title="@v.Error">not answering</span> }</td>
+                <td>@(s.Region.Length > 0 ? Pricing.For(s.Region).Name : "—")</td>
+                <td><input type="checkbox" form="save-@s.Id" name="takingNew" value="true" checked="@s.TakingNewCompanies" disabled="@off"></td>
+                <td><input type="number" form="save-@s.Id" name="capacity" min="0" value="@s.CapacityConnections" style="width:110px;padding:4px" disabled="@off"
+                           title="0 works it out from the server's memory. Put a number here once this size of server has been load-tested.">
+                    @if (v.Assessment != null) { <br><span class="muted" style="font-size:12px">@(s.CapacityConnections == 0 ? "from memory: " : "")@v.Assessment.Capacity.ToString("N0")</span> }</td>
+                <td style="white-space:nowrap">
+                    @if (Model.CanRun)
+                    {
+                        <button class="btn btn-sm" form="save-@s.Id">Save</button>
+                        if (!s.IsLocal)
+                        {
+                            <form method="post" asp-page-handler="Remove" class="inline" onsubmit="return confirm('Take @s.Name off the dashboard? The server itself keeps running.')"><input type="hidden" name="id" value="@s.Id"><button class="btn btn-sm btn-danger">Remove</button></form>
+                            <details style="margin-top:6px"><summary class="muted" style="font-size:12px;cursor:pointer">New key</summary>
+                                <form method="post" asp-page-handler="Key"><input type="hidden" name="id" value="@s.Id"><input name="key" type="password" autocomplete="off" placeholder="its new server key" style="padding:4px"> <button class="btn btn-sm">Use it</button></form>
+                            </details>
+                        }
+                    }
+                </td>
+            </tr>
+        }
+    </table>
+    <p class="muted" style="font-size:13px">This server @(Model.HasOwnKey ? "has a server key of its own, so another dashboard could watch it." : "has no server key of its own (Platform:ServerKey) — that only matters if another dashboard is to watch it.")</p>
+
+    @if (Model.CanRun)
+    {
+        <h2 style="margin-top:36px">Add a server</h2>
+        <form method="post" asp-page-handler="Add" class="form card" id="addServer" style="max-width:620px">
+            <label>Name</label><input name="name" maxlength="40" placeholder="za2 — or leave empty to use the name it gives itself">
+            <label>Address</label><input name="address" required placeholder="https://za2.theremotesupportprogram.com">
+            <label>Server key</label><input name="key" type="password" required autocomplete="off" placeholder="printed by go-live on that server">
+            <p class="muted" style="font-size:13px">It is added only once it answers with that key. New companies in its country start going to it at once, unless you untick <em>Taking new companies</em>.</p>
+            <div class="actions"><button class="btn btn-accent" type="submit">Add</button></div>
+        </form>
+    }
+</div></section>

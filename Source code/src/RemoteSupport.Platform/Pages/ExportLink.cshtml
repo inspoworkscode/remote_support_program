@@ -1,0 +1,25 @@
+@page "/export/{token}"
+@model ExportLinkModel
+@using RemoteSupport.Platform.Services
+@{ ViewData["Title"] = "Your data export"; var d = Model.Found; }
+<section class="section">
+    <div class="wrap" style="max-width:760px">
+        <h1 id="exportHeading">Your data export</h1>
+        @if (d == null)
+        {
+            <div class="alert alert-bad" id="exportGone">This link no longer works. An export is kept for @CompanyExportService.KeepDays days, and a newer one
+                replaces it. Reply to the email it came in, and we will make you another.</div>
+        }
+        else
+        {
+            <p style="font-size:17px">The data of <strong>@d.CompanyName</strong> on The Remote Support Program: clients and their contact people,
+                tickets with their story, quote lines, photos and files, and the knowledge base.</p>
+            <p class="muted">@d.Job.Summary@(d.Job.IncludeRecordings ? ", session recordings included" : "") — @CompanyExportService.Size(d.Job.Bytes).
+                This link works until @d.Job.ExpiresUtc?.ToString("d MMMM yyyy HH:mm") UTC.</p>
+            <form method="post" id="exportDownload">
+                <button class="btn btn-accent" type="submit">Download the zip</button>
+            </form>
+            <p class="muted" style="margin-top:14px;font-size:13px">Inside, README.txt says what each file is. clients.xlsx can be imported straight into another program.</p>
+        }
+    </div>
+</section>

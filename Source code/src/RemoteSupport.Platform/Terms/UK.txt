@@ -1,0 +1,12 @@
+Country: the United Kingdom
+Tax: VAT is [to be confirmed before we open in the United Kingdom].
+LiabilityExtra: , including liability for death or personal injury caused by negligence, or for fraud
+---PRIVACY---
+This agreement follows the **UK General Data Protection Regulation (UK GDPR)** and the **Data Protection Act 2018**.
+
+- **Your customers' information.** For the personal data of your customers and their staff that passes through the service, **you are the controller and we are your processor**. As Article 28 of the UK GDPR requires, we: process it only on your documented instructions (these terms and your use of the service); make sure everyone who handles it is bound to confidentiality; protect it with appropriate technical and organisational measures (Article 32); use other processors (such as our hosting provider) only under the same obligations, and tell you before we add or replace one so that you can object; help you answer people who exercise their rights; tell you without undue delay about a personal data breach; delete or return it when the agreement ends; and give you the information you need to show that these obligations are met.
+- **Your own information.** For the information about your company and your staff that we need to run your account and bill you, we are the controller. We use it only for that, and we never sell it.
+- **Where it is kept.** Your data is kept on servers in **the United Kingdom**. If it is ever transferred outside the UK, it will be only with the safeguards the UK GDPR requires.
+- **Complaints.** You and the people whose data is processed may complain to the **Information Commissioner's Office (ICO)**. Our ICO registration number is [number].
+---LAW---
+These terms are governed by the law of **England and Wales**, and the courts of England and Wales have exclusive jurisdiction.

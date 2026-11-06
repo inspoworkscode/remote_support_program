@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>RemoteSupport.Technician</AssemblyName>
+    <RootNamespace>RemoteSupport.Technician</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\RemoteSupport.Shared\RemoteSupport.Shared.csproj" />
+    <ProjectReference Include="..\RemoteSupport.UI\RemoteSupport.UI.csproj" />
+    <ProjectReference Include="..\RemoteSupport.Media\RemoteSupport.Media.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="branding\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <!-- The downloadable console .exe (2026-10-01): build.ps1 and tools/ship-build.ps1 pass the server
+       a copy asks when the download did not say where it came from. See ConsoleDownload. -->
+  <ItemGroup Condition="'$(ConsoleDefaults)' != '' And Exists('$(ConsoleDefaults)')">
+    <EmbeddedResource Include="$(ConsoleDefaults)" LogicalName="console-defaults.json" />
+  </ItemGroup>
+</Project>

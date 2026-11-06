@@ -1,0 +1,129 @@
+@page "/portal/webchat"
+@model RemoteSupport.Platform.Pages.Portal.WebChatModel
+@using RemoteSupport.Platform.Services
+@{ ViewData["Title"] = "Website chat"; ViewData["Section"] = "portal"; var t = Model.Tenant; }
+<section class="portal"><div class="wrap">
+    <h1>Website chat</h1>
+    <p class="muted" style="max-width:760px">
+        A chat bubble on <strong>your own website</strong>. A visitor gives their name and an email or phone, types a
+        question, and it pops up for <strong>everybody signed in</strong> — in the console, and in the Chat corner of
+        any portal page. The first person to reply takes it; the others see who is answering. With one click you can
+        send them your app's download page, or browser support. When nobody is signed in, or outside your hours, the
+        bubble takes a message instead, and it becomes a ticket.
+    </p>
+    @if (!string.IsNullOrEmpty(Model.Message)) { <div class="alert alert-ok">@Model.Message</div> }
+    @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad">@Model.Error</div> }
+
+    <div class="card" style="margin-bottom:18px">
+        <p style="margin-top:0">
+            Right now the bubble
+            @if (Model.Mode == WebChatService.Mode.Off) { <span class="pill pill-muted">is switched off</span> }
+            else if (Model.Mode == WebChatService.Mode.Open) { <span class="pill pill-ok">takes chats — somebody is signed in</span> }
+            else { <span class="pill pill-warn">takes messages — nobody signed in, or outside your hours</span> }
+        </p>
+        @if (Model.CanManage)
+        {
+            <h3>Put it on your website</h3>
+            <p class="muted" style="margin-top:0">Paste this line into your website, just before <code>&lt;/body&gt;</code> — or give it to whoever looks after your site. It works on any page, on any website builder that lets you add code.</p>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+                <code id="snippet" style="font-size:14px;overflow-wrap:anywhere">@Model.Snippet</code>
+                <button type="button" class="btn btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('snippet').textContent);this.textContent='Copied'">Copy</button>
+                <a class="btn btn-sm" href="/webchat/@t.Slug/try" target="_blank" rel="noopener">Try it</a>
+            </div>
+            <p class="muted" style="margin:10px 0 0;font-size:13px">
+                <em>Try it</em> opens a sample website with the bubble on it, so you can see it and chat with yourself.
+                @if (Model.Origin.StartsWith("http://")) { <text>This server is not on the internet yet, so the line only works on this network until it is hosted.</text> }
+            </p>
+        }
+    </div>
+
+    @if (Model.CanManage)
+    {
+        <form method="post" class="form card" style="max-width:760px;margin-bottom:18px">
+            <label style="display:flex;gap:10px;align-items:center;font-weight:800">
+                <input type="checkbox" name="enabled" value="true" style="width:auto" checked="@t.WebChatEnabled"> Show the chat bubble on our website
+            </label>
+
+            <h3>Hours</h3>
+            <p class="muted" style="margin-top:0">When it takes live chats — as long as somebody is signed in. Outside them it takes messages. A closing time before the opening time runs past midnight.</p>
+            <table class="table" style="box-shadow:none">
+                <thead><tr><th>Day</th><th>Open</th><th>From</th><th>To</th></tr></thead>
+                <tbody>
+                @for (int i = 0; i < 7; i++)
+                {
+                    var d = Model.Days[i];
+                    <tr>
+                        <td><strong>@WebSupportHours.Days[i]</strong></td>
+                        <td>
+                            @* The tick first and its "false" after: the binder takes the FIRST value. *@
+                            <input type="checkbox" name="open[@i]" value="true" style="width:auto" checked="@(d != null)" onchange="dayOn(@i, this.checked)">
+                            <input type="hidden" name="open[@i]" value="false">
+                        </td>
+                        <td><input type="time" name="from[@i]" id="from@(i)" value="@(d is { } a ? WebSupportHours.Hm(a.Open) : "08:00")" style="opacity:@(d == null ? ".45" : "1")"></td>
+                        <td><input type="time" name="to[@i]" id="to@(i)" value="@(d is { } b ? (b.Close >= TimeSpan.FromHours(24) ? "23:59" : WebSupportHours.Hm(b.Close)) : "17:00")" style="opacity:@(d == null ? ".45" : "1")"></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+
+            <label for="zone">Time zone</label>
+            <select name="zone" id="zone">
+                @foreach (var z in WebSupportHours.Zones) { <option value="@z.Id" selected="@(z.Id == t.WebChatTimeZone)">@z.Label</option> }
+            </select>
+
+            <div class="actions"><button class="btn btn-accent" type="submit">Save</button></div>
+        </form>
+    }
+
+    <div class="card">
+        <h3 style="margin-top:0">Recent chats and messages</h3>
+        @if (Model.Recent.Count == 0)
+        {
+            <p class="muted">None yet.</p>
+        }
+        else
+        {
+            <table class="table" style="box-shadow:none">
+                <thead><tr><th>When</th><th>Who</th><th>Answered by</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var c in Model.Recent)
+                {
+                    var lines = Model.Lines.TryGetValue(c.Id, out var l) ? l : new List<RemoteSupport.Platform.Data.WebChatLine>();
+                    <tr>
+                        <td style="white-space:nowrap">@c.StartedUtc.Local().ToString("d MMM HH:mm")</td>
+                        <td>
+                            <strong>@c.Name</strong>
+                            <div class="muted" style="font-size:13px">@string.Join(" · ", new[] { c.Email, c.Phone }.Where(s => s.Length > 0))</div>
+                            <details style="margin-top:6px">
+                                <summary class="muted" style="cursor:pointer;font-size:13px">@lines.Count @(lines.Count == 1 ? "line" : "lines")@(c.Page.Length > 0 ? " · from " + c.Page : "")</summary>
+                                @foreach (var line in lines)
+                                {
+                                    @if (!line.FromVisitor && line.Name.Length == 0)
+                                    {
+                                        @* A hand-over's note (2026-10-15): nobody said it. *@
+                                        <div class="muted" style="margin:6px 0;font-size:13px;font-style:italic">@line.SentUtc.Local().ToString("HH:mm") · @line.Text</div>
+                                    }
+                                    else
+                                    {
+                                        <div style="margin:6px 0"><span class="muted" style="font-size:12px">@line.Name · @line.SentUtc.Local().ToString("HH:mm")</span><br><span style="white-space:pre-wrap">@line.Text</span></div>
+                                    }
+                                }
+                            </details>
+                        </td>
+                        <td>@(c.LeftMessage ? "" : c.AnsweredBy.Length > 0 ? c.AnsweredBy : "nobody")</td>
+                        <td>
+                            @if (c.LeftMessage && c.TicketId is int tid && Model.TicketNumbers.TryGetValue(tid, out var tn)) { <span class="pill pill-warn">message</span> <a href="@(PortalAddresses.Ticket(tn))">ticket #@tn</a> }
+                            else if (c.EndedUtc == null) { <span class="pill pill-ok">going on now</span> }
+                            else { <span class="pill pill-muted">ended</span> }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
+    </div>
+</div></section>
+<script>
+// Dimmed, never disabled: a disabled box is not posted, and a gap in an indexed list stops the binder there.
+function dayOn(i, on){ document.getElementById('from' + i).style.opacity = document.getElementById('to' + i).style.opacity = on ? '1' : '.45'; }
+</script>

@@ -1,0 +1,14 @@
+Country: South Africa
+Tax: No VAT is charged: we are not registered for VAT. If we register, we will tell you at least 30 days before VAT is added to your price.
+LiabilityExtra: , or rights you have under the Consumer Protection Act 68 of 2008 if it applies to you
+---PRIVACY---
+This agreement follows the **Protection of Personal Information Act 4 of 2013 (POPIA)**.
+
+- **Your customers' information.** For the personal information of your customers and their staff that passes through the service (names, contact details, machine details, screens, files, chat, tickets), **you are the responsible party and we are your operator** under sections 20 and 21 of POPIA. We process it only to provide the service and on your instructions, treat it as confidential, secure it as section 19 requires, and tell you as soon as reasonably possible if we believe it has been accessed or acquired by an unauthorised person (section 22), so that you can notify the Information Regulator and the people affected.
+- **Your own information.** For the information about your company and your staff that we need to run your account and bill you, we are the responsible party. We use it only for that, and we never sell it.
+- **Where it is kept.** Your data is kept on servers in **South Africa**. We do not send it outside South Africa except as section 72 of POPIA allows, and we will tell you which other providers we use to run the service (for example our hosting provider) on request.
+- **People's rights.** If one of your customers asks you to see, correct or delete their information, we will help you do it.
+- **Our Information Officer** is our director, Clint, at queries@theremotesupportprogram.com or 19 Tide Street, Knysna Central, Knysna, 6571.
+- These terms are concluded electronically, as the **Electronic Communications and Transactions Act 25 of 2002** allows.
+---LAW---
+These terms are governed by the law of the **Republic of South Africa**. You and we agree to the jurisdiction of the Western Cape Division of the High Court, Cape Town, or a magistrate's court with jurisdiction over the claim.

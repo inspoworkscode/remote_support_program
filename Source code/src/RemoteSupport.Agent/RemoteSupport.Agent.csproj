@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>RemoteSupport.Agent</AssemblyName>
+    <RootNamespace>RemoteSupport.Agent</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\RemoteSupport.Shared\RemoteSupport.Shared.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.13" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.13" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- tools/keeperretry drives HealthCheckKeeper's retry loop with its own attempt and delays. -->
+    <InternalsVisibleTo Include="keeperretry" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="branding\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

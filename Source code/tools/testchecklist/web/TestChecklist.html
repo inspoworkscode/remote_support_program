@@ -1,0 +1,1517 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Test Checklist</title>
+<!--
+  The browser version of tools/testchecklist, for PCs where Smart App Control refuses the
+  unsigned TestChecklist.exe. It lives on the share beside the exe and reads and writes the SAME
+  files — checks.md, data\*.jsonl, data\pictures, exports — in the same shapes, so the two are
+  interchangeable and a report from either says the same thing. See tools/testchecklist/README.md.
+
+  A page opened from a file cannot read the folder it sits in by itself; Edge and Chrome let it
+  once the person picks that folder (the File System Access API, Chrome and Edge only — Firefox
+  has no way for a page to save into a folder). The choice is remembered, so
+  after the first time it is one click on "Continue".
+
+  Keep the logic in step with the C# files beside it: Checks.cs (reading checks.md), Board.cs
+  (what the logs add up to) and Exporter.cs (the report). Test-WebChecklist.ps1 compares them.
+-->
+<!--TEST-->
+<style>
+:root {
+  --bg: #f3f4f6; --panel: #ffffff; --text: #1d2127; --muted: #626b78; --line: #d8dce2; --hover: #eef2f7;
+  --accent: #1f6feb; --accent-text: #ffffff; --sel: #1f6feb; --sel-text: #ffffff;
+  --works-bg: #ddf2db; --works-fg: #1e6b2a; --partly-bg: #ffefc4; --partly-fg: #8a5a00;
+  --fault-bg: #f8d9d6; --fault-fg: #a31d14; --blocked-bg: #e2e9f4; --blocked-fg: #334e7a;
+  --skip-bg: #ececec; --skip-fg: #6b6b6b; --code-bg: #f0f1f3;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #16181c; --panel: #1f2227; --text: #e6e8eb; --muted: #9aa3ae; --line: #343941; --hover: #2a2f36;
+    --accent: #4c8dff; --accent-text: #0b0d10; --sel: #3b6fd1; --sel-text: #ffffff;
+    --works-bg: #1d3a22; --works-fg: #8fd89a; --partly-bg: #3d3113; --partly-fg: #f0c566;
+    --fault-bg: #45201d; --fault-fg: #ff9d93; --blocked-bg: #22304a; --blocked-fg: #a9c1ea;
+    --skip-bg: #2a2d31; --skip-fg: #9a9fa6; --code-bg: #2a2e34;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; display: flex; flex-direction: column; background: var(--bg); color: var(--text);
+  font: 14px/1.45 "Segoe UI", system-ui, sans-serif; }
+button, select, input, textarea { font: inherit; color: inherit; }
+button { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 5px 12px; cursor: pointer; }
+button:hover:not(:disabled) { background: var(--hover); }
+button:disabled { opacity: .45; cursor: default; }
+button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+select, input[type=text], input[type=date], input[type=search], textarea {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
+textarea { resize: vertical; }
+a { color: var(--accent); }
+code { font-family: Consolas, "Cascadia Mono", monospace; background: var(--code-bg); padding: 0 3px; border-radius: 3px; }
+pre { font-family: Consolas, "Cascadia Mono", monospace; background: var(--code-bg); padding: 8px 10px; border-radius: 6px; overflow-x: auto; }
+.muted { color: var(--muted); }
+.hidden { display: none !important; }
+
+header.top { display: flex; align-items: center; gap: 12px; padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+header.top .who { font-weight: 600; }
+header.top .summary { color: var(--muted); flex: 1; min-width: 200px; }
+header.top .status { color: var(--works-fg); }
+nav.tabs { display: flex; gap: 4px; padding: 8px 14px 0; }
+nav.tabs button { border-radius: 6px 6px 0 0; border-bottom: none; background: transparent; }
+nav.tabs button.on { background: var(--panel); font-weight: 600; }
+main { flex: 1; min-height: 0; display: flex; border-top: 1px solid var(--line); background: var(--panel); }
+.pane { flex: 1; min-height: 0; min-width: 0; display: flex; padding: 10px 14px; gap: 12px; }
+
+#checksPane { display: grid; grid-template-columns: minmax(220px, 300px) 1fr; }
+#sections { overflow: auto; border: 1px solid var(--line); border-radius: 6px; padding: 4px 0; }
+#sections button { display: flex; width: 100%; gap: 8px; align-items: center; border: none; border-radius: 0; background: transparent;
+  padding: 7px 12px; text-align: left; }
+#sections button .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#sections button .c { color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+#sections button .c.bad { color: var(--fault-fg); } #sections button .c.good { color: var(--works-fg); }
+#sections button.info .t { font-style: italic; color: var(--muted); }
+#sections button.all .t { font-weight: 600; }
+#sections button.on { background: var(--sel); color: var(--sel-text); }
+#sections button.on .t, #sections button.on .c { color: var(--sel-text); }
+
+.col { display: flex; flex-direction: column; gap: 8px; min-height: 0; min-width: 0; flex: 1; }
+.bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.listwrap { flex: 1 1 50%; min-height: 120px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; outline: none; }
+.detail { flex: 1 1 50%; min-height: 120px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; padding: 10px 16px; }
+.detail h2 { font-size: 1.25em; margin: 4px 0 2px; }
+.detail h3 { font-size: 1em; margin: 16px 0 4px; }
+.detail p { margin: 6px 0; }
+.detail .sub { color: var(--muted); font-size: .92em; }
+.detail .intro { color: var(--muted); }
+.detail .hist { margin: 2px 0 2px 12px; }
+.detail .hist .note { margin: 0 0 4px 24px; white-space: pre-wrap; }
+.detail .body { white-space: pre-wrap; }
+.detail .pics { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.detail .pics img { max-height: 140px; max-width: 240px; border: 1px solid var(--line); border-radius: 4px; cursor: zoom-in; }
+.chip { display: inline-block; padding: 1px 8px; border-radius: 10px; font-weight: 600; font-size: .9em; }
+
+table { width: 100%; border-collapse: collapse; }
+th { position: sticky; top: 0; background: var(--panel); text-align: left; font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--line); z-index: 1; }
+td { padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; width: 3.5em; }
+td.nowrap, th.nowrap { white-space: nowrap; }
+tr.group td { color: var(--accent); font-weight: 600; background: var(--panel); padding-top: 10px; }
+tbody tr[data-k] { cursor: default; }
+tbody tr[data-k]:hover td { filter: brightness(0.97); }
+tr.sel td { background: var(--sel) !important; color: var(--sel-text) !important; }
+.r-works td, .chip.r-works { background: var(--works-bg); } .chip.r-works { color: var(--works-fg); }
+.r-partly td, .chip.r-partly { background: var(--partly-bg); } .chip.r-partly { color: var(--partly-fg); }
+.r-fault td, .chip.r-fault { background: var(--fault-bg); } .chip.r-fault { color: var(--fault-fg); }
+.r-blocked td, .chip.r-blocked { background: var(--blocked-bg); } .chip.r-blocked { color: var(--blocked-fg); }
+.r-skip td, .chip.r-skip { background: var(--skip-bg); } .r-skip td { color: var(--skip-fg); } .chip.r-skip { color: var(--skip-fg); }
+.chip.r-untested { color: var(--muted); border: 1px solid var(--line); }
+tr.closed td { color: var(--muted); }
+
+#note { width: 100%; min-height: 4.6em; }
+.results { display: flex; flex-wrap: wrap; gap: 6px; }
+.results button { min-width: 96px; font-weight: 600; }
+.results .b-works { background: var(--works-bg); color: var(--works-fg); border-color: var(--works-fg); }
+.results .b-partly { background: var(--partly-bg); color: var(--partly-fg); border-color: var(--partly-fg); }
+.results .b-fault { background: var(--fault-bg); color: var(--fault-fg); border-color: var(--fault-fg); }
+.results .b-blocked { background: var(--blocked-bg); color: var(--blocked-fg); border-color: var(--blocked-fg); }
+.results .b-skip { background: var(--skip-bg); color: var(--skip-fg); border-color: var(--skip-fg); }
+.results .b-untested { font-weight: 400; }
+
+dialog { border: 1px solid var(--line); border-radius: 10px; padding: 0; width: min(680px, 94vw); background: var(--panel); color: var(--text); }
+dialog::backdrop { background: rgba(0,0,0,.35); }
+dialog form { padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
+dialog h2 { margin: 0; font-size: 1.15em; }
+.grid { display: grid; grid-template-columns: max-content 1fr; gap: 8px 12px; align-items: center; }
+.grid > label { color: var(--muted); }
+.grid textarea { min-height: 9em; }
+.actions { display: flex; justify-content: flex-end; gap: 8px; }
+.piclist { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.piclist .p { border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; display: flex; gap: 6px; align-items: center; }
+.piclist img { height: 48px; }
+
+#connect { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+#connect .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 24px 28px; max-width: 620px; }
+#connect h1 { margin: 0 0 8px; font-size: 1.4em; }
+#connect .path { display: flex; gap: 8px; align-items: center; margin: 10px 0 16px; }
+#connect .path code { flex: 1; padding: 6px 8px; overflow-wrap: anywhere; }
+#connect .err { color: var(--fault-fg); }
+</style>
+</head>
+<body>
+
+<div id="connect">
+  <div class="card">
+    <h1>Test Checklist</h1>
+    <div id="connectBody"></div>
+  </div>
+</div>
+
+<header class="top">
+  <span class="who" id="who"></span>
+  <a href="#" id="changeMe">change</a>
+  <span class="summary" id="summary"></span>
+  <span class="status" id="status"></span>
+  <button id="refresh" title="Everyone's results are picked up by themselves every 15 seconds; this does it now.">Refresh</button>
+  <button id="exportBtn">Export report…</button>
+</header>
+<nav class="tabs">
+  <button data-tab="checks" class="on">Checks</button>
+  <button data-tab="fault">Faults</button>
+  <button data-tab="upgrade">Upgrades</button>
+</nav>
+<main>
+  <section class="pane" id="checksPane">
+    <div id="sections"></div>
+    <div class="col">
+      <div class="bar">
+        <label for="show">Show</label>
+        <select id="show">
+          <option value="0">All</option><option value="1">Not tested</option><option value="2">Works</option>
+          <option value="3">Fault or partly</option><option value="4">Can't test yet</option><option value="5">Skipped</option>
+        </select>
+        <input type="search" id="search" placeholder="Search every check…" style="width:260px">
+      </div>
+      <div class="listwrap" id="checkList" tabindex="0"></div>
+      <div class="detail" id="checkDetail"></div>
+      <textarea id="note" placeholder="What you saw (optional) — type it, then press the result below. It is saved with it."></textarea>
+      <div class="results" id="resultButtons"></div>
+    </div>
+  </section>
+  <section class="pane hidden" id="itemsPane-fault"></section>
+  <section class="pane hidden" id="itemsPane-upgrade"></section>
+</main>
+
+<dialog id="dlgName"><form method="dialog">
+  <h2>Who is testing?</h2>
+  <p class="muted" style="margin:0">Your name goes beside everything you record, so the report says who found what. It is remembered in this browser.</p>
+  <div class="grid"><label for="nameInput">Your name</label><input type="text" id="nameInput" autocomplete="name"></div>
+  <div class="actions"><button value="cancel" formnovalidate>Cancel</button><button value="ok" class="primary">OK</button></div>
+</form></dialog>
+
+<dialog id="dlgItem"><form method="dialog">
+  <h2 id="itemTitle"></h2>
+  <div class="grid">
+    <label for="fTitle">Title</label><input type="text" id="fTitle">
+    <label for="fArea">Area</label><input type="text" id="fArea" list="areas">
+    <label for="fLevel" id="fLevelLabel"></label><select id="fLevel"></select>
+    <label for="fCheck">Check number</label>
+    <span><input type="text" id="fCheck" style="width:6em"> <span class="muted">optional — the number on the Checks tab this came from</span></span>
+    <label for="fDetails" id="fDetailsLabel"></label><textarea id="fDetails"></textarea>
+    <label>Pictures</label>
+    <div>
+      <div class="piclist" id="fPics"></div>
+      <div class="bar" style="margin-top:6px">
+        <button type="button" id="fPaste">Paste screenshot</button>
+        <label><input type="file" id="fFile" accept="image/*" multiple class="hidden"><span class="muted" style="cursor:pointer;text-decoration:underline">Add picture file…</span></label>
+        <span class="muted">or press Ctrl+V anywhere in this box</span>
+      </div>
+    </div>
+  </div>
+  <datalist id="areas"></datalist>
+  <div class="actions"><button value="cancel" formnovalidate>Cancel</button><button value="ok" class="primary">OK</button></div>
+</form></dialog>
+
+<dialog id="dlgUpdate"><form method="dialog">
+  <h2 id="updTitle"></h2>
+  <div class="grid">
+    <label for="uStatus">Status</label><select id="uStatus"></select>
+    <label for="uComment">Comment</label><textarea id="uComment" placeholder="What changed — e.g. retested on DESKTOP-OPHQIDH and it now works."></textarea>
+  </div>
+  <div class="actions"><button value="cancel" formnovalidate>Cancel</button><button value="ok" class="primary">OK</button></div>
+</form></dialog>
+
+<dialog id="dlgExport"><form method="dialog">
+  <h2>Export a report</h2>
+  <div class="grid">
+    <label for="xRange">What to include</label>
+    <select id="xRange"><option value="0">Today</option><option value="1">Yesterday</option><option value="2">A day I choose</option><option value="3">Everything so far</option></select>
+    <label for="xDay">Day</label><input type="date" id="xDay" disabled>
+  </div>
+  <p class="muted" style="margin:0">It is saved in the Test Checklist folder under <b>exports</b> — one file, plus a folder of any pictures. Give it to Claude at the end of the day.</p>
+  <div class="actions"><button value="cancel" formnovalidate>Cancel</button><button value="ok" class="primary">Export</button></div>
+</form></dialog>
+
+<dialog id="dlgMsg"><form method="dialog">
+  <h2 id="msgTitle"></h2>
+  <div id="msgBody"></div>
+  <div class="actions" id="msgActions"></div>
+</form></dialog>
+
+<script>
+"use strict";
+
+// ================================================================================================
+// Small helpers
+// ================================================================================================
+
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const p2 = n => String(n).padStart(2, "0");
+const ymd = d => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+const ymdhm = ms => { const d = new Date(ms); return `${ymd(d)} ${p2(d.getHours())}:${p2(d.getMinutes())}`; };
+const fmtWhen = ms => { const d = new Date(ms); return `${DAYS[d.getDay()]} ${d.getDate()} ${MONS[d.getMonth()]} ${p2(d.getHours())}:${p2(d.getMinutes())}`; };
+const fmtDay = ms => { const d = new Date(ms); return `${d.getDate()} ${MONS[d.getMonth()]}`; };
+const fmtLong = ms => { const d = new Date(ms); return `${DAYS[d.getDay()]} ${d.getDate()} ${MONS[d.getMonth()]} ${d.getFullYear()} ${p2(d.getHours())}:${p2(d.getMinutes())}`; };
+const startOfToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); };
+const fmtListTime = ms => ms >= startOfToday() && ms < startOfToday() + 864e5
+  ? `${p2(new Date(ms).getHours())}:${p2(new Date(ms).getMinutes())}` : `${fmtDay(ms)} ${p2(new Date(ms).getHours())}:${p2(new Date(ms).getMinutes())}`;
+const newId = () => crypto.randomUUID().replace(/-/g, "");
+
+// The exe writes times with seven decimal places; a browser only promises to read three.
+function parseTime(s) {
+  let t = String(s ?? "").replace(/(\.\d{3})\d+/, "$1");
+  if (t && !/(Z|[+-]\d\d:?\d\d)$/.test(t)) t += "Z";
+  const v = Date.parse(t);
+  return isNaN(v) ? 0 : v;
+}
+
+// ================================================================================================
+// Reading checks.md — the same rules as Checks.cs
+// ================================================================================================
+
+function loadBook(text, modified) {
+  const book = { title: "", sections: [], byNumber: new Map(), modified };
+  let cur = { key: "Read first", title: "Read first", intro: [], checks: [] };
+  book.sections.push(cur);
+  let item = null, fence = false, fenceInItem = false;
+
+  for (const raw of text.replace(/\r/g, "").split("\n")) {
+    const line = raw.replace(/\s+$/, "");
+    const indented = line.length > 0 && /\s/.test(line[0]);
+    const fenceMark = line.trimStart().startsWith("```");
+
+    if (fence) {
+      if (fenceInItem && item) item.lines.push(line.trim()); else cur.intro.push(line);
+      if (fenceMark) fence = false;
+      continue;
+    }
+    if (fenceMark) {
+      fence = true;
+      fenceInItem = item != null && indented;
+      if (fenceInItem) item.lines.push(line.trim());
+      else { item = null; cur.intro.push(line); }
+      continue;
+    }
+    if (line.startsWith("## ")) {
+      const title = line.slice(3).trim();
+      const m = /^([A-Z]{1,3})\.\s/.exec(title);
+      cur = { key: m ? m[1] : title, title, intro: [], checks: [] };
+      book.sections.push(cur);
+      item = null;
+      continue;
+    }
+    if (line.startsWith("# ")) { book.title = line.slice(2).trim(); continue; }
+    const im = /^(\d+)\.\s+(.*)$/.exec(line);
+    if (im) {
+      item = { number: im[1], section: cur, lines: [im[2]], short: "", doneInDoc: null, replacedBy: null };
+      cur.checks.push(item);
+      if (!book.byNumber.has(item.number)) book.byNumber.set(item.number, item);
+      continue;
+    }
+    if (item && (line.length === 0 || indented)) { item.lines.push(line.trim()); continue; }
+    item = null;
+    cur.intro.push(line);
+  }
+
+  const tidy = a => {
+    while (a.length && a[0].trim() === "") a.shift();
+    while (a.length && (a[a.length - 1].trim() === "" || a[a.length - 1].trim() === "---")) a.pop();
+  };
+  for (const s of book.sections) { tidy(s.intro); for (const c of s.checks) { tidy(c.lines); describe(c); } }
+  book.sections = book.sections.filter(s => s.checks.length > 0 || s.intro.length > 0);
+
+  for (const s of book.sections) {
+    const m = /REPLACES\s+checks?\s+([\d,\s]+(?:and\s+\d+)?)/i.exec(s.intro.join(" "));
+    if (!m) continue;
+    for (const n of m[1].match(/\d+/g) || []) {
+      const old = book.byNumber.get(n);
+      if (old && old.section !== s) old.replacedBy = s.key;
+    }
+  }
+  book.all = book.sections.flatMap(s => s.checks);
+  return book;
+}
+
+function describe(c) {
+  let first = [];
+  for (const l of c.lines) { if (l.length === 0) break; first.push(l); }
+  first = first.join(" ");
+  const done = /^\*\*DONE\b([^*]*)\*\*\s*/i.exec(first);
+  if (done) {
+    const d = /\d{4}-\d{2}-\d{2}/.exec(done[1]);
+    c.doneInDoc = d ? d[0] : "earlier";
+    first = first.slice(done[0].length);
+  }
+  let s;
+  const end = first.startsWith("**") ? first.indexOf("**", 2) : -1;
+  if (end > 2) s = first.slice(2, end);
+  else { const stop = first.indexOf(". "); s = stop > 0 ? first.slice(0, stop) : first; }
+  s = s.replace(/\*\*/g, "").replace(/`/g, "").replace(/\*/g, "").trim().replace(/[.:]+$/, "").trim();
+  c.short = s.length > 140 ? s.slice(0, 137) + "…" : s;
+}
+
+// ================================================================================================
+// What the logs add up to — the same rules as Board.cs
+// ================================================================================================
+
+const RESULTS = [
+  { code: "untested", name: "Not tested" }, { code: "works", name: "Works" }, { code: "partly", name: "Partly works" },
+  { code: "fault", name: "Fault" }, { code: "blocked", name: "Can't test yet" }, { code: "skip", name: "Skip" },
+];
+const resultName = code => (RESULTS.find(r => r.code === code) || { name: code }).name;
+
+const KINDS = {
+  fault: {
+    statuses: ["Open", "Fixed — please retest", "Closed", "Not a fault"], open: ["Open", "Fixed — please retest"],
+    levels: ["Stops work", "Serious", "Minor", "Cosmetic"], levelLabel: "Severity", noun: "fault", prefix: "F",
+    title: "Faults", newText: "Log a fault…", heading: "Log a fault", detailsLabel: "What happened",
+    placeholder: "What you did, what you expected, what happened instead. Which machine, if it matters.",
+    empty: "Something not working as it should? Press Log a fault. A screenshot helps more than anything else.",
+  },
+  upgrade: {
+    statuses: ["Open", "Planned", "Done", "Won't do"], open: ["Open", "Planned"],
+    levels: ["Must have", "Should have", "Nice to have"], levelLabel: "Priority", noun: "upgrade", prefix: "U",
+    title: "Upgrades", newText: "Suggest an upgrade…", heading: "Suggest an upgrade", detailsLabel: "What it should do",
+    placeholder: "What you would like it to do, and why it would help.",
+    empty: "An idea that would make it better? Press Suggest an upgrade.",
+  },
+};
+const AREAS = ["Console", "Session window", "Tray app (customer)", "Portal", "Tickets", "Installer", "Health check", "Server / platform", "Other"];
+const isOpen = (kind, status) => KINDS[kind].open.includes(status);
+
+function buildBoard(book, entries) {
+  const board = { checks: new Map(), items: new Map() };
+  for (const c of book.all) if (!board.checks.has(c.number)) board.checks.set(c.number, checkState(c));
+
+  for (const e of entries) {
+    if (e.type === "result") {
+      const cs = e.check != null && e.status != null ? board.checks.get(e.check) : null;
+      if (cs) cs.history.push(e);
+    } else if (e.type === "item") {
+      if (!board.items.has(e.id)) {
+        const it = { created: e, id: e.id, kind: e.kind || "fault", code: "", title: "", details: "", area: "", level: "", check: "",
+          pictures: [], status: "Open", changes: [], last: e._t };
+        applyItem(it, e);
+        board.items.set(e.id, it);
+      }
+    } else if (e.type === "edit") {
+      const it = e.target && board.items.get(e.target);
+      if (it) { applyItem(it, e); it.changes.push(e); }
+    } else if (e.type === "update") {
+      const it = e.target && board.items.get(e.target);
+      if (it) { if (e.status) it.status = e.status; it.last = e._t; it.changes.push(e); }
+    }
+  }
+
+  // Two people saving in the same instant could both take F12; the later one shows as F12b.
+  for (const kind of ["fault", "upgrade"]) {
+    const groups = new Map();
+    for (const i of board.items.values()) if (i.kind === kind) {
+      const k = i.created.seq ?? 0;
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(i);
+    }
+    for (const [seq, list] of groups) {
+      list.sort((a, b) => a.created._t - b.created._t);
+      list.forEach((i, n) => i.code = KINDS[kind].prefix + seq + (n === 0 ? "" : String.fromCharCode(97 + n)));
+    }
+  }
+  board.itemsOf = kind => [...board.items.values()].filter(i => i.kind === kind);
+  board.itemsForCheck = n => [...board.items.values()].filter(i => i.check === n).sort((a, b) => a.created._t - b.created._t);
+  board.nextSeq = kind => Math.max(0, ...board.itemsOf(kind).map(i => i.created.seq ?? 0)) + 1;
+  return board;
+}
+
+function applyItem(it, e) {
+  if (e.title != null) it.title = e.title;
+  if (e.details != null) it.details = e.details;
+  if (e.area != null) it.area = e.area;
+  if (e.level != null) it.level = e.level;
+  if (e.check != null) it.check = e.check;
+  if (e.pictures) for (const p of e.pictures) if (!it.pictures.includes(p)) it.pictures.push(p);
+  it.last = e._t;
+}
+
+function checkState(c) {
+  const s = { check: c, history: [] };
+  Object.defineProperties(s, {
+    latest: { get() { return this.history.length ? this.history[this.history.length - 1] : null; } },
+    status: { get() { return this.latest?.status ?? (c.doneInDoc ? "works" : c.replacedBy ? "skip" : "untested"); } },
+    by: { get() { return this.latest?.by ?? (c.doneInDoc || c.replacedBy ? "checklist" : ""); } },
+    when: { get() {
+      if (this.latest) return this.latest._t;
+      if (c.doneInDoc && /^\d{4}-\d{2}-\d{2}$/.test(c.doneInDoc)) { const [y, m, d] = c.doneInDoc.split("-").map(Number); return new Date(y, m - 1, d).getTime(); }
+      return null;
+    } },
+    docNote: { get() {
+      return this.latest ? null
+        : c.doneInDoc ? `The checklist says this was done by hand (${c.doneInDoc}).`
+        : c.replacedBy ? `Section ${c.replacedBy} of the checklist replaces this check — do that one instead.` : null;
+    } },
+  });
+  return s;
+}
+
+// ================================================================================================
+// The shared folder. Everything goes through a directory handle — the Test Checklist folder the
+// person picked, or (for Test-WebChecklist.ps1) a scratch folder in the browser's own storage.
+// ================================================================================================
+
+const Folder = {
+  root: null,
+  async dir(path, create = false) {
+    let d = this.root;
+    for (const p of path.split("/").filter(Boolean)) d = await d.getDirectoryHandle(p, { create });
+    return d;
+  },
+  split(path) { const i = path.lastIndexOf("/"); return i < 0 ? ["", path] : [path.slice(0, i), path.slice(i + 1)]; },
+  async file(path) { const [d, n] = this.split(path); return (await (await this.dir(d)).getFileHandle(n)).getFile(); },
+  async exists(path) { try { await this.file(path); return true; } catch { return false; } },
+  async write(path, data) {
+    const [d, n] = this.split(path);
+    const fh = await (await this.dir(d, true)).getFileHandle(n, { create: true });
+    const w = await fh.createWritable();
+    await w.write(data);
+    await w.close();
+  },
+  // Only this browser ever writes its own log, so appending cannot race anyone.
+  async append(path, text) {
+    const [d, n] = this.split(path);
+    const fh = await (await this.dir(d, true)).getFileHandle(n, { create: true });
+    const size = (await fh.getFile()).size;
+    const w = await fh.createWritable({ keepExistingData: true });
+    await w.seek(size);
+    await w.write(text);
+    await w.close();
+  },
+};
+
+// ================================================================================================
+// State
+// ================================================================================================
+
+const S = {
+  me: "", device: "", book: null, board: null, entries: [], stamp: null,
+  section: null, selected: [], anchor: null, tab: "checks",
+  itemSel: { fault: null, upgrade: null }, itemFilter: { fault: "Open", upgrade: "Open" }, itemQ: { fault: "", upgrade: "" },
+  detailSig: null, itemSig: { fault: null, upgrade: null },
+};
+const TEST = window.CHECKLIST_TEST || null;
+
+function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch { } }
+
+const machine = () => "browser-" + S.device;
+const safeName = s => s.replace(/[\\/:*?"<>|\x00-\x1f]/g, "_").trim();
+const myFile = () => `data/${safeName(S.me)} on ${safeName(machine())}.jsonl`;
+
+async function reload(force) {
+  let changed = false;
+  const cf = await Folder.file("checks.md");
+  if (!S.book || cf.lastModified !== S.book.modified) {
+    S.book = loadBook(await cf.text(), cf.lastModified);
+    changed = true;
+  }
+
+  const data = await Folder.dir("data", true);
+  const files = [];
+  for await (const [name, h] of data.entries())
+    if (h.kind === "file" && name.toLowerCase().endsWith(".jsonl")) {
+      try { files.push({ name, f: await h.getFile() }); } catch { }
+    }
+  const stamp = files.map(x => `${x.name}:${x.f.size}:${x.f.lastModified}`).sort().join("|");
+  if (force || changed || stamp !== S.stamp) {
+    const seen = new Set(), list = [];
+    for (const { f } of files) {
+      let text;
+      try { text = await f.text(); } catch { continue; }   // being written this instant: next time
+      for (const line of text.split("\n")) {
+        if (!line.trim()) continue;
+        let e;
+        try { e = JSON.parse(line); } catch { continue; }  // half-written: read whole next time
+        if (!e || typeof e !== "object" || !e.id || !e.type || seen.has(e.id)) continue;
+        seen.add(e.id);
+        e._t = parseTime(e.at);
+        list.push(e);
+      }
+    }
+    list.sort((a, b) => a._t - b._t || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+    S.entries = list;
+    S.stamp = stamp;
+    changed = true;
+  }
+  if (changed) S.board = buildBoard(S.book, S.entries);
+  return changed;
+}
+
+// The same key order as the exe writes, and nothing empty — so both read each other's lines.
+async function append(e) {
+  e.id = e.id || newId();
+  const at = new Date().toISOString();
+  const o = { type: e.type, id: e.id, at, by: S.me, machine: machine() };
+  for (const k of ["check", "status", "note", "kind", "seq", "title", "details", "area", "level", "pictures", "target", "comment"])
+    if (e[k] != null) o[k] = e[k];
+  await Folder.append(myFile(), JSON.stringify(o) + "\n");
+  return o;
+}
+
+// ================================================================================================
+// Markdown, as much of it as TEST-3.6.md uses
+// ================================================================================================
+
+function inline(s) {
+  let out = "", buf = "", bold = false, ital = false;
+  const wrap = h => { if (ital) h = "<em>" + h + "</em>"; if (bold) h = "<strong>" + h + "</strong>"; return h; };
+  const flush = () => { if (buf) { out += wrap(esc(buf)); buf = ""; } };
+  for (let i = 0; i < s.length;) {
+    const c = s[i];
+    if (c === "`") {
+      const end = s.indexOf("`", i + 1);
+      if (end > i) { flush(); out += wrap("<code>" + esc(s.slice(i + 1, end)) + "</code>"); i = end + 1; continue; }
+    }
+    if (c === "*" && s[i + 1] === "*") { flush(); bold = !bold; i += 2; continue; }
+    if (c === "*" && (ital || (i + 1 < s.length && !/\s/.test(s[i + 1]) && s.indexOf("*", i + 1) > i))) { flush(); ital = !ital; i++; continue; }
+    buf += c; i++;
+  }
+  flush();
+  return out;
+}
+
+function markdown(lines) {
+  let html = "", para = [], list = [], pre = [], fence = false;
+  const flushPara = () => { if (para.length) { html += "<p>" + inline(para.join(" ")) + "</p>"; para = []; } };
+  const flushList = () => { if (list.length) { html += "<ul>" + list.map(x => "<li>" + inline(x) + "</li>").join("") + "</ul>"; list = []; } };
+  for (const raw of lines) {
+    const t = raw.trim();
+    if (t.startsWith("```")) {
+      if (fence) { html += "<pre>" + esc(pre.join("\n")) + "</pre>"; pre = []; fence = false; }
+      else { flushPara(); flushList(); fence = true; }
+      continue;
+    }
+    if (fence) { pre.push(raw.replace(/\s+$/, "")); continue; }
+    if (!t || t === "---") { flushPara(); flushList(); continue; }
+    if (t.startsWith("- ") || t.startsWith("* ")) { flushPara(); list.push(t.slice(2)); continue; }
+    if (list.length && !para.length) { list[list.length - 1] += " " + t; continue; }
+    para.push(t);
+  }
+  flushPara(); flushList();
+  if (fence && pre.length) html += "<pre>" + esc(pre.join("\n")) + "</pre>";
+  return html;
+}
+
+// ================================================================================================
+// Drawing
+// ================================================================================================
+
+function renderAll() {
+  renderTop();
+  renderSections();
+  renderList();
+  renderDetail();
+  renderItems("fault");
+  renderItems("upgrade");
+  for (const b of document.querySelectorAll("nav.tabs button")) {
+    const k = b.dataset.tab;
+    if (k !== "checks") {
+      const n = S.board.itemsOf(k).filter(i => isOpen(k, i.status)).length;
+      b.textContent = KINDS[k].title + (n ? ` (${n} open)` : "");
+    }
+  }
+}
+
+function renderTop() {
+  $("#who").textContent = "Testing as " + S.me;
+  const all = [...S.board.checks.values()];
+  const n = code => all.filter(c => c.status === code).length;
+  $("#summary").textContent = `${all.length} checks:  ${n("works")} work · ${n("fault")} fault · ${n("partly")} partly · ` +
+    `${n("blocked")} can't test yet · ${n("skip")} skipped · ${n("untested")} not tested`;
+  $("#summary").title = `Checklist: ${S.book.title}\nchecks.md last updated ${ymdhm(S.book.modified)}`;
+}
+
+function renderSections() {
+  const box = $("#sections");
+  const rows = [{ key: null, title: "All checks", checks: S.book.all }, ...S.book.sections];
+  box.innerHTML = rows.map(s => {
+    const states = s.checks.map(c => S.board.checks.get(c.number));
+    const done = states.filter(x => x.status !== "untested").length;
+    let count = "", cls = "";
+    if (s.checks.length) {
+      count = `${done}/${s.checks.length}`;
+      if (states.some(x => x.status === "fault" || x.status === "partly")) cls = "bad";
+      else if (done === s.checks.length) cls = "good";
+      if (done === s.checks.length) count = "✓ " + count;
+    }
+    const kind = s.key === null ? "all" : s.checks.length === 0 ? "info" : "";
+    const on = (S.section ?? null) === s.key ? "on" : "";
+    return `<button class="${kind} ${on}" data-key="${esc(s.key ?? "")}" title="${esc(s.title)}"><span class="t">${esc(s.title)}</span><span class="c ${cls}">${esc(count)}</span></button>`;
+  }).join("");
+}
+
+function passes(st) {
+  switch ($("#show").value) {
+    case "1": return st.status === "untested";
+    case "2": return st.status === "works";
+    case "3": return st.status === "fault" || st.status === "partly";
+    case "4": return st.status === "blocked";
+    case "5": return st.status === "skip";
+    default: return true;
+  }
+}
+
+function visibleChecks() {
+  const q = $("#search").value.trim().toLowerCase();
+  const sec = S.section == null ? null : S.book.sections.find(s => s.key === S.section);
+  const sections = q || !sec ? S.book.sections : [sec];
+  const out = [];
+  for (const s of sections) for (const c of s.checks) {
+    const st = S.board.checks.get(c.number);
+    if (!passes(st)) continue;
+    if (q && c.number !== q && !c.lines.join(" ").toLowerCase().includes(q)) continue;
+    out.push(c);
+  }
+  return out;
+}
+
+function renderList() {
+  const box = $("#checkList"), top = box.scrollTop;
+  const checks = visibleChecks();
+  S.visible = checks.map(c => c.number);
+  S.selected = S.selected.filter(n => S.visible.includes(n));
+  let html = `<table><thead><tr><th class="nowrap">#</th><th>Check</th><th class="nowrap">Result</th><th class="nowrap">By</th><th class="nowrap">When</th></tr></thead><tbody>`;
+  let sec = null;
+  for (const c of checks) {
+    if (c.section !== sec) { sec = c.section; html += `<tr class="group"><td colspan="5">${esc(sec.title)}</td></tr>`; }
+    const st = S.board.checks.get(c.number);
+    let when = st.when != null ? fmtListTime(st.when) : "";
+    if (!st.latest && c.doneInDoc) when = c.doneInDoc;
+    const cls = (st.status !== "untested" ? "r-" + st.status : "") + (S.selected.includes(c.number) ? " sel" : "");
+    const tip = st.latest?.note ?? st.docNote ?? "";
+    html += `<tr data-k="${c.number}" class="${cls}" title="${esc(tip)}"><td class="num">${c.number}</td><td>${esc(c.short)}</td>` +
+      `<td class="nowrap">${esc(resultName(st.status))}</td><td class="nowrap">${esc(st.by)}</td><td class="nowrap">${esc(when)}</td></tr>`;
+  }
+  if (!checks.length) html += `<tr><td colspan="5" class="muted">Nothing matches.</td></tr>`;
+  box.innerHTML = html + "</tbody></table>";
+  box.scrollTop = top;
+}
+
+function renderDetail() {
+  const nums = S.selected;
+  for (const b of document.querySelectorAll("#resultButtons button")) b.disabled = nums.length === 0;
+  const sec = S.section == null ? null : S.book.sections.find(s => s.key === S.section);
+
+  let sig;
+  if (nums.length === 1) {
+    const st = S.board.checks.get(nums[0]);
+    sig = "c" + nums[0] + ":" + st.history.length + ":" + S.board.itemsForCheck(nums[0]).map(i => i.code + i.status).join(",") + S.book.modified;
+  } else if (nums.length > 1) sig = "m" + nums.join(",");
+  else sig = "s" + (S.section ?? "*") + S.book.modified;
+  if (sig === S.detailSig) return;
+  S.detailSig = sig;
+
+  let h = "";
+  if (nums.length === 1) h = checkHtml(S.board.checks.get(nums[0]));
+  else if (nums.length > 1)
+    h = `<h2>${nums.length} checks selected</h2><p class="muted">Press a result below to give all of them the same one, with the same note.</p>`;
+  else if (sec) {
+    h = `<h2>${esc(sec.title)}</h2>` + markdown(sec.intro);
+    if (sec.checks.length) h += `<p class="muted"><em>Pick a check in the list above.</em></p>`;
+  } else {
+    h = `<h2>How to use this</h2>
+      <p>1. Pick a <b>section</b> on the left and a <b>check</b> in the list. Its full description shows here.</p>
+      <p>2. Try it. Type what you saw in the box below (optional), then press <b>Works</b>, <b>Partly works</b>, <b>Fault</b>, <b>Can't test yet</b> or <b>Skip</b>. Ctrl+click or Shift+click picks several at once.</p>
+      <p>3. Something wrong? Press <b>Fault</b> and say yes to logging it — or use the <b>Faults</b> tab. Ideas for improvements go on the <b>Upgrades</b> tab.</p>
+      <p>4. Everyone's results appear here within 15 seconds, whether they use this page or TestChecklist.exe.</p>
+      <p>5. At the end of the day, <b>Export report…</b> writes one file with everything done that day. Give it to Claude.</p>`;
+  }
+  const box = $("#checkDetail");
+  box.innerHTML = h;
+  box.scrollTop = 0;
+}
+
+function checkHtml(st) {
+  const c = st.check;
+  let h = `<h2>Check ${c.number} <span class="chip r-${st.status}">${esc(resultName(st.status))}</span></h2>`;
+  h += `<div class="sub">${esc(c.section.title)}</div>` + markdown(c.lines);
+  const items = S.board.itemsForCheck(c.number);
+  if (items.length) {
+    h += `<h3>Logged against this check</h3>`;
+    for (const i of items)
+      h += `<div class="hist" style="color:var(${isOpen(i.kind, i.status) ? "--fault-fg" : "--muted"})">${esc(i.code)} &nbsp; ${esc(i.title)} — ${esc(i.status)}</div>`;
+  }
+  h += `<h3>What people found</h3>`;
+  if (!st.history.length) h += `<div class="hist muted"><em>${esc(st.docNote ?? "Nobody has marked this one yet.")}</em></div>`;
+  for (const e of [...st.history].reverse()) {
+    h += `<div class="hist"><span class="muted">${esc(fmtWhen(e._t))} &nbsp; ${esc(e.by)}</span> &nbsp; <span class="chip r-${esc(e.status)}">${esc(resultName(e.status))}</span></div>`;
+    if (e.note && e.note.trim()) h += `<div class="hist note">${esc(e.note)}</div>`;
+  }
+  if (c.section.intro.length) h += `<h3 class="muted">About this section</h3><div class="intro">${markdown(c.section.intro)}</div>`;
+  return h;
+}
+
+function renderItems(kind) {
+  const K = KINDS[kind], pane = $("#itemsPane-" + kind);
+  if (!pane.dataset.built) {
+    pane.dataset.built = "1";
+    pane.innerHTML = `<div class="col">
+      <div class="bar">
+        <button class="primary" data-act="new">${esc(K.newText)}</button>
+        <button data-act="edit" disabled>Edit…</button>
+        <button data-act="update" disabled>Change status / comment…</button>
+        <span style="width:16px"></span><label>Show</label>
+        <select data-act="filter"><option>Open</option><option>All</option>${K.statuses.map(s => `<option>${esc(s)}</option>`).join("")}</select>
+        <input type="search" data-act="q" placeholder="Search…" style="width:220px">
+      </div>
+      <div class="listwrap" data-role="list"></div>
+      <div class="detail" data-role="detail"></div>
+    </div>`;
+    pane.querySelector('[data-act="new"]').onclick = () => itemDialog(kind, null);
+    pane.querySelector('[data-act="edit"]').onclick = () => { const i = S.board.items.get(S.itemSel[kind]); if (i) itemDialog(kind, i); };
+    pane.querySelector('[data-act="update"]').onclick = () => { const i = S.board.items.get(S.itemSel[kind]); if (i) updateDialog(i); };
+    pane.querySelector('[data-act="filter"]').onchange = e => { S.itemFilter[kind] = e.target.value; renderItems(kind); };
+    pane.querySelector('[data-act="q"]').oninput = e => { S.itemQ[kind] = e.target.value; renderItems(kind); };
+    const list = pane.querySelector('[data-role="list"]');
+    list.onclick = e => { const tr = e.target.closest("tr[data-k]"); if (tr) { S.itemSel[kind] = tr.dataset.k; renderItems(kind); } };
+    list.ondblclick = e => { const tr = e.target.closest("tr[data-k]"); if (tr) updateDialog(S.board.items.get(tr.dataset.k)); };
+  }
+  pane.querySelector('[data-act="filter"]').value = S.itemFilter[kind];
+
+  const q = S.itemQ[kind].trim().toLowerCase(), f = S.itemFilter[kind];
+  const items = S.board.itemsOf(kind)
+    .filter(i => f === "Open" ? isOpen(kind, i.status) : f === "All" ? true : i.status === f)
+    .filter(i => !q || i.code.toLowerCase() === q || (i.title + " " + i.details + " " + i.area).toLowerCase().includes(q))
+    .sort((a, b) => (isOpen(kind, b.status) - isOpen(kind, a.status)) || (K.levels.indexOf(a.level) - K.levels.indexOf(b.level)) || (a.created._t - b.created._t));
+  if (S.itemSel[kind] && !S.board.items.has(S.itemSel[kind])) S.itemSel[kind] = null;
+
+  const list = pane.querySelector('[data-role="list"]'), top = list.scrollTop;
+  let html = `<table><thead><tr><th>#</th><th>Title</th><th>Area</th><th class="nowrap">${K.levelLabel}</th><th>Check</th><th>Status</th><th class="nowrap">Raised by</th><th>When</th></tr></thead><tbody>`;
+  for (const i of items) {
+    let cls = !isOpen(kind, i.status) ? "closed" : i.status.startsWith("Fixed") ? "r-blocked" : kind === "fault" && (i.level === "Stops work" || i.level === "Serious") ? "r-fault" : "";
+    if (i.id === S.itemSel[kind]) cls += " sel";
+    html += `<tr data-k="${esc(i.id)}" class="${cls}"><td class="nowrap">${esc(i.code)}</td><td>${esc(i.title)}</td><td class="nowrap">${esc(i.area)}</td>` +
+      `<td class="nowrap">${esc(i.level)}</td><td class="num">${esc(i.check)}</td><td class="nowrap">${esc(i.status)}</td>` +
+      `<td class="nowrap">${esc(i.created.by)}</td><td class="nowrap">${esc(fmtListTime(i.created._t))}</td></tr>`;
+  }
+  if (!items.length) html += `<tr><td colspan="8" class="muted">None${f === "Open" ? " open" : ""}.</td></tr>`;
+  list.innerHTML = html + "</tbody></table>";
+  list.scrollTop = top;
+
+  const i = S.itemSel[kind] ? S.board.items.get(S.itemSel[kind]) : null;
+  pane.querySelector('[data-act="edit"]').disabled = pane.querySelector('[data-act="update"]').disabled = !i;
+  const sig = i ? i.id + i.changes.length + i.status : "none";
+  if (sig === S.itemSig[kind]) return;
+  S.itemSig[kind] = sig;
+  const det = pane.querySelector('[data-role="detail"]');
+  if (!i) { det.innerHTML = `<p class="muted"><em>${esc(K.empty)}</em></p>`; return; }
+
+  let h = `<h2>${esc(i.code)} &nbsp; ${esc(i.title)}</h2>`;
+  h += `<div><b>${esc(i.status)}</b> &nbsp;·&nbsp; ${K.levelLabel}: <b>${esc(i.level)}</b> &nbsp;·&nbsp; Area: <b>${esc(i.area || "—")}</b>` +
+       (i.check ? ` &nbsp;·&nbsp; Check <b>${esc(i.check)}</b>` : "") + `</div>`;
+  h += `<div class="sub">Raised by ${esc(i.created.by)} on ${esc(i.created.machine)}, ${esc(fmtLong(i.created._t))}</div>`;
+  h += i.details ? `<p class="body">${esc(i.details)}</p>` : `<p class="muted"><em>No details written.</em></p>`;
+  if (i.pictures.length) h += `<div class="pics" data-role="pics"></div>`;
+  const c = i.check && S.book.byNumber.get(i.check);
+  if (c) h += `<p class="sub">Check ${esc(c.number)}: ${esc(c.short)}</p>`;
+  if (i.changes.length) {
+    h += `<h3>History</h3>`;
+    for (const e of i.changes) {
+      const what = e.type === "edit" ? "edited it" : e.status ? "→ " + e.status : "commented";
+      h += `<div class="hist"><span class="muted">${esc(fmtWhen(e._t))} &nbsp; ${esc(e.by)}</span> &nbsp; <b>${esc(what)}</b></div>`;
+      if (e.comment && e.comment.trim()) h += `<div class="hist note">${esc(e.comment)}</div>`;
+    }
+  }
+  det.innerHTML = h;
+  det.scrollTop = 0;
+  if (i.pictures.length) showPictures(det.querySelector('[data-role="pics"]'), i.pictures);
+}
+
+async function showPictures(box, names) {
+  for (const n of names) {
+    try {
+      const f = await Folder.file("data/pictures/" + n);
+      const url = URL.createObjectURL(f);
+      const img = document.createElement("img");
+      img.src = url; img.alt = n; img.title = n + " — click to open full size";
+      img.onclick = () => window.open(url, "_blank");
+      box.appendChild(img);
+    } catch {
+      const s = document.createElement("span");
+      s.className = "muted"; s.textContent = "Missing from the shared folder: " + n;
+      box.appendChild(s);
+    }
+  }
+}
+
+// ================================================================================================
+// Acting
+// ================================================================================================
+
+function flash(text) {
+  const s = $("#status");
+  s.textContent = text;
+  clearTimeout(flash.t);
+  flash.t = setTimeout(() => s.textContent = "", 4000);
+}
+
+async function guarded(fn) {
+  try { await fn(); }
+  catch (err) {
+    console.error(err);
+    await message("That did not work", `<p>${esc(err && err.message || err)}</p><p class="muted">If the shared folder was disconnected, reload the page and press Continue.</p>`, ["OK"]);
+  }
+}
+
+function message(title, html, buttons) {
+  const d = $("#dlgMsg");
+  $("#msgTitle").textContent = title;
+  $("#msgBody").innerHTML = html;
+  $("#msgActions").innerHTML = buttons.map((b, n) => `<button value="${n}" class="${n === buttons.length - 1 ? "primary" : ""}">${esc(b)}</button>`).join("");
+  return new Promise(res => { d.onclose = () => res(Number(d.returnValue)); d.returnValue = "0"; d.showModal(); });
+}
+
+async function mark(code) {
+  const nums = [...S.selected];
+  if (!nums.length) return;
+  const note = $("#note").value.trim().replace(/\r\n/g, "\n");
+  for (const n of nums) await append({ type: "result", check: n, status: code, note: note || null });
+  $("#note").value = "";
+  S.detailSig = null;
+  await reload(true);
+  renderAll();
+  flash(`Saved: ${nums.length === 1 ? "check " + nums[0] : nums.length + " checks"} — ${resultName(code)}`);
+
+  if ((code === "fault" || code === "partly") && nums.length === 1) {
+    const c = S.book.byNumber.get(nums[0]);
+    const yes = await message("Check " + c.number, "<p>Log this on the Faults tab as well?</p><p class=\"muted\">That is what Claude fixes from — give it a title and, if you can, a screenshot.</p>", ["No", "Yes, log it"]);
+    if (yes === 1) await itemDialog("fault", null, { check: c.number, title: `Check ${c.number}: ${c.short}`, details: note });
+  }
+}
+
+let pendingPics = [];
+
+function itemDialog(kind, existing, prefill = {}) {
+  const K = KINDS[kind], d = $("#dlgItem");
+  $("#itemTitle").textContent = existing ? `Edit ${existing.code}` : K.heading;
+  $("#fLevelLabel").textContent = K.levelLabel;
+  $("#fDetailsLabel").textContent = K.detailsLabel;
+  $("#fDetails").placeholder = K.placeholder;
+  $("#fLevel").innerHTML = K.levels.map(l => `<option>${esc(l)}</option>`).join("");
+  const areas = [...new Set([...AREAS, ...[...S.board.items.values()].map(i => i.area).filter(Boolean)])];
+  $("#areas").innerHTML = areas.map(a => `<option value="${esc(a)}">`).join("");
+  $("#fTitle").value = existing ? existing.title : prefill.title ?? "";
+  $("#fArea").value = existing ? existing.area : "";
+  $("#fLevel").value = existing ? existing.level : K.levels[1];
+  $("#fCheck").value = existing ? existing.check : prefill.check ?? "";
+  $("#fDetails").value = existing ? existing.details : prefill.details ?? "";
+  pendingPics = [];
+  drawPics(existing ? existing.pictures : []);
+
+  return new Promise(res => {
+    d.returnValue = "";
+    d.onclose = () => res();
+    d.querySelector("form").onsubmit = e => {
+      if (e.submitter?.value !== "ok") return;
+      const title = $("#fTitle").value.trim(), check = $("#fCheck").value.trim();
+      if (title.length < 3) { e.preventDefault(); alert("Give it a title — a few words saying what is wrong or wanted."); return; }
+      if (check && !S.book.byNumber.has(check)) { e.preventDefault(); alert(`There is no check ${check} on the checklist. Leave the box empty if it is not about one check.`); return; }
+      e.preventDefault();
+      d.close("ok");
+      guarded(() => saveItem(kind, existing, {
+        title, check, area: $("#fArea").value.trim(), level: $("#fLevel").value,
+        details: $("#fDetails").value.trim().replace(/\r\n/g, "\n"),
+      }));
+    };
+    d.showModal();
+  });
+}
+
+function drawPics(existing) {
+  const box = $("#fPics");
+  box.innerHTML = "";
+  for (const n of existing) {
+    const s = document.createElement("span");
+    s.className = "p muted"; s.textContent = n + " (attached)";
+    box.appendChild(s);
+  }
+  pendingPics.forEach((p, idx) => {
+    const s = document.createElement("span");
+    s.className = "p";
+    const img = document.createElement("img");
+    img.src = p.url;
+    const x = document.createElement("button");
+    x.type = "button"; x.textContent = "Remove";
+    x.onclick = () => { pendingPics.splice(idx, 1); drawPics(existing); };
+    s.append(img, x);
+    box.appendChild(s);
+  });
+  drawPics.existing = existing;
+}
+
+function addPicture(blob, ext) {
+  pendingPics.push({ blob, ext, url: URL.createObjectURL(blob) });
+  drawPics(drawPics.existing || []);
+}
+
+async function savePictures(itemId) {
+  const names = [];
+  const d = new Date(), stamp = `${ymd(d).replace(/-/g, "")}-${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}`;
+  let n = 1;
+  for (const p of pendingPics) {
+    const name = `${itemId.slice(0, 8)}-${stamp}-${n++}${p.ext}`;
+    await Folder.write("data/pictures/" + name, p.blob);
+    names.push(name);
+  }
+  return names;
+}
+
+async function saveItem(kind, existing, v) {
+  if (existing) {
+    const pics = await savePictures(existing.id);
+    await append({ type: "edit", target: existing.id, title: v.title, details: v.details, area: v.area, level: v.level, check: v.check,
+      pictures: pics.length ? pics : null });
+    S.itemSig[kind] = null;
+    await reload(true);
+    renderAll();
+    flash(`Saved ${existing.code}`);
+    return;
+  }
+  await reload(true);   // the freshest possible view of the numbers already taken
+  const id = newId();
+  const pics = await savePictures(id);
+  await append({ id, type: "item", kind, seq: S.board.nextSeq(kind), title: v.title, details: v.details, area: v.area, level: v.level,
+    check: v.check, pictures: pics.length ? pics : null });
+  await reload(true);
+  S.itemFilter[kind] = "All";
+  S.itemQ[kind] = "";
+  const pane = $("#itemsPane-" + kind);
+  if (pane.dataset.built) pane.querySelector('[data-act="q"]').value = "";
+  S.itemSel[kind] = id;
+  S.itemSig[kind] = null;
+  showTab(kind);
+  renderAll();
+  flash(`Saved ${S.board.items.get(id)?.code ?? ""}`);
+}
+
+function updateDialog(item) {
+  if (!item) return;
+  const d = $("#dlgUpdate");
+  $("#updTitle").textContent = `Update ${item.code} — ${item.title}`;
+  const statuses = KINDS[item.kind].statuses.includes(item.status) ? KINDS[item.kind].statuses : [...KINDS[item.kind].statuses, item.status];
+  $("#uStatus").innerHTML = statuses.map(s => `<option>${esc(s)}</option>`).join("");
+  $("#uStatus").value = item.status;
+  $("#uComment").value = "";
+  d.querySelector("form").onsubmit = e => {
+    if (e.submitter?.value !== "ok") return;
+    e.preventDefault();
+    const status = $("#uStatus").value, comment = $("#uComment").value.trim().replace(/\r\n/g, "\n");
+    if (status === item.status && !comment) { alert("Change the status or write a comment."); return; }
+    d.close("ok");
+    guarded(async () => {
+      await append({ type: "update", target: item.id, status: status !== item.status ? status : null, comment: comment || null });
+      S.itemSig[item.kind] = null;
+      await reload(true);
+      renderAll();
+      flash(`Saved ${item.code}`);
+    });
+  };
+  d.showModal();
+}
+
+function askName(current) {
+  const d = $("#dlgName");
+  $("#nameInput").value = current || "";
+  return new Promise(res => {
+    d.querySelector("form").onsubmit = e => {
+      if (e.submitter?.value !== "ok") return;
+      const v = $("#nameInput").value.trim();
+      if (v.length < 2) { e.preventDefault(); alert("Type your name first."); }
+    };
+    d.onclose = () => res(d.returnValue === "ok" ? $("#nameInput").value.trim() : null);
+    d.returnValue = "";
+    d.showModal();
+  });
+}
+
+function showTab(tab) {
+  S.tab = tab;
+  for (const b of document.querySelectorAll("nav.tabs button")) b.classList.toggle("on", b.dataset.tab === tab);
+  $("#checksPane").classList.toggle("hidden", tab !== "checks");
+  for (const k of ["fault", "upgrade"]) $("#itemsPane-" + k).classList.toggle("hidden", tab !== k);
+}
+
+// ================================================================================================
+// The report — the same content as Exporter.cs, so it does not matter which one wrote it
+// ================================================================================================
+
+function buildReport(from, to, label, base) {
+  const b = S.board, book = S.book;
+  const In = e => from == null || (e._t >= from && e._t < to);
+  const quote = s => s.split("\n").map(l => "  > " + l.replace(/\r$/, "")).join("\n");
+  const md = [], L = (s = "") => md.push(s);
+  const all = [...b.checks.values()];
+  const tally = list => RESULTS.map(r => `${r.name} ${list.filter(c => c.status === r.code).length}`).join(", ");
+
+  L(`# Internal testing report — ${label}`); L();
+  L(`Exported ${ymdhm(Date.now())} by ${S.me} in a browser (${machine()}), from \`${Folder.root.name}\`.`);
+  L(`Checklist: *${book.title}* — checks.md last changed ${ymdhm(book.modified)}.`); L();
+
+  const marks = all.flatMap(c => c.history).filter(In);
+  const markedChecks = all.filter(c => c.history.some(In));
+  const faults = b.itemsOf("fault"), upgrades = b.itemsOf("upgrade");
+  const touched = i => In(i.created) || i.changes.some(In);
+
+  L("## Summary"); L();
+  L(`- **All checks (${all.length}):** ${tally(all)}.`);
+  if (from != null) {
+    const by = new Map();
+    for (const m of marks) by.set(m.by, (by.get(m.by) || 0) + 1);
+    L(`- **Marked in this report:** ${markedChecks.length} checks, ${marks.length} marks` +
+      (marks.length ? ` — by ${[...by].map(([k, v]) => `${k} (${v})`).join(", ")}` : "") + ".");
+  }
+  for (const [name, list] of [["Faults", faults], ["Upgrades", upgrades]])
+    L(`- **${name}:** ${list.filter(i => In(i.created)).length} new, ${list.filter(i => !In(i.created) && i.changes.some(In)).length} changed; ` +
+      `${list.filter(i => isOpen(i.kind, i.status)).length} open in all.`);
+  L();
+
+  L(from == null ? "## Every check marked so far" : "## Checks marked"); L();
+  if (!markedChecks.length) { L("None."); L(); }
+  for (const sec of book.sections) {
+    const here = sec.checks.map(c => b.checks.get(c.number)).filter(s => s.history.some(In));
+    if (!here.length) continue;
+    L(`### ${sec.title}`); L();
+    for (const s of here) {
+      const inRange = s.history.filter(In), last = inRange[inRange.length - 1];
+      L(`- **${s.check.number}. ${s.check.short}** — **${resultName(last.status)}** — ${last.by}, ${fmtWhen(last._t)}`);
+      if (last.note && last.note.trim()) L(quote(last.note));
+      for (const e of inRange.slice(0, -1).reverse()) {
+        L(`  - earlier: ${resultName(e.status)} — ${e.by}, ${fmtWhen(e._t)}`);
+        if (e.note && e.note.trim()) L("  " + quote(e.note));
+      }
+      if (s.latest !== last) L(`  - *since then: ${resultName(s.status)} — ${s.by}, ${fmtWhen(s.latest._t)}*`);
+      const logged = b.itemsForCheck(s.check.number).map(i => `${i.code} (${i.status})`);
+      if (logged.length) L(`  - logged against it: ${logged.join(", ")}`);
+    }
+    L();
+  }
+
+  const picDir = base + " pictures", pictures = [];
+  for (const [heading, list, kind] of [["Faults", faults, "fault"], ["Upgrades", upgrades, "upgrade"]]) {
+    const t = list.filter(touched).sort((a, c) => (a.created.seq ?? 0) - (c.created.seq ?? 0) || a.created._t - c.created._t);
+    L(from == null ? `## ${heading} — all of them` : `## ${heading} — new or changed`); L();
+    if (!t.length) { L("None."); L(); continue; }
+    for (const i of t) {
+      L(`### ${i.code} — ${i.title}`); L();
+      L(`- **Status:** ${i.status} · **${KINDS[kind].levelLabel}:** ${i.level} · **Area:** ${i.area || "—"}` + (i.check ? ` · **Check:** ${i.check}` : ""));
+      L(`- Raised by ${i.created.by} on ${i.created.machine}, ${fmtWhen(i.created._t)}` + (In(i.created) ? "" : " (before this report)") + ` · id \`${i.id}\``);
+      L();
+      if (i.details) { for (const l of i.details.split("\n")) L("> " + l); L(); }
+      for (const p of i.pictures) { pictures.push({ code: i.code, name: p }); L(`![${i.code}](<${picDir}/${p}>)`); }
+      if (i.pictures.length) L();
+      if (i.changes.length) {
+        L("History:");
+        for (const e of i.changes) {
+          const what = e.type === "edit" ? "edited it" : e.status ? "status → " + e.status : "commented";
+          L(`- ${fmtWhen(e._t)}, ${e.by}: ${what}` + (In(e) ? "" : " *(before this report)*"));
+          if (e.comment && e.comment.trim()) L(quote(e.comment));
+        }
+        L();
+      }
+    }
+  }
+
+  L("## Still open, across all days"); L();
+  for (const [title, list] of [["Faults", faults], ["Upgrades", upgrades]]) {
+    const open = list.filter(i => isOpen(i.kind, i.status)).sort((a, c) => (a.created.seq ?? 0) - (c.created.seq ?? 0));
+    L(`**${title}:** ` + (open.length ? "" : "none."));
+    for (const i of open)
+      L(`- ${i.code} — ${i.title} — ${i.level}, ${i.status}` + (i.check ? `, check ${i.check}` : "") + ` (raised ${fmtDay(i.created._t)} by ${i.created.by})`);
+    L();
+  }
+  const bad = all.filter(c => ["fault", "partly", "blocked"].includes(c.status)).sort((a, c) => Number(a.check.number) - Number(c.check.number));
+  L("**Checks whose latest result is Fault, Partly works or Can't test yet:** " + (bad.length ? "" : "none."));
+  for (const s of bad) {
+    L(`- ${s.check.number}. ${s.check.short} — ${resultName(s.status)}, ${s.by} ${fmtWhen(s.latest._t)}`);
+    if (s.latest.note && s.latest.note.trim()) L(quote(s.latest.note));
+  }
+  L();
+  L("**Not tested yet, by section:**"); L();
+  for (const sec of book.sections) {
+    const left = sec.checks.filter(c => b.checks.get(c.number).status === "untested").map(c => c.number);
+    if (left.length) L(`- ${sec.key}: ${left.join(", ")}`);
+  }
+  L();
+
+  return {
+    text: md.join("\n") + "\n", pictures, picDir,
+    summary: `${markedChecks.length} checks marked, ${faults.filter(touched).length} faults and ${upgrades.filter(touched).length} upgrades`,
+  };
+}
+
+async function writeReport(from, to, label) {
+  const base = `Test report ${label}`;
+  const r = buildReport(from, to, label, base);
+  await Folder.write(`exports/${base}.md`, new Blob([r.text], { type: "text/markdown" }));
+  let copied = 0;
+  for (const p of r.pictures) {
+    try { await Folder.write(`exports/${r.picDir}/${p.name}`, await Folder.file("data/pictures/" + p.name)); copied++; } catch { }
+  }
+  return { ...r, base, copied };
+}
+
+function exportDialog() {
+  const d = $("#dlgExport");
+  $("#xRange").value = "0";
+  $("#xDay").value = ymd(new Date());
+  $("#xDay").disabled = true;
+  $("#xRange").onchange = () => $("#xDay").disabled = $("#xRange").value !== "2";
+  d.querySelector("form").onsubmit = e => {
+    if (e.submitter?.value !== "ok") return;
+    e.preventDefault();
+    const today = startOfToday(), day = 864e5;
+    let from, to, label;
+    switch ($("#xRange").value) {
+      case "0": from = today; to = today + day; label = ymd(new Date(today)); break;
+      case "1": from = today - day; to = today; label = ymd(new Date(today - day)); break;
+      case "2": {
+        const [y, m, dd] = ($("#xDay").value || ymd(new Date())).split("-").map(Number);
+        from = new Date(y, m - 1, dd).getTime(); to = from + day; label = ymd(new Date(from)); break;
+      }
+      default: from = to = null; label = "everything to " + ymd(new Date(today));
+    }
+    d.close("ok");
+    guarded(async () => {
+      await reload(true);
+      renderAll();
+      const r = await writeReport(from, to, label);
+      const url = URL.createObjectURL(new Blob([r.text], { type: "text/markdown" }));
+      await message("Report exported",
+        `<p>Saved in the Test Checklist folder:<br><b>exports\\${esc(r.base)}.md</b></p>` +
+        `<p class="muted">${esc(r.summary)}${r.copied ? `, ${r.copied} pictures copied beside it` : ""}.</p>` +
+        `<p><a href="${url}" download="${esc(r.base)}.md">Download a copy as well</a></p>`, ["OK"]);
+    });
+  };
+  d.showModal();
+}
+
+// ================================================================================================
+// Wiring
+// ================================================================================================
+
+function wire() {
+  $("#resultButtons").innerHTML = [...RESULTS.slice(1), RESULTS[0]].map(r =>
+    `<button class="b-${r.code}" data-code="${r.code}" disabled>${r.code === "untested" ? "Clear (not tested)" : esc(r.name)}</button>`).join("");
+  $("#resultButtons").onclick = e => { const b = e.target.closest("button[data-code]"); if (b) guarded(() => mark(b.dataset.code)); };
+
+  $("#sections").onclick = e => {
+    const b = e.target.closest("button[data-key]");
+    if (!b) return;
+    S.section = b.dataset.key || null;
+    $("#search").value = "";
+    S.selected = [];
+    renderSections(); renderList(); renderDetail();
+  };
+  $("#show").onchange = () => { renderList(); renderDetail(); };
+  $("#search").oninput = () => { renderList(); renderDetail(); };
+
+  const list = $("#checkList");
+  list.onclick = e => {
+    const tr = e.target.closest("tr[data-k]");
+    if (!tr) return;
+    const n = tr.dataset.k;
+    if (e.shiftKey && S.anchor && S.visible.includes(S.anchor)) {
+      const [a, z] = [S.visible.indexOf(S.anchor), S.visible.indexOf(n)].sort((x, y) => x - y);
+      S.selected = S.visible.slice(a, z + 1);
+    } else if (e.ctrlKey || e.metaKey) {
+      S.selected = S.selected.includes(n) ? S.selected.filter(x => x !== n) : [...S.selected, n];
+      S.anchor = n;
+    } else { S.selected = [n]; S.anchor = n; }
+    renderList(); renderDetail();
+  };
+  list.onkeydown = e => {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    e.preventDefault();
+    const cur = S.selected.length ? S.visible.indexOf(S.selected[S.selected.length - 1]) : -1;
+    const next = Math.max(0, Math.min(S.visible.length - 1, cur + (e.key === "ArrowDown" ? 1 : -1)));
+    if (!S.visible.length) return;
+    S.selected = [S.visible[next]]; S.anchor = S.visible[next];
+    renderList(); renderDetail();
+    list.querySelector("tr.sel")?.scrollIntoView({ block: "nearest" });
+  };
+
+  for (const b of document.querySelectorAll("nav.tabs button")) b.onclick = () => showTab(b.dataset.tab);
+  $("#refresh").onclick = () => guarded(async () => { await reload(true); S.detailSig = null; S.itemSig = { fault: null, upgrade: null }; renderAll(); flash("Up to date"); });
+  $("#exportBtn").onclick = exportDialog;
+  $("#changeMe").onclick = async e => {
+    e.preventDefault();
+    const n = await askName(S.me);
+    if (n) { S.me = n; lsSet("tc.me", n); renderTop(); }
+  };
+
+  const dlg = $("#dlgItem");
+  dlg.addEventListener("paste", e => {
+    const items = [...(e.clipboardData?.items || [])];
+    const img = items.find(i => i.kind === "file" && i.type.startsWith("image/"));
+    const hasText = items.some(i => i.kind === "string" && i.type === "text/plain");
+    if (img && !hasText) { e.preventDefault(); addPicture(img.getAsFile(), ".png"); }
+  });
+  $("#fPaste").onclick = async () => {
+    try {
+      for (const it of await navigator.clipboard.read()) {
+        const t = it.types.find(x => x.startsWith("image/"));
+        if (t) { addPicture(await it.getType(t), ".png"); return; }
+      }
+      alert("There is no picture on the clipboard. Take one with Windows+Shift+S, then press Paste screenshot.");
+    } catch {
+      alert("Press Ctrl+V in this box to paste the screenshot.");
+    }
+  };
+  $("#fFile").onchange = e => {
+    for (const f of e.target.files) {
+      const m = /\.[A-Za-z0-9]+$/.exec(f.name);
+      addPicture(f, m ? m[0].toLowerCase() : ".png");
+    }
+    e.target.value = "";
+  };
+
+  setInterval(() => { if (Folder.root && !document.hidden) reload(false).then(ch => { if (ch) renderAll(); }).catch(() => { }); }, 15000);
+  window.addEventListener("focus", () => { if (Folder.root) reload(false).then(ch => { if (ch) renderAll(); }).catch(() => { }); });
+}
+
+// ================================================================================================
+// Getting to the folder — picked once, remembered, one click after that
+// ================================================================================================
+
+const IDB = {
+  open() {
+    return new Promise((res, rej) => {
+      const r = indexedDB.open("test-checklist", 1);
+      r.onupgradeneeded = () => r.result.createObjectStore("kv");
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    });
+  },
+  async get(k) { const db = await this.open(); return new Promise(res => { const r = db.transaction("kv").objectStore("kv").get(k); r.onsuccess = () => res(r.result); r.onerror = () => res(null); }); },
+  async set(k, v) { const db = await this.open(); return new Promise(res => { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").put(v, k); t.oncomplete = () => res(); t.onerror = () => res(); }); },
+};
+
+function sharePath() {
+  if (location.protocol !== "file:") return "";
+  let p = decodeURIComponent(location.pathname).replace(/\//g, "\\");
+  p = p.slice(0, p.lastIndexOf("\\"));
+  return location.host ? `\\\\${location.host}${p}` : p.replace(/^\\/, "");
+}
+
+function connectScreen(html) {
+  $("#connect").classList.remove("hidden");
+  $("#connectBody").innerHTML = html;
+}
+
+async function useFolder(handle) {
+  // The person may have picked the folder above ours.
+  if (!(await hasChecks(handle))) {
+    let inner = null;
+    try { inner = await handle.getDirectoryHandle("Test Checklist"); } catch { }
+    if (inner && await hasChecks(inner)) handle = inner;
+    else return false;
+  }
+  Folder.root = handle;
+  return true;
+}
+
+async function hasChecks(h) { try { await h.getFileHandle("checks.md"); return true; } catch { return false; } }
+
+async function connect() {
+  const path = sharePath();
+  const pathHtml = path ? `<div class="path"><code id="pathText">${esc(path)}</code><button id="copyPath" type="button">Copy</button></div>` : "";
+
+  if (!("showDirectoryPicker" in window)) {
+    connectScreen(`<p class="err"><b>This browser cannot save into the shared folder.</b></p>
+      <p>Open this page in <b>Google Chrome</b> instead: right-click <code>TestChecklist.html</code> →
+      <b>Open with</b> → <b>Google Chrome</b>. (Firefox does not let a web page save into a folder — only into Downloads.)</p>
+      ${pathHtml}`);
+    $("#copyPath")?.addEventListener("click", () => navigator.clipboard.writeText(path).then(() => $("#copyPath").textContent = "Copied"));
+    return;
+  }
+
+  const saved = await IDB.get("root").catch(() => null);
+  const pick = async () => {
+    let h;
+    try { h = await window.showDirectoryPicker({ id: "test-checklist", mode: "readwrite" }); }
+    catch (e) { if (e.name !== "AbortError") showPicker(`<p class="err">${esc(e.message)}</p>`); return; }
+    if (!(await useFolder(h))) { showPicker(`<p class="err">That folder has no <code>checks.md</code> in it. Choose the <b>Test Checklist</b> folder itself.</p>`); return; }
+    await IDB.set("root", Folder.root).catch(() => { });
+    start();
+  };
+  const showPicker = (extra = "") => {
+    connectScreen(`<p>This page keeps its results in the shared <b>Test Checklist</b> folder. Your browser asks you to point it at that folder
+      the first time — after that it remembers.</p>
+      <p>Press the button, then in the window that opens paste this into the address bar at the top and choose <b>Select folder</b>:</p>
+      ${pathHtml}${extra}
+      <p><button class="primary" id="pickBtn" type="button">Choose the Test Checklist folder</button></p>
+      <p class="muted">When the browser asks, allow it to <b>edit files</b> — that is how your results are saved.</p>`);
+    $("#pickBtn").onclick = pick;
+    $("#copyPath")?.addEventListener("click", () => navigator.clipboard.writeText(path).then(() => $("#copyPath").textContent = "Copied"));
+  };
+
+  if (saved) {
+    try {
+      if (await saved.queryPermission({ mode: "readwrite" }) === "granted" && await useFolder(saved)) { start(); return; }
+    } catch { }
+    connectScreen(`<p>Carry on where you left off, in <b>${esc(saved.name)}</b>.</p>
+      <p><button class="primary" id="goBtn" type="button">Continue</button> &nbsp; <a href="#" id="otherBtn">choose a different folder</a></p>
+      <p class="muted">Your browser may ask once more to let this page edit files there — allow it.</p>`);
+    $("#goBtn").onclick = async () => {
+      try {
+        if (await saved.requestPermission({ mode: "readwrite" }) === "granted" && await useFolder(saved)) { start(); return; }
+      } catch { }
+      showPicker(`<p class="err">That did not work — choose the folder again.</p>`);
+    };
+    $("#otherBtn").onclick = e => { e.preventDefault(); showPicker(); };
+    return;
+  }
+  showPicker();
+}
+
+async function start() {
+  if (!S.me) {
+    const n = await askName("");
+    if (!n) { connectScreen(`<p>A name is needed so the report says who found what.</p><p><button class="primary" type="button" onclick="start()">Try again</button></p>`); return; }
+    S.me = n; lsSet("tc.me", n);
+  }
+  await guarded(async () => {
+    await reload(true);
+    $("#connect").classList.add("hidden");
+    renderAll();
+  });
+  if (TEST) await runTest();
+}
+
+// ================================================================================================
+// Test hook — only when Test-WebChecklist.ps1 has put window.CHECKLIST_TEST into a copy of this
+// page. The folder is then a scratch one in the browser's own storage, never the share.
+// ================================================================================================
+
+async function seedTestFolder() {
+  const root = await navigator.storage.getDirectory();
+  try { await root.removeEntry("tc-test", { recursive: true }); } catch { }
+  const d = await root.getDirectoryHandle("tc-test", { create: true });
+  Folder.root = d;
+  await Folder.write("checks.md", TEST.checks);
+  for (const [name, text] of Object.entries(TEST.files || {})) await Folder.write("data/" + name, text);
+  for (const [name, b64] of Object.entries(TEST.pictures || {}))
+    await Folder.write("data/pictures/" + name, new Blob([Uint8Array.from(atob(b64), c => c.charCodeAt(0))], { type: "image/png" }));
+}
+
+function parsedDump() {
+  const out = [];
+  for (const s of S.book.sections) {
+    out.push(`[${s.key}] ${s.title}  intro=${s.intro.length} lines, checks=${s.checks.length}`);
+    for (const c of s.checks)
+      out.push(`   ${c.number.padStart(4)}  ${c.short}` + (c.doneInDoc ? `   [DONE ${c.doneInDoc}]` : "") +
+        (c.replacedBy ? `   [REPLACED BY ${c.replacedBy}]` : "") + `   (${c.lines.length} lines)`);
+  }
+  return out.join("\n");
+}
+
+async function runTest() {
+  const out = document.createElement("pre");
+  out.id = "selftest";
+  const results = [];
+  const ok = (name, cond, detail = "") => results.push(`${cond ? "PASS" : "FAIL"}  ${name}${detail ? "  — " + detail : ""}`);
+  try {
+    if (TEST.mode === "demo") {
+      if (TEST.select?.section) { S.section = TEST.select.section; }
+      if (TEST.select?.check) { S.selected = [TEST.select.check]; S.anchor = TEST.select.check; }
+      if (TEST.select?.item) S.itemSel[TEST.select.tab] = [...S.board.items.values()].find(i => i.code === TEST.select.item)?.id ?? null;
+      S.detailSig = null;
+      renderAll();
+      if (TEST.select?.tab) showTab(TEST.select.tab);
+      if (TEST.select?.dialog === "item") itemDialog("fault", null, { check: "42", title: "Check 42: example", details: "What I saw" });
+      if (TEST.select?.dialog === "export") exportDialog();
+      document.title = "DEMO READY";
+      return;
+    }
+
+    const parsed = document.createElement("pre");
+    parsed.id = "parsed";
+    parsed.textContent = parsedDump();
+    document.body.appendChild(parsed);
+
+    // Lines the exe wrote: seven decimal places, a half-written last line.
+    const exeLine = S.entries.find(e => e.id === "exe-7digits");
+    ok("reads the exe's seven-decimal times", exeLine && exeLine._t === Date.parse("2026-09-29T13:50:45.688Z"), exeLine ? String(exeLine._t) : "missing");
+    ok("skips a half-written line", !S.entries.some(e => e.id === "half"));
+
+    const before = S.entries.length;
+    await append({ type: "result", check: "5", status: "works", note: "from the browser" });
+    await append({ type: "result", check: "6", status: "fault", note: "line one\nline two" });
+    await reload(true);
+    ok("a save is read back", S.board.checks.get("5").status === "works" && S.board.checks.get("5").by === S.me);
+    ok("appending keeps every earlier line", S.entries.length === before + 2, `${before} → ${S.entries.length}`);
+    const mine = await (await Folder.file(myFile())).text();
+    ok("my log is one JSON object per line", mine.trim().split("\n").every(l => { try { return JSON.parse(l).by === S.me; } catch { return false; } }));
+
+    pendingPics = [{ blob: new Blob([Uint8Array.from(atob(TEST.png), c => c.charCodeAt(0))], { type: "image/png" }), ext: ".png" }];
+    const seqBefore = S.board.nextSeq("fault");
+    await saveItem("fault", null, { title: "Web fault with a picture", details: "Seen in the browser\nsecond line", area: "Portal", level: "Minor", check: "6" });
+    const made = [...S.board.items.values()].find(i => i.title === "Web fault with a picture");
+    ok("a fault is logged with the next number", made && made.code === "F" + seqBefore, made?.code);
+    ok("its picture is on the share", made && made.pictures.length === 1 && await Folder.exists("data/pictures/" + made.pictures[0]));
+
+    await append({ type: "update", target: made.id, status: "Closed", comment: "closed from the browser" });
+    await reload(true);
+    ok("a status change sticks", S.board.items.get(made.id).status === "Closed");
+
+    const today = startOfToday();
+    const r = await writeReport(today, today + 864e5, ymd(new Date(today)));
+    const text = await (await Folder.file(`exports/${r.base}.md`)).text();
+    ok("the report is written to exports", text.startsWith("# Internal testing report"));
+    ok("the report has today's marks", text.includes("**5. ") && text.includes("from the browser"));
+    ok("the report has the new fault", text.includes(made.code + " — Web fault with a picture") && text.includes(made.id));
+    ok("the report's picture was copied", r.copied === 1 && await Folder.exists(`exports/${r.picDir}/${made.pictures[0]}`));
+
+    const written = document.createElement("pre");
+    written.id = "written";
+    written.textContent = mine + (await (await Folder.file(myFile())).text()).slice(mine.length);
+    document.body.appendChild(written);
+    const rep = document.createElement("pre");
+    rep.id = "report";
+    rep.textContent = text;
+    document.body.appendChild(rep);
+    const pic = document.createElement("pre");
+    pic.id = "picname";
+    pic.textContent = made.pictures[0];
+    document.body.appendChild(pic);
+  } catch (e) {
+    results.push("FAIL  threw: " + (e && e.stack || e));
+  }
+  out.textContent = results.join("\n");
+  document.body.appendChild(out);
+  const pass = results.filter(x => x.startsWith("PASS")).length;
+  document.title = `SELFTEST ${pass}/${results.length}`;
+}
+
+// ================================================================================================
+
+(async () => {
+  S.me = lsGet("tc.me") || "";
+  S.device = lsGet("tc.device") || "";
+  if (!S.device) { S.device = newId().slice(0, 4); lsSet("tc.device", S.device); }
+  wire();
+  if (TEST) {
+    S.me = TEST.me || "WebTest";
+    S.device = TEST.device || "test";
+    await seedTestFolder();
+    await start();
+    return;
+  }
+  connect();
+})();
+</script>
+</body>
+</html>

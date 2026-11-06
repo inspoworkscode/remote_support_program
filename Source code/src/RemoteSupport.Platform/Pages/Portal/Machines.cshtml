@@ -1,0 +1,97 @@
+@page "/portal/machines"
+@model RemoteSupport.Platform.Pages.Portal.MachinesModel
+@{ ViewData["Title"] = "Your computers"; ViewData["Section"] = "portal"; var t = Model.Tenant; var max = RemoteSupport.Shared.FreePlan.MachinesFor(t.Plan, t.BasicMachines); var most = RemoteSupport.Shared.FreePlan.MostMachines; }
+<section class="portal"><div class="wrap" style="max-width:860px">
+    <h1 id="machinesHeading">Your computers</h1>
+    @if (RemoteSupport.Shared.FreePlan.IsFree(t.Plan))
+    {
+        <p class="muted">@RemoteSupport.Shared.FreePlan.FreeFullName reaches @max of your own computers, unattended, with its password. Connect to it from your console — or <a href="/portal/upgrade">upgrade</a> for more computers.</p>
+    }
+    else
+    {
+        <p class="muted">Your Basic version reaches @max of your own computers — @RemoteSupport.Shared.FreePlan.MaxMachines are in its price, and you can <a href="/portal/billing#basicMachines">pay for more</a>, up to @most. Each is reached unattended, with its own password, or attended, the person there asked to allow you in. Connect to them from your console.</p>
+    }
+    @if (!string.IsNullOrEmpty(Model.Message)) { <div class="alert alert-ok" id="machinesMessage">@Model.Message</div> }
+    @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad" id="machinesError">@Model.Error</div> }
+
+    <div class="stats" style="grid-template-columns:repeat(3,1fr)">
+        <div class="stat"><div class="n" id="machineCount">@Model.Machines.Count of @max</div><div class="l">Computers</div></div>
+        <div class="stat"><div class="n">@Model.Machines.Count(m => m.Online)</div><div class="l">Online now</div></div>
+        <div class="stat"><div class="n" id="removalsLeft">@Model.RemovalsLeft</div><div class="l">Removals left this month</div></div>
+    </div>
+
+    @if (Model.Machines.Count == 0)
+    {
+        <div class="card">No computers yet. Add one below.</div>
+    }
+    else
+    {
+        <div class="card">
+            <table>
+                <thead><tr><th></th><th>Computer</th><th>Windows</th><th>Last seen</th><th>Password</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var m in Model.Machines)
+                {
+                    <tr class="machine-row" data-device="@m.DeviceId">
+                        <td><span class="pill @(m.Online ? "pill-ok" : "pill-muted")">@(m.Online ? "Online" : "Offline")</span></td>
+                        <td><strong>@m.Name</strong>
+                            @* Installed again and recognised by its hardware (2026-10-07): the owner says it is theirs first. *@
+                            @if (m.Unconfirmed)
+                            {
+                                <br><span class="pill pill-warn reinstall-unconfirmed" title="This computer was installed again. Confirm it is yours before connecting.">installed again — confirm it</span>
+                                <form method="post" asp-page-handler="ConfirmReinstall" class="inline" style="margin-top:4px"
+                                      onsubmit="return confirm('Confirm only if you installed this computer again yourself. If you did not, another computer may be pretending to be this one: leave it, and remove it.')">
+                                    <input type="hidden" name="deviceId" value="@m.DeviceId">
+                                    <button class="btn btn-sm" type="submit">It is mine</button>
+                                </form>
+                            }
+                        </td>
+                        <td class="muted">@m.Os</td>
+                        <td class="muted">@(m.Online ? "now" : m.LastSeenUtc.Local().ToString("d MMM yyyy HH:mm"))</td>
+                        <td>@(m.HasPassword ? "Set" : "Not set — reinstall it")</td>
+                        <td>
+                            @if (Model.RemovalsLeft > 0)
+                            {
+                                <form method="post" asp-page-handler="Remove" class="inline" onsubmit="return confirm('Remove @m.Name? It will no longer be reachable, and this uses one of this month\'s @RemoteSupport.Shared.FreePlan.RemovalsPerMonth removals.')">
+                                    <input type="hidden" name="deviceId" value="@m.DeviceId">
+                                    <button class="btn btn-sm" type="submit">Remove</button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+    @* Said whether or not any computers are listed: removing both leaves an empty list, and the limit still matters. *@
+    @if (Model.RemovalsLeft == 0)
+    {
+        <p class="muted" style="font-size:13px;margin-top:8px" id="noRemovals">This month's @RemoteSupport.Shared.FreePlan.RemovalsPerMonth removals are used. The next can be made on @Model.NextMonth.ToString("d MMMM").</p>
+    }
+    else if (Model.Machines.Count > 0)
+    {
+        <p class="muted" style="font-size:13px;margin-top:8px">Removing a computer frees its place for another. You can remove @RemoteSupport.Shared.FreePlan.RemovalsPerMonth a month.</p>
+    }
+
+    <div class="card" style="margin-top:20px" id="addComputer">
+        <h3>Add a computer</h3>
+        @if (Model.Machines.Count >= max)
+        {
+            @if (RemoteSupport.Shared.FreePlan.IsFree(t.Plan))
+            {
+                <p>You have @Model.Machines.Count, and @RemoteSupport.Shared.FreePlan.FreeTheName allows @max. Remove it to add another, or <a href="/portal/upgrade" id="upgradeLink">upgrade</a> for more.</p>
+            }
+            else
+            {
+            <p>You have @max computers, which is what the Basic version allows you now. @if (max < most) { <a href="/portal/billing#basicMachines" id="addMachineLink">Add a computer on Billing</a><text>, remove one to make room, or </text> } else { <text>Remove one to add another, or </text> }<a href="/portal/upgrade" id="upgradeLink">upgrade</a> for as many as you need.</p>
+            }
+        }
+        else
+        {
+            <p>On the computer itself, open this link, run what it downloads and choose the computer's password@(RemoteSupport.Shared.FreePlan.IsBasic(t.Plan) ? " — or leave it blank, and the person at it is asked to allow each connection" : ""):</p>
+            <div class="copy"><code id="addLink">@Model.PublicUrl/download/@t.Slug</code> <button class="btn btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('addLink').textContent)">Copy</button></div>
+        }
+        <p class="muted" style="font-size:13px;margin-top:12px">To change a computer's password, run the same download on it again. The console you connect from is on <a href="/portal/downloads">Downloads</a>.</p>
+    </div>
+</div></section>

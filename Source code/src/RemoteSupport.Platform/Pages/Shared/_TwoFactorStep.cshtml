@@ -1,0 +1,36 @@
+@model RemoteSupport.Platform.Services.WebSignIn
+@* The second step of signing in, for the portal's sign-in page and /tech/{slug} alike — see WebSignIn.
+   "saved" is after setting up: they are signed in already, and see their recovery codes once. *@
+@if (Model.Mode == "saved")
+{
+    <div class="alert alert-ok">Two-factor sign-in is set up.</div>
+    <p><strong>Save these recovery codes somewhere safe</strong> — a password manager, or printed and locked away.
+       If you lose your phone, each one lets you sign in once in place of a code. They will not be shown again.</p>
+    <pre id="rcodes" style="font-size:17px;line-height:1.7;padding:14px 18px;user-select:all">@string.Join("\n", Model.RecoveryCodes)</pre>
+    <p><button type="button" class="btn" onclick="navigator.clipboard.writeText(document.getElementById('rcodes').innerText);this.textContent='Copied'">Copy</button>
+       <a class="btn btn-accent" href="@Model.ContinueTo">I have saved them — continue</a></p>
+}
+else
+{
+    <form method="post" class="form">
+        <input type="hidden" name="Mode" value="@Model.Mode">
+        <input type="hidden" name="Pending" value="@Model.Pending">
+        @if (Model.Mode == "enrol")
+        {
+            <p><strong>Set up two-factor sign-in.</strong> Your account now needs a code from an authenticator app as well as your password.
+               Install <em>Microsoft Authenticator</em> or <em>Google Authenticator</em> on your phone, tap <em>Add account</em>, and scan:</p>
+            <p style="text-align:center"><img src="@Model.Qr" alt="QR code to scan with your authenticator app" width="220" height="220" style="background:#fff;padding:8px;border-radius:6px"></p>
+            <p class="muted" style="font-size:13px">Can't scan? Choose <em>enter a key</em> in the app and type: <code style="user-select:all">@RemoteSupport.Shared.Totp.Grouped(Model.Secret)</code></p>
+            <label>Then type the six-digit code the app shows</label>
+        }
+        else
+        {
+            if (Model.Notice.Length > 0) { <div class="alert alert-warn">@Model.Notice</div> }
+            <p class="muted">Enter the six-digit code from your authenticator app. This browser then asks only for your password for the next 7 days.</p>
+            <label>Code</label>
+        }
+        <input name="Code" inputmode="numeric" autocomplete="one-time-code" maxlength="16" required autofocus>
+        @if (Model.Mode == "code") { <p class="muted" style="font-size:13px;margin-top:6px">Lost your phone? Type one of your recovery codes instead.</p> }
+        <div class="actions"><button class="btn btn-accent btn-lg" type="submit">@(Model.Mode == "enrol" ? "Finish setting up" : "Sign in")</button></div>
+    </form>
+}

@@ -1,0 +1,226 @@
+@page "/portal"
+@using RemoteSupport.Platform.Data
+@using RemoteSupport.Platform.Services
+@model RemoteSupport.Platform.Pages.Portal.IndexModel
+@{
+    ViewData["Title"] = "Dashboard"; ViewData["Section"] = "portal";
+    var d = Model.D;
+}
+<section class="portal"><div class="wrap">
+    <h1>@Model.Tenant.CompanyName <span class="pill @Model.StatusPill">@Model.StatusText</span></h1>
+    <p class="muted">Good day, @Model.Me. @d.OpenTotal open @(d.OpenTotal == 1 ? "job" : "jobs"), @d.OpenedToday opened today, @d.ClosedToday closed today.</p>
+    @if (Model.Tenant.TrialExpired) { <div class="alert alert-bad">Your trial has ended and technicians can no longer sign in. <a href="/portal/billing">Activate your subscription</a> to continue.</div> }
+
+    <!-- ---------- the numbers that decide what you do next ---------- -->
+    <div class="stats">
+        <a class="stat" href="/portal/tickets?filter=open" style="text-decoration:none;color:inherit">
+            <div class="n">@d.OpenTotal</div>
+            <div class="l">Open jobs</div>
+            <div style="margin-top:8px">
+                <span class="pill pill-warn">@d.Open new</span>
+                <span class="pill pill-muted">@d.InProgress in progress</span>
+                @if (d.OnHold > 0) { <span class="pill pill-muted">@d.OnHold on hold</span> }
+            </div>
+        </a>
+        <a class="stat" href="/portal/tickets?filter=unassigned" style="text-decoration:none;color:inherit">
+            <div class="n">@d.Unassigned</div>
+            <div class="l">Unassigned</div>
+            <div style="margin-top:8px" class="muted">Nobody has picked these up.</div>
+        </a>
+        <a class="stat" href="/portal/tickets?filter=mine" style="text-decoration:none;color:inherit">
+            <div class="n">@d.Mine</div>
+            <div class="l">Assigned to me</div>
+            <div style="margin-top:8px" class="muted">@Model.Me</div>
+        </a>
+        <a class="stat" href="/portal/tickets?filter=urgent" style="text-decoration:none;color:inherit">
+            <div class="n">@(d.Urgent + d.High)</div>
+            <div class="l">Urgent or high priority</div>
+            <div style="margin-top:8px">
+                @if (d.Urgent > 0) { <span class="pill pill-bad">@d.Urgent urgent</span> }
+                @if (d.High > 0) { <span class="pill pill-warn">@d.High high</span> }
+                @if (d.Urgent + d.High == 0) { <span class="muted">Nothing pressing.</span> }
+            </div>
+        </a>
+    </div>
+
+    <!-- ---------- Latest activity (2026-10-26, HANDOVER §164): every update on every ticket, as it is posted ---------- -->
+    <a class="kb-item" href="/portal/activity" style="margin:-8px 0 14px">
+        <div class="kb-t">🕘 Latest activity <span class="pill @(Model.ActivityNew > 0 ? "pill-warn" : "pill-muted")" data-activity-count>@(Model.ActivityNew > 0 ? RemoteSupport.Shared.ActivityWords.Count(Model.ActivityNew) + " new" : "nothing new")</span></div>
+        <div class="kb-s">Every comment, stage change, customer reply and assignment on the tickets, newest first — all of them, or only yours.</div>
+    </a>
+
+    <!-- ---------- the knowledge base (3.8.5): "an option on all user's dashboards" ---------- -->
+    <a class="kb-item" href="/portal/kb" style="margin:-8px 0 28px">
+        <div class="kb-t">📘 Knowledge base <span class="pill pill-muted">@Model.KbCount</span></div>
+        <div class="kb-s">How things are done — in General, and for each client. Search it, write a new article, or edit one.</div>
+    </a>
+
+    <!-- ---------- appointments: the only hard commitments in the system ---------- -->
+    <div class="grid2">
+        <div class="card">
+            <h3>Today's call outs</h3>
+            @if (d.Today.Count == 0) { <p class="muted">Nothing booked for today.</p> }
+            else
+            {
+                <table>
+                    <tr><th>Time</th><th>Job</th><th>Where</th></tr>
+                    @foreach (var r in d.Today.OrderBy(x => x.AppointmentUtc))
+                    {
+                        <tr>
+                            <td><strong>@r.AppointmentUtc!.Value.Local().ToString("HH:mm")</strong></td>
+                            <td><a href="@(PortalAddresses.Ticket(r.Number))">#@r.Number</a> @r.Subject<br><span class="muted" style="font-size:12px">@r.ClientName @if (!string.IsNullOrWhiteSpace(r.AssignedTo)) { <text>· @r.AssignedTo</text> }</span></td>
+                            <td class="muted" style="font-size:12px">@(string.IsNullOrWhiteSpace(r.SiteAddress) ? "—" : r.SiteAddress)</td>
+                        </tr>
+                    }
+                </table>
+            }
+            @if (d.Week.Count > 0)
+            {
+                <h3 style="margin-top:22px">Next seven days</h3>
+                <table>
+                    <tr><th>When</th><th>Job</th></tr>
+                    @foreach (var r in d.Week)
+                    {
+                        <tr>
+                            <td><strong>@RemoteSupport.Platform.Pages.Portal.IndexModel.Local(r.AppointmentUtc!.Value)</strong></td>
+                            <td><a href="@(PortalAddresses.Ticket(r.Number))">#@r.Number</a> @r.Subject<br><span class="muted" style="font-size:12px">@r.ClientName</span></td>
+                        </tr>
+                    }
+                </table>
+            }
+        </div>
+
+        <div class="card">
+            <h3>In the workshop <span class="pill pill-muted">@d.Workshop.Count</span></h3>
+            @if (d.Workshop.Count == 0) { <p class="muted">No machines booked in.</p> }
+            else
+            {
+                <table>
+                    <tr><th>#</th><th>Job</th><th>Priority</th><th>Age</th></tr>
+                    @foreach (var r in d.Workshop)
+                    {
+                        <tr>
+                            <td><a href="@(PortalAddresses.Ticket(r.Number))"><strong>#@r.Number</strong></a></td>
+                            <td>@r.Subject<br><span class="muted" style="font-size:12px">@r.ClientName</span></td>
+                            <td><span class="pill @RemoteSupport.Platform.Pages.Portal.IndexModel.PriorityPill(r.Priority)">@r.Priority</span></td>
+                            <td><span class="pill @RemoteSupport.Platform.Pages.Portal.IndexModel.AgePill(r.AgeDays)">@r.AgeDays d</span></td>
+                        </tr>
+                    }
+                </table>
+            }
+        </div>
+    </div>
+
+    <!-- ---------- what is going stale ---------- -->
+    <div class="card" style="margin-top:26px">
+        <h3>Needs attention</h3>
+        @if (d.Oldest != null)
+        {
+            <p class="muted">Oldest open job is <a href="@(PortalAddresses.Ticket(d.Oldest.Number))">#@d.Oldest.Number</a> — @d.Oldest.Subject, opened @RemoteSupport.Platform.Pages.Portal.IndexModel.Ago(d.Oldest.AgeDays)@(string.IsNullOrWhiteSpace(d.Oldest.ClientName) ? "" : " for " + d.Oldest.ClientName).</p>
+        }
+        @if (d.Stale.Count == 0) { <p class="muted">Nothing open has been left untouched for a week. </p> }
+        else
+        {
+            <p class="muted">Open jobs with no note or change for a week or more:</p>
+            <table>
+                <tr><th>#</th><th>Job</th><th>Priority / owner</th><th>Untouched</th></tr>
+                @foreach (var r in d.Stale)
+                {
+                    <tr>
+                        <td><a href="@(PortalAddresses.Ticket(r.Number))"><strong>#@r.Number</strong></a></td>
+                        <td>
+                            @r.Subject
+                            <br><span class="muted" style="font-size:12px">
+                                @TicketService.CategoryName(r.Category)@(string.IsNullOrWhiteSpace(r.ClientName) ? "" : " · " + r.ClientName)@(string.IsNullOrWhiteSpace(r.MachineName) ? "" : " · " + r.MachineName)
+                            </span>
+                        </td>
+                        <td>
+                            <span class="pill @RemoteSupport.Platform.Pages.Portal.IndexModel.PriorityPill(r.Priority)">@r.Priority</span>
+                            @if (string.IsNullOrWhiteSpace(r.AssignedTo)) { <span class="pill pill-warn">unassigned</span> }
+                            else { <span class="muted" style="font-size:12px">@r.AssignedTo</span> }
+                        </td>
+                        <td><span class="pill @RemoteSupport.Platform.Pages.Portal.IndexModel.AgePill(r.IdleDays)">@r.IdleDays d</span></td>
+                    </tr>
+                }
+            </table>
+        }
+    </div>
+
+    <!-- ---------- machines ---------- -->
+    <div class="grid2" style="margin-top:26px">
+        <div class="card">
+            <h3>Machines</h3>
+            <div class="stats" style="grid-template-columns:repeat(2,1fr);margin-bottom:16px">
+                <div class="stat"><div class="n">@d.DevicesOnline</div><div class="l">Online now</div></div>
+                <div class="stat"><div class="n">@d.DevicesTotal</div><div class="l">Known machines</div></div>
+            </div>
+            @if (d.LongUnseen.Count > 0)
+            {
+                <p class="muted">Not seen for over a month — retired, broken, or an old record left behind by a reinstall:</p>
+                <table>
+                    <tr><th>Machine</th><th>Client</th><th>Last seen</th></tr>
+                    @foreach (var x in d.LongUnseen)
+                    {
+                        <tr>
+                            <td><strong>@x.MachineName</strong></td>
+                            <td class="muted">@(string.IsNullOrWhiteSpace(x.ClientName) ? "—" : x.ClientName)</td>
+                            <td><span class="pill pill-muted">@x.LastSeenUtc.Local().ToString("yyyy-MM-dd")</span></td>
+                        </tr>
+                    }
+                </table>
+            }
+            <p style="margin-top:14px"><a class="btn btn-sm" href="/portal/devices">All devices</a></p>
+        </div>
+
+        <div class="card">
+            <h3>Unassigned machines <span class="pill @(d.Unlinked.Count > 0 ? "pill-warn" : "pill-muted")">@d.Unlinked.Count</span></h3>
+            <p class="muted">Machines not yet filed under a customer. Until they are linked, their work does not show on any client's page.</p>
+            @if (d.Unlinked.Count == 0) { <p class="muted">Every machine is linked to a client.</p> }
+            else
+            {
+                <table>
+                    <tr><th>Machine</th><th>Last seen</th><th>Link to</th></tr>
+                    @foreach (var x in d.Unlinked.Take(8))
+                    {
+                        <tr>
+                            @* The name they gave at a support request first (2026-10-18), marked as only what they typed. *@
+                            <td><strong>@x.MachineName</strong>@if (x.Online) { <span class="pill pill-ok">online</span> }<br>
+                                @if (!string.IsNullOrWhiteSpace(x.RequestedBy)) { <em class="muted requested-by" style="font-size:12px" title="The name they gave when they asked for help — not checked. Link the machine to make it a client's.">@x.RequestedBy</em><span class="muted" style="font-size:12px"> · @x.UserName</span> }
+                                else { <span class="muted" style="font-size:12px">@x.UserName</span> }</td>
+                            <td class="muted" style="font-size:12px">@x.LastSeenUtc.Local().ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>
+                                <form method="post" asp-page-handler="Link" class="cpick-form">
+                                    <input type="hidden" name="deviceId" value="@x.DeviceId">
+                                    <div class="cpick" data-mode="id">
+                                        <input type="hidden" name="clientId" value="0">
+                                        <input class="cpick-in" placeholder="Type a client's name" aria-label="Client for @x.MachineName">
+                                        <div class="cpick-list" role="listbox" hidden></div>
+                                    </div>
+                                    <button class="btn btn-sm">Link</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </table>
+                @if (d.Unlinked.Count > 8) { <p class="muted" style="margin-top:10px">and @(d.Unlinked.Count - 8) more on the <a href="/portal/devices">devices page</a>.</p> }
+            }
+        </div>
+    </div>
+
+    <p style="margin-top:26px">
+        @if (Model.WorksTickets) { <a class="btn btn-accent" href="/portal/tickets/new">New ticket</a> }
+        <a class="btn" href="/portal/tickets">All tickets</a>
+        <a class="btn" href="/portal/clients">Clients</a>
+    </p>
+
+    @* The setup cards were the whole of this page. They stay until the tenant is actually set up. *@
+    @if (Model.SetupIncomplete)
+    {
+        <h2 style="margin-top:34px">Finish setting up</h2>
+        <div class="grid3">
+            <div class="card"><h3>1. Brand it</h3><p class="muted">Upload your logo and set colours. They appear on every app and prompt your customers see.</p><a class="btn btn-sm" href="/portal/branding">Branding</a></div>
+            <div class="card"><h3>2. Add technicians</h3><p class="muted">Your company has @Pricing.SeatsAllowed(Model.Tenant) seats, any mix of technicians, supervisors and office administrators.</p><a class="btn btn-sm" href="/portal/technicians">Technicians</a></div>
+            <div class="card"><h3>3. Share your link</h3><p class="muted">Customers download your branded app from:<br><code>@Model.PublicUrl/get/@Model.Tenant.Slug</code></p><a class="btn btn-sm" href="/portal/downloads">Downloads</a></div>
+        </div>
+    }
+</div></section>

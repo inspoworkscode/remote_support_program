@@ -1,0 +1,12 @@
+@page "/privacy"
+@{
+    ViewData["Title"] = "Privacy policy";
+    ViewData["Description"] = "What personal information The Remote Support Program collects, why, how long it is kept, and what you can ask of us under POPIA.";
+}
+@* The same text the holding page's legal block carries (Terms/privacy-ZA.txt): one source, so the two can never differ. *@
+<section class="section">
+    <div class="wrap" style="max-width:860px">
+        <h1>Privacy policy</h1>
+        <div class="kb-body" id="privacyText">@Html.Raw(RemoteSupport.Platform.Services.Terms.PrivacyHtml())</div>
+    </div>
+</section>

@@ -1,0 +1,47 @@
+# Privacy policy
+
+This version is dated **14 October 2026**.
+
+This policy explains what personal information **The Remote Support Program (Pty) Ltd** (registration number 2026/737434/07, "we", "us") collects, why, and what you can ask of us, as the **Protection of Personal Information Act 4 of 2013 (POPIA)** requires.
+
+**Our Information Officer** is our director, Clint, at queries@theremotesupportprogram.com, 078 131 5618, or 19 Tide Street, Knysna Central, Knysna, Western Cape, 6571.
+
+# What we collect, and why
+
+- **Visiting this website.** We use **no analytics, no trackers and no advertising**, and this website loads nothing from any other website. The only **cookies** are the ones it cannot work without: one that keeps you signed in, a few that remember this browser so the sign-in code is asked only once a week and tell you if you were signed out from another computer, and one that stops a form (signing up, signing in, contacting us) being sent from another website. None of them follows you anywhere else, and none is used for marketing. Your browser also keeps a few choices for you alone — the currency you pick, light or dark, and, if you chat with us, the conversation, so that it carries on from page to page; we never see these. Like every web server, ours notes the internet address and time of each request, which we keep only as long as we need it to keep the site secure.
+- **When you contact us** by email or phone, we keep what you tell us so that we can answer you.
+- **When your company signs up**, we collect its name, the contact person's name, email address and phone number, its country and time zone, and the terms it accepted (with when, and from which internet address). Your password is never stored — only a one-way scrambled version of it — and your two-factor sign-in key is stored encrypted.
+- **When your staff use the service**, we keep their names and email addresses, and a record of when and from which network they signed in, so that we can protect their accounts and warn them of a sign-in they did not make.
+- **Your customers' information.** What passes through the service about your own customers — their machines, screens, files, chats and tickets — is processed for you, as your **operator** under POPIA, as our Terms and Conditions (section 5) explain. You decide what that information is used for; we use it only to provide the service to you.
+- **Payments** are made through **PayFast**. We never see or store your card or bank details; PayFast tells us only whether a payment succeeded, the amount and its reference.
+
+We use personal information only to provide and secure the service, to bill for it, to answer you, and to meet our legal duties. **We never sell it**, and we never market to your customers.
+
+# Who else sees it
+
+Only those we need to run the service, each bound to keep it confidential and secure:
+
+- our hosting provider, **xneelo**, whose servers in **South Africa** hold the service and its data;
+- **PayFast**, for payments;
+- our email provider, to deliver the emails the service sends (invitations, reports, notices);
+- anyone the law requires us to give it to, such as a court order — and only what is required.
+
+We do not send personal information outside South Africa, except where section 72 of POPIA allows it.
+
+# How long we keep it
+
+- While your company's account is open, and for **60 days** after it ends, so that you can ask for an export; then it is deleted.
+- Invoices and payment records for **five years**, as South African tax law requires.
+- Email and phone enquiries for as long as they are useful to answer you, and no longer than a year if you do not become a customer.
+
+# How we protect it
+
+Every connection to the service is encrypted. Every sign-in needs a password, and a code from an authenticator app at least once a week on each computer. Passwords are stored only as a one-way scramble. Our servers are backed up every night, and the backups are encrypted.
+
+# What you can ask of us
+
+Under POPIA you may ask us **what personal information we hold about you**, to **correct or delete** it, or **object** to how we use it. Write to our Information Officer at queries@theremotesupportprogram.com; we will answer within 30 days. If you are not satisfied, you may complain to the **Information Regulator** (www.inforegulator.org.za).
+
+# Changes to this policy
+
+If we change this policy we will publish the new version here, with its date, and tell our customers by email of any change that matters to them.

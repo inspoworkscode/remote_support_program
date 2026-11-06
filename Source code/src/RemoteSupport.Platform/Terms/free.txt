@@ -1,0 +1,10 @@
+# The Free Version
+
+You are signing up for **the Free version** of The Remote Support Program. Everything in these terms applies to it, with the changes in this section. **Where this section and the rest of these terms differ, this section applies.**
+
+- **Your own computer.** The Free version is for reaching a computer that you, or the company you sign up for, **own**, or whose owner has **allowed you to reach it** — for example your computer at the office. You must not use it to support your customers or anybody else's computers; that needs the full version.
+- **What it includes.** One person, who is the owner and the technician. Unattended access to **{{FREE_MACHINES}} computer**, protected by an unattended password chosen when it is installed. Remote control, file transfer, copy and paste, and printing. It does not include attended access, tickets, a branded app for customers, or the other features of the Basic version or the full version.
+- **No fees.** The Free version costs nothing, so section 2 (the trial, the price and paying) does not apply to it, and there is nothing to refund under section 11. If you upgrade to the Basic version or the full version, you will be shown its price and its terms, and accept them, before anything is charged.
+- **Removing and replacing a computer.** You may remove your computer to make room for another, up to two removals in a calendar month.
+- **Changes to the Free version.** We may change what the Free version includes, or its limits, or stop offering it, by telling you by email at least 30 days before.
+- **Section 3 still applies in full.** Even on your own computer, the people who use it must know that it can be reached remotely; a notice saying "Being controlled remotely" is shown on the screen during every session.

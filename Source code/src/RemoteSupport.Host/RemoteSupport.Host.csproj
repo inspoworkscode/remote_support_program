@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>RemoteSupport.Host</AssemblyName>
+    <RootNamespace>RemoteSupport.Host</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\RemoteSupport.Shared\RemoteSupport.Shared.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\RemoteSupport.UI\RemoteSupport.UI.csproj" />
+    <ProjectReference Include="..\RemoteSupport.Media\RemoteSupport.Media.csproj" />
+  </ItemGroup>
+</Project>

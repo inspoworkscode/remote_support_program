@@ -1,0 +1,40 @@
+@model RemoteSupport.Platform.Pages.Portal.TicketModel
+@{
+    // Adding the sender as a contact is the office's work, not an owner-only login's (2026-10-15).
+    if (!Model.WorksTickets) { return; }
+    // Who sent it (3.8.4) — drawn by BOTH the story page and the classic page, as everything shown on
+    // a ticket must be (§61). Only for a ticket opened by email or the website form that is not linked
+    // to a client yet. Clint, answer 3: when the client is known but the person is not, SAY so and
+    // suggest adding them as a contact first, so that the ticket is linked correctly.
+    var t = Model.Ticket!;
+    var m = Model.Sender;
+}
+@if (m != null)
+{
+    if (m.Suggested.Count > 0)
+    {
+        var first = m.Suggested[0];
+        var name = t.ContactName.Length > 0 && !t.ContactName.Contains('@') ? t.ContactName : "";
+        <div class="alert alert-warn sender-note" style="margin:12px 0">
+            <p style="margin:0 0 8px">@m.Note</p>
+            <form method="post" asp-page-handler="AddSender" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                <input name="contactName" value="@name" placeholder="Their name" aria-label="Their name" style="max-width:220px">
+                @if (m.Suggested.Count == 1)
+                {
+                    <input type="hidden" name="clientId" value="@first.id">
+                }
+                else
+                {
+                    <select name="clientId" aria-label="Which client" style="max-width:260px">
+                        @foreach (var c in m.Suggested) { <option value="@c.id">@c.name</option> }
+                    </select>
+                }
+                <button class="btn btn-sm btn-accent" type="submit">Add as a contact@(m.Suggested.Count == 1 ? " at " + first.name : "") and link this ticket</button>
+            </form>
+        </div>
+    }
+    else
+    {
+        <p class="tk-sys sender-note" style="margin:8px 0">@(m.Note.Length > 0 ? m.Note : $"{t.RequesterEmail} is not on file.") If you know who it is, link it on the Details tab.</p>
+    }
+}

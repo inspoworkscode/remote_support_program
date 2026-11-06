@@ -1,0 +1,24 @@
+@model RemoteSupport.Platform.Pages.Portal.TicketModel
+@using RemoteSupport.Platform.Services
+@{
+    // Files and photos for a comment or a step (2026-10-13), inside its form, in BOTH layouts. Each one goes up as it is
+    // picked (attach.js) and the form carries its id; files picked before a refusal come back already listed.
+    var label = ViewData["label"] as string ?? "📎 Attach files or photos";
+    var required = ViewData["required"] is true;
+    // Which form this is ("comment", or a step's key): files picked before a refusal come back in that one only.
+    var picked = (ViewData["for"] as string ?? "comment") == Model.PickedFor ? Model.PickedFiles : new();
+}
+<div class="att" data-ticket="@Model.Ticket!.Number">
+    <label class="att-pick">
+        <span class="btn btn-sm">@label</span>
+        <input type="file" multiple accept="@string.Join(",", TicketAttachmentService.Extensions)" style="position:absolute;left:-9999px">
+    </label>
+    @if (required) { <span class="tk-sys">Required — a PDF, a Word document or photos of it.</span> }
+    <div class="att-list">
+        @foreach (var f in picked)
+        {
+            <span class="att-chip" data-id="@f.Id">@(f.IsImage ? "🖼 " : "📎 ")@f.OriginalName (@TicketAttachmentService.Size(f.Bytes)) <button type="button" class="att-x" title="Take it off">×</button><input type="hidden" name="attach" value="@f.Id"></span>
+        }
+    </div>
+    <div class="tk-sys att-note"></div>
+</div>

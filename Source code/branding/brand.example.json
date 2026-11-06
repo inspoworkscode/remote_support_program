@@ -1,0 +1,15 @@
+﻿{
+    "companyName":  "Anywhere IT",
+    "productName":  "Anywhere IT Remote Support",
+    "supportEmail":  "support@anywhereit.co.za",
+    "supportPhone":  "",
+    "primaryColor":  "#0E0E12",
+    "accentColor":  "#29A8E0",
+    "logo":  "logo.jpg",
+    "serverUrl":  "ws://YOUR-SERVER:8090",
+    "welcomeText":  "Need help? Click Request Support and an Anywhere IT technician will connect with you.",
+    "requireConsent":  true,
+    "unattendedRequireConsent":  false,
+    "consentTimeoutSeconds":  60,
+    "tenantKey":  ""
+}

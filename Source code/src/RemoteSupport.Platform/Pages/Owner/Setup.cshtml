@@ -1,0 +1,36 @@
+@page "/owner/setup"
+@model RemoteSupport.Platform.Pages.Owner.SetupModel
+@{ ViewData["Title"] = "Set up your admin account"; }
+<section class="section"><div class="wrap" style="max-width:480px">
+    <h1>Set up your admin account</h1>
+    @if (Model.Who == null)
+    {
+        <div class="alert alert-bad">@Model.LinkError</div>
+    }
+    else if (Model.Pending.Length == 0)
+    {
+        <p>Hello <strong>@Model.Who.Name</strong> — you are a platform admin of The Remote Support Program
+           (<strong>@PlatformAdmins.Label(Model.Who.Level)</strong>: @PlatformAdmins.Describe(Model.Who.Level)).</p>
+        @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad">@Model.Error</div> }
+        <form method="post" class="form" id="choosePassword">
+            <input type="hidden" name="T" value="@Model.T">
+            <label>Choose a password</label><input name="Password" type="password" required minlength="8" autofocus autocomplete="new-password">
+            <label>The same again</label><input name="Again" type="password" required minlength="8" autocomplete="new-password">
+            <div class="actions"><button class="btn btn-accent" type="submit">Next</button></div>
+        </form>
+    }
+    else
+    {
+        @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad">@Model.Error</div> }
+        <form method="post" class="form" id="scanCode">
+            <input type="hidden" name="T" value="@Model.T">
+            <input type="hidden" name="Pending" value="@Model.Pending">
+            <p><strong>Now your authenticator app.</strong> Scan this with Microsoft Authenticator, Google Authenticator or similar,
+               then type the six digits it shows. Nothing is saved until the code is right.</p>
+            <p style="text-align:center"><img src="@Model.Qr" alt="QR code" width="220" height="220" style="background:#fff;padding:8px;border-radius:6px"></p>
+            <p class="muted" style="font-size:13px">Can't scan? Type this key into the app instead: <code style="user-select:all">@RemoteSupport.Shared.Totp.Grouped(Model.Secret)</code></p>
+            <label>Code</label><input name="Code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required autofocus>
+            <div class="actions"><button class="btn btn-accent" type="submit">Finish</button></div>
+        </form>
+    }
+</div></section>

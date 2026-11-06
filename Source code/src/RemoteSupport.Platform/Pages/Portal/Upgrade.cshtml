@@ -1,0 +1,146 @@
+@page "/portal/upgrade"
+@model RemoteSupport.Platform.Pages.Portal.UpgradeModel
+@using RemoteSupport.Shared
+@{ ViewData["Title"] = Model.Down ? "Move to the Free version" : "Upgrade"; ViewData["Section"] = "portal"; }
+@if (Model.Checkout is { } co)
+{
+    @* Upgraded; on to PayFast for the card. action= written out: no antiforgery token (outside PayFast's signature). *@
+    <section class="portal"><div class="wrap"><h1>Going to PayFast…</h1>
+        <form id="toPayfast" method="post" action="@co.Action">
+            @foreach (var f in co.Fields) { <input type="hidden" name="@f.Key" value="@f.Value"> }
+            <button class="btn btn-accent" type="submit">Continue to PayFast</button>
+        </form>
+        <script>document.getElementById('toPayfast').submit();</script>
+    </div></section>
+    return;
+}
+@{ var q = Model.Quote; var r = q.After.Region; var tt = Model.TermsText; var basicPrice = Pricing.For(Model.Tenant).Basic; }
+<section class="portal"><div class="wrap" style="max-width:860px">
+    @if (Model.Choosing)
+    {
+        @* The Free version (2026-10-25, §163): up to the Basic version or the full version — asked which first, because the terms differ. *@
+        <h1 id="upgradeHeading">Upgrade</h1>
+        <p class="muted">The same account, the same computer and its saved password — and more of what you can do.</p>
+        <div class="grid2" id="upgradeChoice">
+            <div class="card">
+                <h3>@FreePlan.FullName</h3>
+                <p><strong>@Pricing.Money(r, basicPrice) a month</strong>, after 14 days free.</p>
+                <ul style="padding-left:18px;line-height:1.8">
+                    <li>@FreePlan.MaxMachines computers, and more at @Pricing.Money(r, r.ExtraMachine) each — up to @FreePlan.MostMachines</li>
+                    <li>Attended as well as unattended: the person at a computer can allow you in</li>
+                    <li>Still one person, and still for your own computers</li>
+                </ul>
+                <a class="btn btn-accent" href="/portal/upgrade?to=basic" id="chooseBasic">Choose the Basic version</a>
+            </div>
+            <div class="card">
+                <h3>The full version</h3>
+                <p><strong>@Pricing.Money(r, r.Package) a month</strong> for @q.After.Included seats, after 14 days free.</p>
+                <ul style="padding-left:18px;line-height:1.8">
+                    <li>Supporting your customers — attended and unattended, as many computers as you look after</li>
+                    <li>Tickets, clients, a knowledge base, and your whole team</li>
+                    <li>Your own logo and colours on the app your customers download</li>
+                </ul>
+                <a class="btn btn-accent" href="/portal/upgrade?to=full" id="chooseFull">Choose the full version</a>
+            </div>
+        </div>
+    }
+    else
+    {
+    @if (Model.Down)
+    {
+        <h1 id="upgradeHeading">Move to the Free version</h1>
+        <p class="muted">The same account, your computer and its saved password. The Free version is one computer, reached unattended with its password — nobody there is asked.</p>
+    }
+    else
+    {
+        <h1 id="upgradeHeading">Upgrade to @(Model.ToBasic ? FreePlan.TheName : "the full version")</h1>
+        <p class="muted">The same account, the same computers and saved passwords — and everything @(Model.ToBasic ? FreePlan.TheName : "the full version") has.</p>
+    }
+    @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad" id="upgradeError">@Model.Error</div> }
+
+    @if (Model.Down)
+    {
+        <div class="grid2">
+            <div class="card">
+                <h3>What changes</h3>
+                <ul style="padding-left:18px;line-height:1.8">
+                    <li>@FreePlan.FreeMachines computer: you have @Model.Installed installed@(Model.Installed > FreePlan.FreeMachines ? " — remove the others first, on Your computers" : "")</li>
+                    <li>Unattended only: the computer needs an unattended password. If it has none, run its installer again and choose one</li>
+                    <li>Nothing to pay: your card is cancelled at PayFast at once</li>
+                </ul>
+            </div>
+            <div class="card" id="upgradePrice">
+                <h3>The price</h3>
+                <p>Now: <strong>@q.Before.Total a month</strong> — @FreePlan.TheName</p>
+                <p>After: <strong>nothing</strong> — @FreePlan.FreeTheName</p>
+                <p class="muted" style="font-size:14px" id="upgradeWhen">It changes at once. Nothing more is charged, and the month already paid is not refunded.</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="grid2">
+            <div class="card">
+                <h3>What you get</h3>
+                <ul style="padding-left:18px;line-height:1.8">
+                    @if (Model.ToBasic)
+                    {
+                        <li>@FreePlan.MaxMachines computers, and more at @Pricing.Money(r, r.ExtraMachine) a month each — up to @FreePlan.MostMachines</li>
+                        <li>Attended as well as unattended: the person at a computer can allow you in</li>
+                    }
+                    else
+                    {
+                        <li>Supporting your customers — attended and unattended, as many computers as you look after</li>
+                        <li>Your own logo and colours on the app your customers download</li>
+                        <li>Tickets, clients, a knowledge base, and your whole team</li>
+                    }
+                    <li>Everything you have now stays exactly as it is</li>
+                </ul>
+            </div>
+            <div class="card" id="upgradePrice">
+                <h3>The price</h3>
+                <p>Now: <strong>@(q.Before.Monthly == 0 ? "nothing" : q.Before.Total + " a month")</strong> — @FreePlan.TheNameOf(Model.Tenant.Plan)</p>
+                @if (Model.ToBasic) { <p>After: <strong>@q.After.Total a month</strong> — one person, @FreePlan.MaxMachines computers. In @r.Currency.</p> }
+                else { <p>After: <strong>@q.After.Total a month</strong> for @q.After.Included seats, any mix of roles; more on request. In @r.Currency.</p> }
+                <p class="muted" style="font-size:14px" id="upgradeWhen">@(Model.TrialEnd is { } ends
+                    ? $"Nothing more is charged until {ends.Local():d MMMM yyyy} — it is free until then. Cancel any time."
+                    : "You already pay by card: the new price is charged from your next payment instead of the Basic price. Cancel any time.")</p>
+            </div>
+        </div>
+    }
+
+    <h2 style="margin-top:22px">Our terms for @(Model.Down ? FreePlan.FreeTheName + " in " : Model.ToBasic ? FreePlan.TheName + " in " : "")@r.In</h2>
+    <p class="muted" style="font-size:13px">Version @tt.Version — a copy of exactly what you accept is kept on your account.</p>
+    <div class="card kb-body terms-text" id="termsText" style="max-height:380px;overflow:auto;font-size:14px">@Html.Raw(tt.Html)</div>
+
+    @if (!Model.MayAccept)
+    {
+        <div class="alert alert-warn">Only the owner can change the company's version.</div>
+    }
+    else if (Model.Down)
+    {
+        <form method="post" asp-page-handler="Down" class="form" style="margin-top:14px">
+            <input type="hidden" name="TermsSha" value="@tt.Sha256">
+            <label class="check" style="display:flex;gap:10px;align-items:flex-start;font-weight:600">
+                <input type="checkbox" name="Accept" value="true" id="acceptUpgrade" style="margin-top:4px;width:auto">
+                <span>I have read these terms and accept them.</span>
+            </label>
+            <div class="actions"><button class="btn btn-accent btn-lg" type="submit" id="downConfirm">Move to the Free version</button>
+                <a class="btn" href="/portal/billing">Stay on the Basic version</a></div>
+        </form>
+    }
+    else
+    {
+        <form method="post" class="form" style="margin-top:14px">
+            <input type="hidden" name="To" value="@Model.To">
+            <input type="hidden" name="TermsSha" value="@tt.Sha256">
+            <input type="hidden" name="Agreed" value="@q.Token">
+            <label class="check" style="display:flex;gap:10px;align-items:flex-start;font-weight:600">
+                <input type="checkbox" name="Accept" value="true" id="acceptUpgrade" style="margin-top:4px;width:auto">
+                <span>I have read these terms and accept them, and the price above@(Model.ToBasic ? "" : ", on behalf of my company").</span>
+            </label>
+            <div class="actions"><button class="btn btn-accent btn-lg" type="submit" id="upgradeConfirm">Upgrade — @q.After.Total a month</button></div>
+        </form>
+    }
+    }
+</div></section>

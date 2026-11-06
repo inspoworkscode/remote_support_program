@@ -1,0 +1,91 @@
+﻿<!doctype html>
+<!-- Clint's Teams and Zoom background, 1920 x 1080: every company and product on one white screen.
+     Render-Backgrounds.ps1 takes the picture. The logos sit in two columns down the sides, above
+     the bottom third: the centre is Clint's head, the bottom third his shoulders and the controls.
+     Anywhere I.T top left, HotKup top right, the same size. -->
+<html><head><meta charset="utf-8">
+<style>
+  @font-face { font-family: Jakarta; src: url("../../logo/source/fonts/PlusJakartaSans-Bold.ttf"); font-weight: 700; }
+  @font-face { font-family: Jakarta; src: url("../../logo/source/fonts/PlusJakartaSans-ExtraBold.ttf"); font-weight: 800; }
+  * { margin: 0; box-sizing: border-box; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; }
+  body { position: relative; font-family: Jakarta, sans-serif; color: #2b3440;
+         background: linear-gradient(180deg, #ffffff 0%, #f6f7fa 100%); }
+  .band { position: absolute; left: 0; right: 0; top: 0; height: 10px;
+          background: linear-gradient(90deg, #29A8E0 0%, #8e44ad 38%, #7c3aed 62%, #0e6e82 100%); }
+  .col { position: absolute; top: 64px; width: 560px; display: flex; flex-direction: column; gap: 26px; }
+  .left { left: 64px; } .right { right: 64px; }
+  /* Two matching rows: Anywhere I.T beside HotKup, ESET beside The Remote Support Program. */
+  .card { background: #fff; border-radius: 22px; padding: 30px 32px;
+          display: flex; flex-direction: column; justify-content: center;
+          box-shadow: 0 2px 4px rgba(20,30,50,.05), 0 10px 30px rgba(20,30,50,.08); }
+  .first { height: 320px; } .second { height: 260px; }
+  .card img { display: block; align-self: flex-start; }   /* never stretched to the card's width */
+  .say { font-size: 22px; font-weight: 700; line-height: 1.3; margin-top: 16px; }
+  .web { font-size: 20px; font-weight: 700; margin-top: 4px; }
+  .row { display: flex; align-items: center; gap: 26px; }
+  .row .say { margin-top: 0; }
+  .ait .web { color: #1a8fc4; }
+  .rsp .web { color: #6d28d9; }
+  .hotkup .web { color: #1f7ae0; }   /* the logo's blue, a shade deeper to read on white */
+  .hotkup .say, .ait .say { font-size: 20px; margin-top: 14px; }
+  .punch { font-size: 24px; font-weight: 800; color: #7d3c98; margin-top: 8px; }   /* the logo's purple */
+  .hotkup .say + .say { margin-top: 6px; }
+  .eset .say span { color: #0e6e82; }
+  /* ?only=hotkup (or ait, eset, rsp): that card alone on a transparent page, for ads. */
+  body.only { background: transparent; }
+  body.only .band, body.only .card:not(.picked) { display: none; }
+  /* The background itself is Anywhere I.T and HotKup only (Clint, 2026-10-26: four was busy).
+     ESET and RSP stay here so Render-Card.ps1 can still export them. */
+  body:not(.only) .second { display: none; }
+  /* Each card is one centred block: the logo, its words, the web address in the middle beneath
+     (Clint, 2026-10-27). ?plain=1 leaves the words out - the "logos only" version. */
+  body:not(.only) .first .say, body:not(.only) .punch { text-align: center; }
+  body:not(.only) .first .web { margin-top: 12px !important; font-size: 24px; text-align: center; }
+  body.plain .first .say, body.plain .punch { display: none; }
+  body.plain .first { height: 250px; }
+  body.plain .first .web { margin-top: 0 !important; }
+  body:not(.only) .first img { align-self: center; }
+  body:not(.only) .first img { height: 110px; width: auto; }   /* the same space for both logos... */
+  body:not(.only) .hotkup img { height: 92px; margin: 9px 0; }  /* ...HotKup's heavy letters a little smaller, to look the same size */
+</style></head>
+<body>
+<div class="band"></div>
+
+<div class="col left">
+  <div class="card first ait">
+    <img src="anywhere-it-logo-for-white.png" width="496" alt="">
+    <div class="say">Online computer support to home and business,<br>all over South Africa.</div>
+    <div class="punch">Call, Connect, Fixed!</div>
+    <div class="web" style="margin-top:10px">anywhereit.co.za</div>
+  </div>
+  <div class="card second eset">
+    <div class="row">
+      <!-- ESET's partner badge exactly as supplied, never recoloured or cropped. "multiply" lets
+           its white ground disappear into the card. -->
+      <img src="eset-badge-for-white.png" width="205" style="mix-blend-mode:multiply" alt="">
+      <div class="say">Cybersecurity<br><span>ESET managed security for your business</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="col right">
+  <div class="card first hotkup">
+    <img src="hotkup-logo-for-white.png" width="400" alt="">
+    <!-- the two lines under hotkup.com's headline, word for word -->
+    <div class="say">Built around how your business works, not forced into a CRM template.</div>
+    <div class="say">Pipeline, delivery, client records, all in one place.</div>
+    <div class="web" style="margin-top:10px">hotkup.com</div>
+  </div>
+  <div class="card second rsp">
+    <img src="../../logo/rsp-logo.svg" width="470" alt="">
+    <div class="say">Remote support and job tracking for IT companies</div>
+    <div class="web">theremotesupportprogram.com</div>
+  </div>
+</div>
+<script>
+  if (new URLSearchParams(location.search).get("plain")) document.body.classList.add("plain");
+  const only = new URLSearchParams(location.search).get("only");
+  if (only) { document.body.classList.add("only"); document.querySelector(".card." + only).classList.add("picked"); }
+</script>
+</body></html>

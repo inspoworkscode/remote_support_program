@@ -1,0 +1,97 @@
+@page "/owner/tenants"
+@model RemoteSupport.Platform.Pages.Owner.TenantsModel
+@{
+    ViewData["Title"] = "Companies"; ViewData["Section"] = "owner";
+    var off = Model.CanManage ? null : "disabled";
+    var total = Model.Fleet.Where(v => v.Report != null).Sum(v => v.Report!.Companies.Count);
+}
+<section class="portal"><div class="wrap">
+    <h1>All companies <span class="pill pill-muted">@total</span></h1>
+    @if (!string.IsNullOrEmpty(Model.Message)) { <div class="alert alert-ok">@Model.Message</div> }
+    @if (!string.IsNullOrEmpty(Model.Problem)) { <div class="alert alert-bad">@Model.Problem</div> }
+    @if (!Model.CanManage) { <div class="alert">You are a Viewer: you can see everything here, and change nothing.</div> }
+    @foreach (var v in Model.Fleet)
+    {
+        if (Model.Several)
+        {
+            <h2 class="server-group"><span class="dot @(Dot(v))"></span>@v.Row.Name <span class="pill pill-muted">@(v.Report?.Companies.Count ?? 0)</span></h2>
+        }
+        if (v.Report == null) { <div class="alert alert-bad">@v.Row.Name is not answering: @v.Error</div> continue; }
+        @* Five columns, each holding what belongs together (2026-10-13): eleven ran off the right of the page. *@
+        <div class="table-scroll"><table class="tenantList" data-server="@v.Row.Name">
+            <tr><th>Company</th><th>Contact and owners</th><th>People and machines</th><th>Billing</th><th>Status</th></tr>
+            @foreach (var t in v.Report.Companies)
+            {
+                <tr data-slug="@t.Slug">
+                    <td><strong>@t.Name</strong><br><span class="muted">/@t.Slug</span>@if (t.Free) { <br><span class="pill pill-muted">@(t.PlanName.Length > 0 ? t.PlanName : "Basic")</span> }</td>
+                    <td>
+                        <div>@t.ContactName</div>
+                        <div class="muted" style="font-size:13px;overflow-wrap:anywhere">@t.SupportEmail@(t.ContactNumber.Length > 0 ? " · " + t.ContactNumber : "")</div>
+                        <div style="margin-top:6px;font-size:13px"><strong>Owners:</strong>
+                            @if (t.Owners.Count == 0) { <span class="muted">none</span> }
+                            @foreach (var o in t.Owners) { <div>@o.Name · <a href="mailto:@o.Email" style="overflow-wrap:anywhere">@o.Email</a></div> }
+                        </div>
+                        @if (Model.CanManage) { <a class="btn btn-sm" href="/owner/email?server=@v.Row.Id&id=@t.Id" style="margin-top:6px">Email the owners</a> }
+                    </td>
+                    <td title="Everybody on the People page, how many of them are ticked Technician, and their machines">
+                        @t.People @(t.People == 1 ? "person" : "people")<br>
+                        <span class="muted">@t.Technicians technician@(t.Technicians == 1 ? "" : "s")</span><br>
+                        @t.Machines machine@(t.Machines == 1 ? "" : "s")<br>
+                        <span class="muted">@t.MachinesOnline online</span>
+                    </td>
+                    <td>
+                        <div>@t.PriceLabel</div>
+                        @if (Model.CanManage)
+                        {
+                            <form method="post" asp-page-handler="Act" class="inline" style="display:block;margin-top:6px"><input type="hidden" name="server" value="@v.Row.Id"><input type="hidden" name="id" value="@t.Id"><input type="hidden" name="act" value="seats"><span class="muted" style="font-size:13px">Seats in package</span> <input name="seats" type="number" min="1" max="@Pricing.MaxSeats" value="@t.Seats" style="width:60px;padding:4px"> <button class="btn btn-sm">Set</button></form>
+                            @* More seats, on request (2026-10-25): only we raise it; the owner then agrees each seat's price on People. *@
+                            @if (!t.Free && !t.NotBilled)
+                            {
+                                var most = Math.Max(t.MostSeats, t.Seats);
+                                <form method="post" asp-page-handler="Act" class="inline" style="display:block;margin-top:6px" data-allow-seats="@t.Id"><input type="hidden" name="server" value="@v.Row.Id"><input type="hidden" name="id" value="@t.Id"><input type="hidden" name="act" value="allow-seats"><span class="muted" style="font-size:13px" title="The most seats they may have. Seats past the package are the extra-seat price, which their owner agrees to when adding somebody.">Allow up to</span> <input name="most" type="number" min="@t.Seats" max="@Pricing.MostAllowed" value="@(t.SeatsAskedFor > most ? t.SeatsAskedFor : most)" style="width:60px;padding:4px"> <button class="btn btn-sm">Allow</button></form>
+                                <div class="muted" style="font-size:13px;margin-top:4px">@t.InSeats of @most seats in use@(most > t.Seats ? $" · {most - t.Seats} extra allowed" : "")</div>
+                                @if (t.SeatsAskedFor > 0) { <div class="pill pill-warn" style="margin-top:4px" title="@t.SeatsAskedNote">Asks for @t.SeatsAskedFor — see Approvals</div> }
+                            }
+                            <form method="post" asp-page-handler="Act" class="inline" style="display:block;margin-top:6px"><input type="hidden" name="server" value="@v.Row.Id"><input type="hidden" name="id" value="@t.Id"><input type="hidden" name="act" value="billed"><input type="hidden" name="notBilled" value="@(t.NotBilled ? "false" : "true")"><button class="btn btn-sm" title="The platform's own company, or one given the service free">@(t.NotBilled ? "Bill them" : "Not billed")</button></form>
+                        }
+                        else { <div class="muted" style="font-size:13px">@t.Seats seats in package@(t.MostSeats > t.Seats ? $" · up to {t.MostSeats} allowed" : "")</div> }
+                        <form method="post" asp-page-handler="Act" class="inline" style="display:block;margin-top:6px"><input type="hidden" name="server" value="@v.Row.Id"><input type="hidden" name="id" value="@t.Id"><input type="hidden" name="act" value="country">
+                            <select name="country" style="padding:4px;max-width:100%" onchange="this.form.submit()" disabled="@off" title="Decides the currency, and South African phone repairs on client import">
+                                @if (string.IsNullOrWhiteSpace(t.Country)) { <option value="" selected>Country — not set</option> }
+                                @foreach (var c in RemoteSupport.Platform.Pages.SignupModel.Countries) { <option value="@c" selected="@(c == t.Country)">@c</option> }
+                            </select></form>
+                    </td>
+                    <td style="white-space:nowrap">
+                        <span class="pill @(t.Status == "Active" ? "pill-ok" : t.Status == "Trial" ? (t.TrialExpired ? "pill-bad" : "pill-warn") : "pill-bad")">@t.StatusText</span>
+                        @if (t.TrialEndsUtc != null) { <div class="muted" style="font-size:13px;margin-top:4px">Trial ends @t.TrialEndsUtc.Value.ToString("yyyy-MM-dd")</div> }
+                        @if (t.Payment.Length > 0) { <div class="muted" style="font-size:13px;margin-top:4px" data-payment="@t.Payment">@t.Payment</div> }
+                        @if (Model.CanManage)
+                        {
+                            <form method="post" asp-page-handler="Act" style="margin-top:8px" onsubmit="var s=this.status.value;return s!=='Suspended'||confirm('Suspend @t.Name? Their people are signed out and their machines disconnected NOW, and their owners are emailed.')"><input type="hidden" name="server" value="@v.Row.Id"><input type="hidden" name="id" value="@t.Id"><input type="hidden" name="act" value="status">
+                                <select name="status" style="padding:4px">
+                                    @foreach (var s in Enum.GetValues<TenantStatus>()) { <option value="@s" selected="@(s.ToString() == t.Status)">@s</option> }
+                                </select> <button class="btn btn-sm">Apply</button>
+                            </form>
+                            @* Their data, made by us and the link emailed to their owners (2026-10-22) — for a company that cannot
+                               sign in to make its own: suspended, or closed and inside its 60 days. *@
+                            <form method="post" asp-page-handler="Act" style="margin-top:8px" data-export-form="@t.Id" onsubmit="return confirm('Export @t.Name\'s data? When it is made, their owners are emailed a link to download it.')"><input type="hidden" name="server" value="@v.Row.Id"><input type="hidden" name="id" value="@t.Id"><input type="hidden" name="act" value="export">
+                                <label class="muted" style="font-size:13px;white-space:nowrap"><input type="checkbox" name="recordings" value="true" style="width:auto"> with recordings</label>
+                                <button class="btn btn-sm" title="Their clients, tickets and knowledge base, as a zip their owners are emailed a link to">Export their data</button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+        </table></div>
+    }
+    <p class="muted" style="margin-top:12px;font-size:13px">Set <strong>Active</strong> once a company has paid. <strong>Suspended</strong> signs their people out, disconnects their machines at once and emails their owners; making them Active again emails them that too. Every change is in the <a href="/owner/log">log</a>.</p>
+</div></section>
+@functions {
+    static string Dot(RemoteSupport.Platform.Services.ControlServers.View v) => v.Level switch
+    {
+        RemoteSupport.Platform.Services.ServerCapacity.Level.Green => "",
+        RemoteSupport.Platform.Services.ServerCapacity.Level.Amber => "amber",
+        RemoteSupport.Platform.Services.ServerCapacity.Level.Red => "red",
+        _ => "down"
+    };
+}

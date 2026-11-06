@@ -1,0 +1,310 @@
+@page "/portal/c/{number:int}"
+@using RemoteSupport.Platform.Data
+@using RemoteSupport.Platform.Services
+@using M = RemoteSupport.Platform.Pages.Portal.ClientModel
+@model RemoteSupport.Platform.Pages.Portal.ClientModel
+@{ ViewData["Title"] = Model.Client.Name; ViewData["Section"] = "portal"; }
+<section class="portal"><div class="wrap">
+    <p class="muted" style="margin-bottom:6px"><a href="/portal/clients">← All clients</a></p>
+    <h1>@Model.Client.Name
+        @if (Model.OpenTickets.Count > 0) { <span class="pill pill-warn">@Model.OpenTickets.Count open</span> }
+        else { <span class="pill pill-ok">nothing open</span> }
+    </h1>
+    @* Three fields, shown as three: the contact person, the number and the address are each their
+       own thing (Clint, 2026-09-28), and a job's stage changes will one day be texted and emailed to them. *@
+    <p class="muted" style="display:flex;flex-wrap:wrap;gap:6px 22px">
+        <span>Contact person: <strong>@(string.IsNullOrWhiteSpace(Model.Client.ContactName) ? "—" : Model.Client.ContactName)</strong></span>
+        <span>Phone: <strong>@(string.IsNullOrWhiteSpace(Model.Client.Phone) ? "—" : Model.Client.Phone)</strong></span>
+        <span>Email: @if (string.IsNullOrWhiteSpace(Model.Client.Email)) { <strong>—</strong> } else { <a href="mailto:@Model.Client.Email">@Model.Client.Email</a> }</span>
+        <span>Address: <strong>@(string.IsNullOrWhiteSpace(Model.Client.Address) ? "—" : Model.Client.Address.Replace("\n", ", "))</strong></span>
+    </p>
+    @* The knowledge base (3.8.5): how things are done for this client, one click from the client. *@
+    <div class="kb-ticket" id="kbClient">
+        <a class="kb-ref" href="@(PortalAddresses.KbFor(Model.Client.Number))">📘 Knowledge base for @Model.Client.Name (@Model.KbCount)</a>
+        <a class="btn btn-sm" href="/portal/kb/edit?c=@Model.Client.Number">New article for them</a>
+    </div>
+    @if (!string.IsNullOrEmpty(Model.Message)) { <div class="alert alert-ok">@Model.Message</div> }
+    @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad">@Model.Error</div> }
+
+    <div class="stats">
+        <div class="stat"><div class="n">@Model.CountOpen</div><div class="l">Open</div></div>
+        <div class="stat"><div class="n">@Model.CountInProgress</div><div class="l">In progress</div></div>
+        <div class="stat"><div class="n">@Model.CountOnHold</div><div class="l">On hold</div></div>
+        <div class="stat"><div class="n">@Model.CountResolvedThisMonth</div><div class="l">Closed this month</div></div>
+    </div>
+
+    <!-- ---------- the people there ---------- -->
+    @*
+        Contacts are edited in place, one row per person. A separate "edit contact" page would mean
+        a click out and a click back to change a phone number, which is the kind of small friction
+        that makes staff keep the numbers somewhere else instead.
+    *@
+    <div class="card" style="margin-bottom:26px">
+        <h3>People <span class="pill pill-muted">@Model.Contacts.Count</span></h3>
+        @if (Model.Contacts.Count == 0)
+        {
+            <p class="muted">Nobody recorded at @Model.Client.Name yet. Add them below, and you can then say which machine is whose.</p>
+        }
+        else
+        {
+            @*
+                Rows of divs rather than a table, and deliberately. A <form> inside a <tr> is not
+                valid HTML: the parser hoists it out of the table and the fields stop belonging to
+                it, so Save silently posts nothing. One form per person, laid out with flex.
+            *@
+            <div style="display:flex;flex-direction:column;gap:8px">
+                @foreach (var p in Model.Contacts)
+                {
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                        <form method="post" asp-page-handler="SaveContact" style="display:flex;gap:8px;align-items:center;flex:1;flex-wrap:wrap;margin:0">
+                            <input type="hidden" name="contactId" value="@p.Id">
+                            <input name="name" value="@p.Name" required placeholder="Name" style="flex:1 1 150px">
+                            <input name="role" value="@p.Role" placeholder="Accounts, reception…" style="flex:1 1 140px">
+                            <input name="phone" value="@p.Phone" placeholder="Phone" style="flex:1 1 130px">
+                            <input name="email" type="email" value="@p.Email" placeholder="Email" style="flex:1 1 180px">
+                            <button class="btn btn-sm" type="submit">Save</button>
+                        </form>
+                        <form method="post" asp-page-handler="ArchiveContact" style="margin:0"
+                              onsubmit="return confirm('Archive @p.Name? They stay on past tickets, and come off any machine they own.');">
+                            <input type="hidden" name="contactId" value="@p.Id">
+                            <button class="btn btn-sm" type="submit">Archive</button>
+                        </form>
+                    </div>
+                }
+            </div>
+        }
+
+        <form method="post" asp-page-handler="AddContact"
+              style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
+            <input name="name" placeholder="Their name" required style="flex:1 1 150px">
+            <input name="role" placeholder="Accounts, reception…" style="flex:1 1 140px">
+            <input name="phone" placeholder="Phone" style="flex:1 1 130px">
+            <input name="email" type="email" placeholder="Email" style="flex:1 1 180px">
+            <button class="btn btn-accent btn-sm" type="submit">Add person</button>
+        </form>
+    </div>
+
+    <!-- ---------- their machines ---------- -->
+    <div class="card" style="margin-bottom:26px">
+        <h3>Machines <span class="pill pill-muted">@Model.Machines.Count</span></h3>
+        @* The customer's tick. One box, saved as it is clicked: an SLA client is ticked once and every
+           machine of theirs follows, including ones linked later. A machine that should differ is set
+           on its own row below, or by right-clicking it in the console. *@
+        <form method="post" asp-page-handler="HealthCheck" style="margin:0 0 12px 0">
+            <input type="hidden" name="on" value="@(Model.Client.HealthCheck ? "false" : "true")">
+            <label style="display:flex;gap:8px;align-items:center;cursor:pointer;margin:0">
+                <input type="checkbox" checked="@Model.Client.HealthCheck" onchange="this.form.submit()" style="width:auto;margin:0">
+                <strong>Monthly health check</strong>
+                <span class="muted" style="font-size:13px">— maintenance and a report on every machine of theirs, once a month</span>
+            </label>
+            <noscript><button class="btn btn-sm">@(Model.Client.HealthCheck ? "Switch off" : "Switch on")</button></noscript>
+            @if (!Model.Tenant.HealthCheckReady)
+            {
+                <p class="muted" style="font-size:13px;margin:6px 0 0 0">
+                    The health check is switched off for your company, so nothing runs whatever is ticked here.
+                    @if (Model.IsOwner) { <a href="/portal/healthcheck">Switch it on</a> }
+                </p>
+            }
+        </form>
+        @if (Model.Machines.Count == 0)
+        {
+            <p class="muted">No machines are linked to @Model.Client.Name yet. Link one from the <a href="/portal/devices">devices page</a> and their tickets will file here automatically.</p>
+        }
+        else
+        {
+            <table>
+                <tr><th>Machine</th><th>Whose</th><th>User</th><th>Operating system</th><th>Specification</th><th>Health check</th><th>Last seen</th><th></th></tr>
+                @foreach (var m in Model.Machines)
+                {
+                    <tr>
+                        <td>
+                            <strong>@m.Current.MachineName</strong>
+                            @if (m.Online) { <span class="pill pill-ok">online</span> } else { <span class="pill pill-muted">offline</span> }
+                        </td>
+                        @* One dropdown, not two. The client is already known on this page, so the
+                           only question left is which person — or the company itself, which is the
+                           right answer for a server or the PC at reception. *@
+                        <td>
+                            <form method="post" asp-page-handler="SetOwner" class="inline">
+                                <input type="hidden" name="deviceId" value="@m.Current.DeviceId">
+                                <select name="contactId" onchange="this.form.submit()"
+                                        style="padding:5px;border-radius:8px;border:1px solid var(--line);max-width:170px">
+                                    <option value="0" selected="@(m.Current.ContactId == null)">@Model.Client.Name (the company)</option>
+                                    @foreach (var p in Model.Contacts)
+                                    {
+                                        <option value="@p.Id" selected="@(m.Current.ContactId == p.Id)">@p.Name</option>
+                                    }
+                                </select>
+                                <noscript><button class="btn btn-sm">Set</button></noscript>
+                            </form>
+                        </td>
+                        <td>@(string.IsNullOrWhiteSpace(m.Current.UserName) ? "—" : m.Current.UserName)</td>
+                        <td>@(string.IsNullOrWhiteSpace(m.Current.Os) ? "—" : m.Current.Os)</td>
+                        <td>
+                            <span class="muted" style="font-size:12px">@m.SpecSummary</span>
+                            @if (m.DiskUsedPct >= 90) { <br><span class="pill pill-bad">disk @m.DiskUsedPct% full</span> }
+                            else if (m.DiskUsedPct >= 75) { <br><span class="pill pill-warn">disk @m.DiskUsedPct% full</span> }
+                        </td>
+                        <td>
+                            <form method="post" asp-page-handler="MachineHealthCheck" class="inline">
+                                <input type="hidden" name="deviceId" value="@m.Current.DeviceId">
+                                <select name="mode" onchange="this.form.submit()"
+                                        style="padding:5px;border-radius:8px;border:1px solid var(--line);max-width:170px">
+                                    <option value="0" selected="@(m.Current.HealthCheckMode == 0)">As @Model.Client.Name (@(Model.Client.HealthCheck ? "on" : "off"))</option>
+                                    <option value="1" selected="@(m.Current.HealthCheckMode == 1)">On for this machine</option>
+                                    <option value="2" selected="@(m.Current.HealthCheckMode == 2)">Off for this machine</option>
+                                </select>
+                                <noscript><button class="btn btn-sm">Set</button></noscript>
+                            </form>
+                            <br><span class="muted" style="font-size:12px">@m.HealthCheckText</span>
+                        </td>
+                        <td class="muted" style="font-size:12px">@m.Current.LastSeenUtc.Local().ToString("yyyy-MM-dd HH:mm")</td>
+                        <td>
+                            <a class="btn btn-sm" href="/portal/tickets?machine=@Uri.EscapeDataString(m.Current.MachineName)&filter=all">History</a>
+                            <form method="post" asp-page-handler="Link" class="inline" style="margin-left:6px">
+                                <input type="hidden" name="deviceId" value="@m.Current.DeviceId">
+                                <input type="hidden" name="unlink" value="true">
+                                <button class="btn btn-sm">Unlink</button>
+                            </form>
+                        </td>
+                    </tr>
+                    @* Older rows for the same PC, shown underneath it rather than as another machine. *@
+                    @if (m.Duplicates.Count > 0)
+                    {
+                        <tr>
+                            <td colspan="8" class="muted" style="font-size:12px;padding-top:0">
+                                Also @m.Duplicates.Count older record@(m.Duplicates.Count == 1 ? "" : "s") for this machine
+                                (@string.Join(", ", m.Duplicates.Select(x => "last seen " + x.LastSeenUtc.Local().ToString("yyyy-MM-dd")))) —
+                                left behind by an uninstall and reinstall, not a second PC.
+                            </td>
+                        </tr>
+                    }
+                }
+            </table>
+        }
+
+        @* An unlinked row with the same name is the same PC after a reinstall. Offer to adopt it. *@
+        @if (Model.LooseMatches.Count > 0)
+        {
+            <div class="alert alert-bad" style="margin-top:16px">
+                <strong>Unlinked records for machines you already own.</strong>
+                A reinstall gives a machine a new identity, so it comes back as a new row with no client.
+                <table style="margin-top:12px">
+                    <tr><th>Machine</th><th>User</th><th>Last seen</th><th></th></tr>
+                    @foreach (var d in Model.LooseMatches)
+                    {
+                        <tr>
+                            <td><strong>@d.MachineName</strong></td>
+                            <td>@d.UserName</td>
+                            <td class="muted" style="font-size:12px">@d.LastSeenUtc.Local().ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>
+                                <form method="post" asp-page-handler="Link" class="inline">
+                                    <input type="hidden" name="deviceId" value="@d.DeviceId">
+                                    <input type="hidden" name="unlink" value="false">
+                                    <button class="btn btn-sm btn-accent">Link to @Model.Client.Name</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </table>
+            </div>
+        }
+    </div>
+
+    <!-- ---------- their work ---------- -->
+    <div class="card" style="margin-bottom:26px">
+        <h3>Open work <span class="pill @(Model.OpenTickets.Count > 0 ? "pill-warn" : "pill-ok")">@Model.OpenTickets.Count</span>
+            @if (Model.WorksTickets) { <a class="btn btn-sm btn-accent" style="float:right" href="/portal/tickets/new">New ticket</a> }</h3>
+        @if (Model.OpenTickets.Count == 0) { <p class="muted">Nothing open for @Model.Client.Name.</p> }
+        else
+        {
+            <table>
+                <tr><th>#</th><th>Subject</th><th>Type</th><th>Status</th><th>Priority</th><th>Assigned to</th><th>Age</th></tr>
+                @foreach (var t in Model.OpenTickets)
+                {
+                    <tr>
+                        <td><a href="@(PortalAddresses.Ticket(t.Number))"><strong>#@t.Number</strong></a></td>
+                        <td>@t.Subject
+                            @if (!string.IsNullOrWhiteSpace(t.MachineName)) { <br><span class="muted" style="font-size:12px">@t.MachineName</span> }
+                        </td>
+                        <td class="muted" style="font-size:12px">@TicketService.CategoryName(t.Category)</td>
+                        <td><span class="pill @M.StatusPillFor(t.Status)">@M.StatusName(t.Status)</span></td>
+                        <td><span class="pill @M.PriorityPill(t.Priority)">@t.Priority</span></td>
+                        <td>@if (string.IsNullOrWhiteSpace(t.AssignedTo)) { <span class="pill pill-warn">unassigned</span> } else { <text>@t.AssignedTo</text> }</td>
+                        <td><span class="pill @M.AgePill(M.Age(t.CreatedUtc))">@M.Age(t.CreatedUtc) d</span></td>
+                    </tr>
+                }
+            </table>
+        }
+    </div>
+
+    <div class="card" style="margin-bottom:26px">
+        <h3>Closed history <span class="pill pill-muted">@Model.ClosedTickets.Count</span></h3>
+        @if (Model.ClosedTickets.Count == 0) { <p class="muted">Nothing closed yet.</p> }
+        else
+        {
+            <table>
+                <tr><th>#</th><th>Subject</th><th>Type</th><th>Status</th><th>Closed</th></tr>
+                @foreach (var t in Model.ClosedTickets)
+                {
+                    <tr>
+                        <td><a href="@(PortalAddresses.Ticket(t.Number))">#@t.Number</a></td>
+                        <td>@t.Subject</td>
+                        <td class="muted" style="font-size:12px">@TicketService.CategoryName(t.Category)</td>
+                        <td><span class="pill @M.StatusPillFor(t.Status)">@M.StatusName(t.Status)</span></td>
+                        <td class="muted" style="font-size:12px">@(t.ClosedUtc?.Local().ToString("yyyy-MM-dd") ?? "—")</td>
+                    </tr>
+                }
+            </table>
+            <p class="muted" style="margin-top:12px;font-size:13px">Showing the most recent 25. The full record is on the <a href="/portal/tickets?c=@Model.Client.Number&filter=closed">tickets page</a>.</p>
+        }
+    </div>
+
+    <!-- ---------- their details ---------- -->
+    <div class="card form">
+        <h3>Details</h3>
+        <form method="post" asp-page-handler="Save">
+            <label>Name (company or person)</label><input name="name" value="@Model.Client.Name" required>
+            <label>Contact person</label><input name="contact" value="@Model.Client.ContactName">
+            <div class="row">
+                <div><label>Phone</label><input name="phone" value="@Model.Client.Phone"></div>
+                <div><label>Email</label><input name="email" type="email" value="@Model.Client.Email"></div>
+            </div>
+            <label>Address</label><textarea name="address" rows="2">@Model.Client.Address</textarea>
+            <label>Notes</label><textarea name="notes" rows="3">@Model.Client.Notes</textarea>
+            <div class="actions"><button class="btn btn-accent" type="submit">Save details</button></div>
+        </form>
+        <p class="muted" style="font-size:13px;margin-top:10px">Customer since @Model.Client.CreatedUtc.Local().ToString("d MMMM yyyy").</p>
+    </div>
+
+    <!-- ---------- removing it (§172): a misspelling or a duplicate, its work moved to the right client ---------- -->
+    @if (Model.MayRemove)
+    {
+        <div class="card form" id="removeClient" style="margin-top:26px">
+            <h3>Remove this client</h3>
+            @if (Model.OnIt.Length > 0)
+            {
+                <p class="muted">Added twice, or spelt wrong? Choose the right client and everything on @Model.Client.Name —
+                    @Model.OnIt — moves to them. Then @Model.Client.Name is removed. The right client keeps its own details;
+                    anything it has blank is filled in from this one.</p>
+                <form method="post" asp-page-handler="Remove" data-ask="Move everything on @Model.Client.Name to the client you chose, and remove @Model.Client.Name? This cannot be undone."
+                      onsubmit="return confirm(this.dataset.ask);">
+                    <label>Move everything to</label>
+                    <div class="cpick" data-mode="id">
+                        <input type="hidden" name="into" value="0">
+                        <input class="cpick-in" placeholder="Type the right client's name" required>
+                        <div class="cpick-list" hidden></div>
+                    </div>
+                    <div class="actions"><button class="btn" type="submit">Move everything and remove @Model.Client.Name</button></div>
+                </form>
+            }
+            else
+            {
+                <p class="muted">Nothing is on @Model.Client.Name — no tickets, machines, people or articles — so it can simply be removed.</p>
+                <form method="post" asp-page-handler="Remove" data-ask="Remove @Model.Client.Name?" onsubmit="return confirm(this.dataset.ask);">
+                    <div class="actions"><button class="btn" type="submit">Remove @Model.Client.Name</button></div>
+                </form>
+            }
+        </div>
+    }
+</div></section>

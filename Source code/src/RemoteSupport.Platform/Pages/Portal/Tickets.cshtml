@@ -1,0 +1,208 @@
+@page "/portal/tickets"
+@model RemoteSupport.Platform.Pages.Portal.TicketsModel
+@{ ViewData["Title"] = "Tickets"; ViewData["Section"] = "portal"; }
+<section class="portal"><div class="wrap">
+    <h1>
+        @(Model.CanSeeAll ? "Tickets" : "My tickets")
+        @if (Model.WorksTickets) { <a class="btn btn-accent" style="float:right" href="/portal/tickets/new">New ticket</a> }
+        <a class="btn" style="float:right;margin-right:8px" href="/portal/recurring">Recurring tasks</a>
+    </h1>
+    @if (Model.CanSeeAll)
+    {
+        <p class="muted tintro">Every job: general work, walk ins, workshop bookings, call outs and remote support. Anyone in the office can raise one and assign it.</p>
+    }
+    else
+    {
+        @* Said out loud rather than left to be inferred from a short list. Somebody who cannot see
+           a colleague's ticket should know that is the rule and not think the queue is empty. *@
+        <p class="muted tintro">
+            Your own jobs, plus anything nobody has been given yet — those are yours to pick up.
+            A colleague's tickets are not shown.
+            @if (Model.PoolCount > 0)
+            {
+                <text> </text><a href="/portal/tickets?filter=unassigned"><strong>@Model.PoolCount waiting for somebody.</strong></a>
+            }
+        </p>
+    }
+
+    @if (!string.IsNullOrEmpty(Model.FilterLabel))
+    {
+        <div class="alert alert-ok">
+            Showing only <strong>@Model.FilterLabel</strong>@(Model.ClientFilter.HasValue ? "" : " (all device records for that machine name)").
+            <a href="/portal/tickets?filter=@Model.Filter">Show everything</a>
+        </div>
+    }
+
+    <form method="get" class="card tfilter@(Model.From.HasValue || Model.To.HasValue ? " dates-on" : "")" style="margin-bottom:18px">
+        @* keep the client / machine narrowing when the filter form is submitted *@
+        @if (Model.ClientNumber.HasValue) { <input type="hidden" name="c" value="@Model.ClientNumber.Value"> }
+        @if (!string.IsNullOrEmpty(Model.MachineFilter)) { <input type="hidden" name="machine" value="@Model.MachineFilter"> }
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+            <div>
+                <label style="display:block;font-weight:800;font-size:13px;margin-bottom:6px">Show</label>
+                <select name="filter" style="padding:10px 12px;border:1px solid var(--line);border-radius:10px">
+                    <option value="open" selected="@(Model.Filter == "open")">Open</option>
+                    <option value="unassigned" selected="@(Model.Filter == "unassigned")">Unassigned</option>
+                    <option value="mine" selected="@(Model.Filter == "mine")">Assigned to me</option>
+                    <option value="urgent" selected="@(Model.Filter == "urgent")">Urgent or high priority</option>
+                    <option value="billing" selected="@(Model.Filter == "billing")">Billing queue</option>
+                    <option value="asked" selected="@(Model.Filter == "asked")">Waiting on my reply</option>
+                    <option value="closed" selected="@(Model.Filter == "closed")">Resolved / closed</option>
+                    <option value="all" selected="@(Model.Filter == "all")">All</option>
+                </select>
+            </div>
+            @* The list sorts by clicking a heading (§165), so the Sort box is gone; the order goes along with the form, and the
+               grouped view it used to offer as "Customer" is this tick. Both are remembered in this browser. *@
+            <input type="hidden" name="sort" value="@Model.Sort">
+            @* One field that always says which: an unticked box sends nothing, and "nothing" means "as last time". *@
+            <input type="hidden" name="group" id="tGroup" value="@(Model.Grouped ? "1" : "0")">
+            <label style="display:flex;gap:8px;align-items:center;font-size:14px;padding-bottom:10px;white-space:nowrap">
+                <input type="checkbox" id="tGroupTick" checked="@Model.Grouped"
+                       onchange="document.getElementById('tGroup').value = this.checked ? '1' : '0'; this.form.submit()"> Group by customer
+            </label>
+            <div style="flex:1;min-width:200px">
+                <label style="display:block;font-weight:800;font-size:13px;margin-bottom:6px">Search</label>
+                <input name="search" value="@Model.Search" placeholder="subject, machine or customer" style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px">
+            </div>
+            <div class="t-date">
+                <label style="display:block;font-weight:800;font-size:13px;margin-bottom:6px">From</label>
+                <input name="from" type="date" value="@Model.From?.ToString("yyyy-MM-dd")" style="padding:10px 12px;border:1px solid var(--line);border-radius:10px">
+            </div>
+            <div class="t-date">
+                <label style="display:block;font-weight:800;font-size:13px;margin-bottom:6px">To</label>
+                <input name="to" type="date" value="@Model.To?.ToString("yyyy-MM-dd")" style="padding:10px 12px;border:1px solid var(--line);border-radius:10px">
+            </div>
+            <button class="btn btn-accent" type="submit">Apply</button>
+            @* On a phone the dates fold behind this, so the list is on the first screen. *@
+            <button class="btn t-dates-btn" type="button" onclick="this.form.classList.toggle('dates-on')">Dates</button>
+            <a class="btn" href="/portal/tickets">Clear</a>
+        </div>
+    </form>
+
+    <div class="stats tstats" style="grid-template-columns:repeat(3,1fr)">
+        <div class="stat"><div class="n">@Model.Tickets.Count</div><div class="l">Tickets shown</div></div>
+        <div class="stat"><div class="n">@Model.TotalMinutes</div><div class="l">Minutes of remote time</div></div>
+        <div class="stat"><div class="n">@Model.Tickets.Count(t => t.Status == TicketStatus.Resolved || t.Status == TicketStatus.Closed)</div><div class="l">Resolved / closed</div></div>
+    </div>
+
+    @* The headings sort (2026-10-26, HANDOVER §165, from SuperOps' list): click one, click it again to turn it round; ▲ or ▼
+       says which is in use. Every column is sorted on the SERVER, before the first 500 are taken. Grouped by customer, the
+       Client column is the group's heading, so it shows the machine instead — and the headings sort within each customer.
+       On a phone the headings fold away with the table, so a small Sort box stands in for them there (t-phone-sort). *@
+    <form method="get" class="t-phone-sort">
+        @foreach (var kv in Request.Query.Where(kv => kv.Key != "sort")) { <input type="hidden" name="@kv.Key" value="@kv.Value"> }
+        <label>Sort by
+            <select name="sort" onchange="this.form.submit()">
+                @foreach (var (key, heading) in RemoteSupport.Shared.TicketSort.Columns)
+                {
+                    var on = RemoteSupport.Shared.TicketSort.Parse(Model.Sort).Column == key;
+                    <option value="@(on ? Model.Sort : key)" selected="@on">@(key == RemoteSupport.Shared.TicketSort.Number ? "Ticket number" : heading)</option>
+                }
+            </select>
+        </label>
+    </form>
+
+    @if (Model.Tickets.Count == 0) { <div class="card">No tickets match this filter.</div> }
+    else if (!Model.Grouped)
+    {
+        <div class="card">
+            <table class="tlist no-cards">
+                @SortRow(false)
+                @foreach (var t in Model.Tickets) { @TicketRow(t, false) }
+            </table>
+        </div>
+    }
+    else
+    {
+        @* Gathered under the customer they belong to. Since every remote session has its own
+           ticket, a busy day is a hundred rows, and a flat hundred rows is unreadable — which
+           would make the whole change look like a mistake rather than like time being tracked. *@
+        foreach (var g in Model.Groups)
+        {
+            <details open class="card" style="margin-bottom:14px">
+                <summary style="cursor:pointer;font-weight:800;font-size:15px;list-style:none">
+                    @if (g.ClientId > 0) { <text>@g.Name</text> } else { <span class="muted">@g.Name</span> }
+                    <span class="pill pill-muted">@g.Tickets.Count</span>
+                    @if (g.Minutes > 0) { <span class="pill pill-muted">@g.Minutes min</span> }
+                </summary>
+                <table class="tlist no-cards" style="margin-top:10px">
+                    @SortRow(true)
+                    @foreach (var t in g.Tickets) { @TicketRow(t, true) }
+                </table>
+            </details>
+        }
+    }
+</div></section>
+
+@functions {
+    // Drawn in code, once for both views — every value encoded (HtmlEncoder), as Razor would.
+    static readonly System.Text.Encodings.Web.HtmlEncoder Enc = System.Text.Encodings.Web.HtmlEncoder.Default;
+    static string H(string? s) => Enc.Encode(s ?? "");
+
+    /// <summary>The headings: each a link to this page sorted by it, with its arrow when it is the one in use.</summary>
+    Microsoft.AspNetCore.Html.IHtmlContent SortRow(bool grouped)
+    {
+        var sb = new System.Text.StringBuilder("<tr>");
+        foreach (var (key, heading) in RemoteSupport.Shared.TicketSort.Columns)
+        {
+            if (grouped && key == RemoteSupport.Shared.TicketSort.Client) { sb.Append("<th>Machine</th>"); continue; }
+            var arrow = RemoteSupport.Shared.TicketSort.Arrow(Model.Sort, key);
+            sb.Append(arrow.Length > 0 ? $"<th aria-sort=\"{(arrow == "▼" ? "descending" : "ascending")}\">" : "<th>");
+            sb.Append($"<a class=\"t-sort{(arrow.Length > 0 ? " on" : "")}\" href=\"{H(Model.SortLink(key))}\" title=\"{H(Model.SortHint(key, heading))}\">{H(heading)}");
+            if (arrow.Length > 0) sb.Append($" <span aria-hidden=\"true\">{arrow}</span>");
+            sb.Append("</a></th>");
+        }
+        // Time only when a ticket listed has any (§165): eleven columns must fit a laptop, and on most lists it is all "—".
+        sb.Append(Model.TotalMinutes > 0 ? "<th>Time</th><th></th></tr>" : "<th></th></tr>");
+        return new Microsoft.AspNetCore.Html.HtmlString(sb.ToString());
+    }
+
+    Microsoft.AspNetCore.Html.IHtmlContent TicketRow(Ticket t, bool grouped)
+    {
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        var sb = new System.Text.StringBuilder("<tr>");
+        // #
+        sb.Append($"<td class=\"t-num\"><strong>#{t.Number}</strong>");
+        if (t.ParentTicketId.HasValue) sb.Append("<br><span class=\"muted\" style=\"font-size:11px\">part of a job</span>");
+        else if (Model.ChildrenOf(t.Id) > 0) sb.Append($"<br><span class=\"pill pill-muted\">+{Model.ChildrenOf(t.Id)}</span>");
+        sb.Append("</td>");
+        // Type
+        sb.Append($"<td class=\"t-type\"><span class=\"pill pill-muted\">{H(TicketService.CategoryName(t.Category))}</span></td>");
+        // Subject — the machine under it in the plain list (grouped, it has a column of its own)
+        sb.Append($"<td class=\"t-subj\">{H(t.Subject)}");
+        if (!grouped && t.MachineName.Length > 0) sb.Append($"<br><span class=\"muted\" style=\"font-size:12px\">{H(t.MachineName)}</span>");
+        sb.Append("</td>");
+        // Client, or the machine when grouped
+        if (grouped) sb.Append($"<td class=\"t-mach\">{H(t.MachineName)}</td>");
+        else sb.Append($"<td class=\"t-client{(t.ClientId.HasValue ? "" : " none")}\">{H(t.ClientId.HasValue ? Model.ClientNameFor(t.ClientId) : "—")}</td>");
+        // Assigned to
+        sb.Append($"<td class=\"t-who\">{H(t.AssignedTo.Length > 0 ? t.AssignedTo : t.Lane == 1 ? "Billing queue" : t.Lane == 2 ? "Supervisors" : "—")}</td>");
+        // Status — "Customer replied" first, in orange, while the customer's reply is the newest entry (§165)
+        sb.Append("<td class=\"t-status\">");
+        if (Model.Replied.Contains(t.Id)) sb.Append("<span class=\"pill t-replied\">Customer replied</span> ");
+        sb.Append($"<span class=\"pill {Model.StatusPill(t.Status)}\">{H(Model.StatusName(t.Status))}</span>");
+        // A workflow job says where on its route it is — "Quote needed" is the title Clint wanted a billing job to carry.
+        if (t.Stage.Length > 0) sb.Append($"<br><span style=\"font-size:12px;font-weight:700\">{H(Workflow.Label(t.Stage))}</span>");
+        sb.Append("</td>");
+        // Priority, with its dot
+        sb.Append($"<td class=\"t-prio\"><span class=\"t-dot\" style=\"background:{TicketsModel.PriorityDot(t.Priority)}\"></span>{H(RemoteSupport.Shared.TicketSummary.PriorityNames[(int)t.Priority])}</td>");
+        // Last updated, as "2 min ago"; the exact time on hover
+        sb.Append($"<td class=\"t-upd\" title=\"{H(t.UpdatedUtc.Local().ToString("yyyy-MM-dd HH:mm", inv))}\">{H(TicketsModel.Ago(t.UpdatedUtc))}</td>");
+        // Due — its due date, else a call out's appointment (with the time); overdue in red
+        sb.Append("<td class=\"t-due\">");
+        if (t.DueDate is DateTime due)
+        {
+            bool late = TicketDue.IsOverdue(t);
+            sb.Append($"<span{(late ? " class=\"t-late\"" : "")}>{H(due.ToString("ddd d MMM", inv))}</span>");
+            if (late) sb.Append(" <span class=\"pill pill-bad\">Overdue</span>");
+        }
+        else if (t.AppointmentUtc is DateTime at) sb.Append($"📅 {H(at.Local().ToString("ddd d MMM HH:mm", inv))}");
+        else sb.Append("<span class=\"muted\">—</span>");
+        sb.Append("</td>");
+        // Time, and the way in
+        var mins = Model.MinutesFor(t.Id);
+        if (Model.TotalMinutes > 0) sb.Append($"<td class=\"t-time{(mins > 0 ? "" : " none")}\">{(mins > 0 ? mins + " min" : "—")}</td>");
+        sb.Append($"<td class=\"t-go\"><a class=\"btn btn-sm\" href=\"{H(PortalAddresses.Ticket(t.Number))}\" aria-label=\"Open #{t.Number}\">Open</a></td>");
+        return new Microsoft.AspNetCore.Html.HtmlString(sb.Append("</tr>").ToString());
+    }
+}

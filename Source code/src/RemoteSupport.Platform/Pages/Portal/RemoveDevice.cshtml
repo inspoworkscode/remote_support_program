@@ -1,0 +1,29 @@
+@page "/portal/removedevice"
+@model RemoteSupport.Platform.Pages.Portal.RemoveDeviceModel
+@{ ViewData["Title"] = "Remove a machine"; ViewData["Section"] = "portal"; var m = Model.Machine!; }
+<section class="portal"><div class="wrap" style="max-width:600px">
+    <h1 id="removeHeading">Remove @m.MachineName</h1>
+    <p class="muted">
+        @(Model.Online
+            ? "It is online, so the support program uninstalls itself from it now."
+            : "It is offline: it will be refused when it next connects, and the support program stays on it until somebody removes it.")
+        Its tickets, sessions and reports are kept. To add it again, install the support program on it again.
+    </p>
+    @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad" id="removeError">@Model.Error</div> }
+    <div class="card form">
+        <form method="post">
+            <input type="hidden" name="Id" value="@m.DeviceId">
+            <label>Why?</label>
+            <select name="Reason" required id="removeReason">
+                <option value="">Choose…</option>
+                @foreach (var r in RemoteSupport.Shared.RemovalReasons.All) { <option selected="@(r == Model.Reason)">@r</option> }
+            </select>
+            <label>Note <span class="muted">(needed for Other)</span></label>
+            <textarea name="Note" rows="3" maxlength="500">@Model.Note</textarea>
+            <div class="actions">
+                <button class="btn btn-danger" type="submit" id="removeConfirm">Remove</button>
+                <a class="btn" href="/portal/devices">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div></section>

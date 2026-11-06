@@ -1,0 +1,68 @@
+@page "/portal/downloads"
+@model RemoteSupport.Platform.Pages.Portal.DownloadsModel
+@{ ViewData["Title"] = "Downloads"; ViewData["Section"] = "portal"; var t = Model.Tenant; }
+<section class="portal"><div class="wrap">
+    <h1>Downloads</h1>
+    <p class="muted">Both packages are built with your branding and linked to your company automatically.</p>
+    @if (!t.IsServiceEnabled) { <div class="alert alert-warn">Downloads are available once your account is approved and active.</div> }
+    @if (RemoteSupport.Shared.FreePlan.Is(t.Plan))
+    {
+        @* The free version (2026-10-06): no customers and no team — the console, and the installer for its own computers. *@
+        <div class="grid2" id="freeDownloads">
+            <div class="card">
+                <h3>Your console</h3>
+                <p>What you connect from. One file: opened, it sets itself up with a desktop shortcut, already pointed at your account.</p>
+                @if (Model.TechExeReady) { <p><a class="btn btn-accent" href="/downloads/@t.Slug/technician.exe" id="freeConsole">Download the console</a></p> }
+                else if (Model.TechReady) { <p><a class="btn btn-accent" href="/downloads/@t.Slug/technician.zip" id="freeConsole">Download the console</a></p> }
+                else { <div class="alert alert-warn">The console hasn't been uploaded to the platform yet.</div> }
+            </div>
+            <div class="card">
+                <h3>For your computers</h3>
+                @if (RemoteSupport.Shared.FreePlan.IsFree(t.Plan))
+                {
+                    <p>On the computer you want to reach, open this link, run what it downloads and choose the computer's password:</p>
+                }
+                else
+                {
+                    <p>On each computer you want to reach, open this link and run what it downloads. Choose a password to connect with nobody there;
+                        leave it blank and the person at the computer is asked to allow each connection:</p>
+                }
+                <div class="copy"><code id="freeLink">@Model.PublicUrl/download/@t.Slug</code> <button class="btn btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('freeLink').textContent)">Copy</button></div>
+                @if (RemoteSupport.Shared.FreePlan.IsFree(t.Plan))
+                {
+                    <p class="muted" style="font-size:13px;margin-top:12px">@RemoteSupport.Shared.FreePlan.FreeTheName has @RemoteSupport.Shared.FreePlan.FreeMachines computer — <a href="/portal/upgrade">upgrade</a> for more. It is listed on <a href="/portal/machines">Computers</a>.</p>
+                }
+                else
+                {
+                    <p class="muted" style="font-size:13px;margin-top:12px">@RemoteSupport.Shared.FreePlan.MachinesFor(t.Plan, t.BasicMachines) computers — more on <a href="/portal/billing#basicMachines">Billing</a>. They are listed on <a href="/portal/machines">Computers</a>.</p>
+                }
+            </div>
+        </div>
+        @Html.Raw("</div></section>")
+        return;
+    }
+    <div class="grid2">
+        <div class="card">
+            <h3>For your customers</h3>
+            <p>Share this link. It shows your logo and lets customers download the branded support app:</p>
+            <div class="copy"><code id="lnk">@Model.PublicUrl/get/@t.Slug</code> <button class="btn btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('lnk').textContent)">Copy</button></div>
+            <p style="margin-top:14px"><a class="btn" href="/get/@t.Slug" target="_blank">Preview the page</a>
+            @if (Model.ClientReady) { <a class="btn btn-accent" href="/downloads/@t.Slug/client.zip">Download client package</a> }</p>
+            <p class="muted" style="font-size:13px">Includes the customer app, the unattended agent, and the session host. Run <code>RemoteSupport.Client.exe</code>; install <code>RemoteSupport.Agent.exe</code> as a service for unattended access.</p>
+        </div>
+        <div class="card">
+            <h3>For your technicians</h3>
+            <p>Send your technicians this link. They sign in on it with their console email and password, and download the console on whatever PC they are at:</p>
+            <div class="copy"><code id="techlnk">@Model.PublicUrl/tech/@t.Slug</code> <button class="btn btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('techlnk').textContent)">Copy</button></div>
+            <p style="margin-top:14px"><a class="btn" href="/tech/@t.Slug" target="_blank">Open the page</a>
+            @if (Model.TechExeReady) { <a class="btn btn-accent" href="/downloads/@t.Slug/technician.exe">Download technician console</a> }
+            else if (Model.TechReady) { <a class="btn btn-accent" href="/downloads/@t.Slug/technician.zip">Download technician console</a> }</p>
+            @if (!Model.TechReady) { <div class="alert alert-warn">The technician package hasn't been uploaded to the platform yet.</div> }
+            <p class="muted" style="font-size:13px">@(Model.TechExeReady ? "One file: opened, it sets itself up with a desktop shortcut, already pointed at your company." : "Run RemoteSupport.Technician.exe. It is already pointed at this platform.")</p>
+        </div>
+    </div>
+    <div class="card" style="margin-top:20px">
+        <h3>Your company key</h3>
+        <p class="muted">Baked into every download so devices know they belong to you. Keep it private. <code>@t.TenantKey</code></p>
+    </div>
+</div></section>

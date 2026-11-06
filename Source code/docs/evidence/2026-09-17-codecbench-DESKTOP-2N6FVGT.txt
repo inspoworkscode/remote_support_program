@@ -1,0 +1,180 @@
+codecbench on DESKTOP-2N6FVGT as DESKTOP-2N6FVGT\User, session 2, 2026-09-17T13:07:20
+
+======== what Media Foundation enumerates ========
+(codecbench --mfts)
+codecbench - what the screen pipeline costs, on this machine alone.
+
+monitor 0: 1366x768 at 0,0 (primary)  \\.\DISPLAY1
+JPEG quality 55, cap 12 fps, 6 s per pass.
+
+
+video encoder  (everything)
+    NVIDIA HEVC Encoder MFT
+    NVIDIA H.264 Encoder MFT
+    Intelr Hardware H265 Encoder MFT
+    Intelr Quick Sync Video H.264 Encoder MFT
+    Intelr Hardware H265 Encoder MFT
+    Intelr Quick Sync Video H.264 Encoder MFT
+    HEIFImageExtension
+    VP9VideoExtensionEncoder
+    H264 Encoder MFT
+    WMVideo8 Encoder MFT
+    H263 Encoder MFT
+    WMVideo9 Encoder MFT
+    Microsoft MPEG-2 Video Encoder MFT
+
+video encoder  (hardware only)
+    Intelr Quick Sync Video H.264 Encoder MFT
+    NVIDIA H.264 Encoder MFT
+    NVIDIA HEVC Encoder MFT
+    Intelr Hardware H265 Encoder MFT
+    Intelr Quick Sync Video H.264 Encoder MFT
+    Intelr Hardware H265 Encoder MFT
+
+video encoder  (synchronous only)
+    H264 Encoder MFT
+    WMVideo8 Encoder MFT
+    H263 Encoder MFT
+    WMVideo9 Encoder MFT
+    VP9VideoExtensionEncoder
+    HEIFImageExtension
+
+video encoder  (asynchronous only)
+    Microsoft MPEG-2 Video Encoder MFT
+
+video encoder  (no flags at all)
+    HEIFImageExtension
+    VP9VideoExtensionEncoder
+    H264 Encoder MFT
+    WMVideo8 Encoder MFT
+    H263 Encoder MFT
+    WMVideo9 Encoder MFT
+
+video decoder  (everything)
+    NVIDIA MJPEG Video Decoder MFT
+    Intelr Hardware M-JPEG Decoder MFT
+    Intelr Hardware M-JPEG Decoder MFT
+    HEIFImageExtension
+    VP9VideoExtensionDecoder
+    WebpImageExtension
+    Microsoft MPEG Video Decoder MFT
+    DV Decoder MFT
+    Mpeg4s Decoder MFT
+    Microsoft H264 Video Decoder MFT
+    WMV Screen decoder MFT
+    WMVideo Decoder MFT
+    MJPEG Decoder MFT
+    Mpeg43 Decoder MFT
+    Mpeg4 Decoder MFT
+
+video processor  (everything)
+    Microsoft Video Processor MFT
+
+video encoder  (NV12 in, H.264 out)
+    NVIDIA H.264 Encoder MFT
+    Intelr Quick Sync Video H.264 Encoder MFT
+    Intelr Quick Sync Video H.264 Encoder MFT
+    H264 Encoder MFT
+
+video encoder  (BGRA in, H.264 out)
+    Intelr Quick Sync Video H.264 Encoder MFT
+    Intelr Quick Sync Video H.264 Encoder MFT
+
+video decoder  (H.264 in, NV12 out)
+    Microsoft H264 Video Decoder MFT
+
+video processor  (BGRA in, NV12 out)
+    Microsoft Video Processor MFT
+[exit 0]
+
+======== h264check - default encoder ========
+(codecbench --h264check --out C:\Temp\codecbench\out-default)
+codecbench - what the screen pipeline costs, on this machine alone.
+
+monitor 0: 1366x768 at 0,0 (primary)  \\.\DISPLAY1
+JPEG quality 55, cap 12 fps, 6 s per pass.
+
+Encoding one frame, decoding it again, and comparing it to the screen.
+
+  encoder: Intelr Quick Sync Video H.264 Encoder MFT
+  1366x768, 819 kbit/s, taking BGRA directly
+  FAIL  the encoder never produced a key frame
+        encoder Intelr Quick Sync Video H.264 Encoder MFT: asynchronous, unlocked True (ok), events 0 (needInput 0, haveOutput 0, other 0, last type 0, last GetEvent no event queued), inputs accepted 0 refused 20, outputs taken 0, providesSamples True, outputSize 0, beginStreaming ok, startOfStream ok, last ProcessInput ok, last ProcessOutput ok
+        frames the encoder was too busy for: 20
+[exit 1]
+
+======== h264check - forced NVIDIA ========
+(codecbench --h264check --encoder NVIDIA --out C:\Temp\codecbench\out-nvidia)
+codecbench - what the screen pipeline costs, on this machine alone.
+
+monitor 0: 1366x768 at 0,0 (primary)  \\.\DISPLAY1
+JPEG quality 55, cap 12 fps, 6 s per pass.
+
+Encoding one frame, decoding it again, and comparing it to the screen.
+
+no encoder on this machine: no H.264 encoder would take this screen - NVIDIA H.264 Encoder MFT: would not activate (HRESULT 0x8000FFFF)
+[exit 1]
+
+======== h264check - forced Intel Quick Sync ========
+(codecbench --h264check --encoder Quick Sync --out C:\Temp\codecbench\out-quicksync)
+codecbench - what the screen pipeline costs, on this machine alone.
+
+monitor 0: 1366x768 at 0,0 (primary)  \\.\DISPLAY1
+JPEG quality 55, cap 12 fps, 6 s per pass.
+
+Encoding one frame, decoding it again, and comparing it to the screen.
+
+  encoder: Intelr Quick Sync Video H.264 Encoder MFT
+  1366x768, 819 kbit/s, taking BGRA directly
+  FAIL  the encoder never produced a key frame
+        encoder Intelr Quick Sync Video H.264 Encoder MFT: asynchronous, unlocked True (ok), events 0 (needInput 0, haveOutput 0, other 0, last type 0, last GetEvent no event queued), inputs accepted 0 refused 20, outputs taken 0, providesSamples True, outputSize 0, beginStreaming ok, startOfStream ok, last ProcessInput ok, last ProcessOutput ok
+        frames the encoder was too busy for: 20
+[exit 1]
+
+======== the bandwidth table (2817 KB/s to beat) ========
+(codecbench --source all --seconds 6)
+codecbench - what the screen pipeline costs, on this machine alone.
+
+monitor 0: 1366x768 at 0,0 (primary)  \\.\DISPLAY1
+JPEG quality 55, cap 12 fps, 6 s per pass.
+
+
+| source | condition | pass | fps | KB/s | tiles/frame | ms/poll (grab/diff/jpeg) | CPU |
+|---|---|---|---|---|---|---|---|
+| gdi | idle | capped 12 |   0.0 |     0.0 |   0.0 of 66 |  38.5  (29.8/7.8/0.0) | 17.4% |
+| gdi | idle | uncapped |   0.0 |     0.0 |   0.0 of 66 |  34.1  (27.7/5.7/0.0) | 39.3% |
+| gdi | scroll | capped 12 |  10.7 |  1469.2 |  42.0 of 66 |  49.5  (29.6/5.9/12.7) | 26.2% |
+| gdi | scroll | uncapped |  19.7 |  2729.3 |  42.0 of 66 |  50.7  (30.9/6.1/12.8) | 58.0% |
+| gdi | video | capped 12 |   9.4 |  1071.8 |  66.0 of 66 | 106.5  (84.6/5.4/15.5) | 28.3% |
+| gdi | video | uncapped |   9.3 |  1064.7 |  66.0 of 66 | 107.0  (85.1/5.5/15.6) | 25.9% |
+| dxgi | idle | capped 12 |   0.0 |     0.0 |   0.0 of 66 |   0.1  (0.1/0.0/0.0) |  0.0% |
+| dxgi | idle | uncapped |   0.0 |     0.0 |   0.0 of 66 |   0.0  (0.0/0.0/0.0) | 100.0% |
+| dxgi | scroll | capped 12 |  10.7 |  1471.0 |  42.0 of 66 |  14.2  (2.6/1.7/9.8) |  0.8% |
+| dxgi | scroll | uncapped |  56.3 |  7809.5 |  42.0 of 66 |   0.1  (0.0/0.0/0.1) | 70.0% |
+| dxgi | video | capped 12 |  10.7 |  1217.6 |  66.0 of 66 |  15.3  (2.0/1.0/12.2) |  4.6% |
+| dxgi | video | uncapped |  18.5 |  2108.7 |  66.0 of 66 |   0.0  (0.0/0.0/0.0) | 90.4% |
+| h264 | idle | capped 12 |   0.0 |     0.0 |   whole frame |   0.1  (0.1/0.0/0.0) |  0.0% |
+| h264 | idle | uncapped |   0.0 |     0.0 |   whole frame |   0.0  (0.0/0.0/0.0) | 100.0% |
+| h264 | scroll | capped 12 |   0.0 |     0.0 |   whole frame |  93.7  (0.2/0.0/93.5) |  0.0% |
+| h264 | scroll | uncapped |   0.0 |     0.0 |   whole frame |  93.7  (0.3/0.0/93.5) |  0.0% |
+| h264 | video | capped 12 |   0.0 |     0.0 |   whole frame |  93.6  (0.2/0.0/93.4) |  0.0% |
+| h264 | video | uncapped |   0.0 |     0.0 |   whole frame |  93.7  (0.2/0.0/93.5) |  0.0% |
+h264: Intelr Quick Sync Video H.264 Encoder MFT, 819 kbit/s asked for; 1 frames the encoder was too busy for
+h264: Intelr Quick Sync Video H.264 Encoder MFT, 819 kbit/s asked for; 82 frames the encoder was too busy for
+h264: Intelr Quick Sync Video H.264 Encoder MFT, 819 kbit/s asked for; 81 frames the encoder was too busy for
+
+JPEG quality 55; 6 s per pass after a warm-up that is discarded; screen 1.0 MP.
+fps counts only polls that carried pixels, so an idle screen correctly reads 0.
+The uncapped CPU figure for a still screen is an artefact of this bench and not of the
+product: with no cap it asks for a frame as fast as it can and Desktop Duplication says
+no in microseconds. The host's capture loop always sleeps to the frame budget.
+gdi: a forced-full frame -- what every subscribe and every desktop switch costs -- was 171 KB in 53 ms.
+dxgi: a forced-full frame -- what every subscribe and every desktop switch costs -- was 171 KB in 19 ms.
+gdi: idle sent something on 0 of 65 polls. A still screen should send nothing at all.
+dxgi: idle sent something on 0 of 64 polls. A still screen should send nothing at all.
+h264: idle sent something on 0 of 64 polls. A still screen should send nothing at all.
+
+The 'video' condition is a moving field with noise, NOT a film: reproducible on purpose,
+harsher than scrolling text and cheaper than real footage. Run --live against a real
+video once before trusting it as an upper bound.
+[exit 0]

@@ -1,0 +1,637 @@
+@inject Microsoft.Extensions.Configuration.IConfiguration Cfg
+@inject RemoteSupport.Platform.Services.TenantService TenantsSvc
+@inject RemoteSupport.Platform.Services.TicketService TicketsSvc
+@inject RemoteSupport.Platform.Services.SitePreview Preview
+@inject RemoteSupport.Platform.Services.ReviewService ReviewsSvc
+@inject RemoteSupport.Platform.Services.TicketActivityService ActivitySvc
+@{
+    var isTenant = User.IsInRole("tenant");
+    var isBilling = User.IsInRole("billing");
+    var isTechnician = User.IsInRole("technician");
+    var isOwner = User.IsInRole("owner");
+    var section = ViewData["Section"] as string ?? "public";
+    var signupsOn = Preview.SignupsOn(Context);
+
+    // The trial warning lives in the LAYOUT, not on the dashboard, so it is on every portal page.
+    // Somebody who signs in to work a ticket is exactly the person who never opens the dashboard,
+    // and this is the one notice that must not be missed: the day the trial lapses, every one of
+    // their customer machines is refused at the same moment. This half works with no mailbox
+    // configured at all, which is why it is not left to the email.
+    Tenant? trialTenant = null;
+    int askedCount = 0;
+    int? billingWaiting = null;
+    int activityNew = 0;
+    int reviewAsk = 0;
+    // The free version (2026-10-06): its own short menu, and no office chat — it is one person. FreePortal is the rule.
+    bool freeTenant = false;
+    string companyName = "";
+    if ((isTenant || isBilling || isTechnician) && section == "portal")
+    {
+        var tid = int.TryParse(User.FindFirst("tenantId")?.Value, out var _tid) ? _tid : 0;
+        if (tid > 0)
+        {
+            var _t = await TenantsSvc.ByIdAsync(tid);
+            companyName = _t?.CompanyName ?? "";
+            freeTenant = RemoteSupport.Shared.FreePlan.Is(_t?.Plan);
+            // Only within a week of the end, or already past it. Earlier than that it is noise,
+            // and noise is how a warning stops being read.
+            if (_t is { Status: TenantStatus.Trial } && _t.TrialDaysLeft is <= 7) trialTenant = _t;
+            // @mentions waiting for this person's reply (stage 3.7). The office administrator has
+            // no console, so this is their badge; for everybody else it matches the console's.
+            askedCount = (await TicketsSvc.OpenMentionsAsync(tid, User.Identity?.Name ?? "")).Select(m => m.TicketId).Distinct().Count();
+            // Jobs in the billing queue waiting for the office (2026-10-05), for the people told when
+            // one arrives. Null for everybody else: no badge. chat.js moves it live.
+            billingWaiting = await TicketsSvc.BillingBadgeForAsync(tid, User.Identity?.Name ?? "");
+            // Latest activity (2026-10-26, HANDOVER §164): what is new to this person since they last looked. chat.js moves it live.
+            if (!freeTenant) activityNew = (await ActivitySvc.NewCountAsync(tid, RemoteSupport.Platform.Services.PortalIdentity.TechnicianIdOf(User))).Count;
+            // The review ask (2026-10-14): the owner, a week in; Later puts it off a month; Don't ask again from the second time.
+            reviewAsk = await ReviewsSvc.AskAsync(tid, RemoteSupport.Platform.Services.PortalIdentity.RoleOf(User));
+        }
+    }
+}
+<!doctype html>
+@{
+    // Stage 3.6.9. Their own light or dark, from the cookie, so the page is painted right the
+    // first time rather than flashing the other palette and correcting itself. Empty means follow
+    // the company, which means the stylesheet's default — dark — so nobody who has not asked for
+    // anything sees a change.
+    var appearance = RemoteSupport.Platform.Services.PortalIdentity.AppearanceOf(User);
+    var appNav = (section == "portal" && (freeTenant || isTenant || isBilling || isTechnician))
+              || (section == "owner" && isOwner);
+    var whoName = User.Identity?.Name ?? "";
+    var whoEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "";
+    var whoBits = whoName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+    var whoInitial = whoBits.Length >= 2 ? char.ToUpperInvariant(whoBits[0][0]).ToString() + char.ToUpperInvariant(whoBits[^1][0])
+        : whoBits.Length == 1 ? char.ToUpperInvariant(whoBits[0][0]).ToString() : "";
+}
+@* An empty data-theme matches nothing, so it falls through to the stylesheet's default. *@
+<html lang="en" data-theme="@appearance">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>@(ViewData["Title"] != null ? ViewData["Title"] + " — " : "")The Remote Support Program</title>
+    @* The public site's light or dark (2026-10-14, Clint: "switch between light and dark mode like our product does").
+       A visitor has no account to keep it on, so it is kept in their browser — never sent anywhere. Their own choice
+       first; else what their computer is set to; else the stylesheet's dark. Set HERE, before the stylesheet, so the
+       page is painted right the first time. *@
+    @if (section == "public")
+    {
+        <script>(function () { try { var d = document.documentElement, s = localStorage.getItem('rsp-theme');
+            if (s === 'light' || s === 'dark') d.setAttribute('data-theme', s);
+            else if (!d.getAttribute('data-theme') && window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches) d.setAttribute('data-theme', 'light');
+        } catch (e) { } })();</script>
+    }
+    @* Stamped with the build, so a stylesheet change is never served from a browser cache.
+       Added 2026-09-20 while chasing "the switch does nothing": a palette that has changed on
+       the server and not in the browser is indistinguishable from a switch that does not work,
+       and this removes that whole class of question for good. *@
+    <link rel="stylesheet" href="/site.css?v=@RemoteSupport.Platform.Services.BuildStamp.Value">
+    @* Our logo (docs/logo, chosen 2026-10-26) as the tab's icon: the simple mark for small sizes, the .ico for old browsers. *@
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" href="/img/rsp-mark-small.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/img/rsp-mark-256.png">
+    @* Portal pages repaint the signature colour from the tenant's branding. Public pages keep
+       the product's own palette. *@
+    @if (ViewData["BrandCss"] is string brandCss && brandCss.Length > 0)
+    {
+        <style>:root { @Html.Raw(brandCss) }</style>
+    }
+    @* The public site (2026-10-14, stage E — the website report): every public page names itself to search engines and
+       to a link shared in a chat — a description, its one canonical address, and the same for Open Graph. A page that
+       sets no Description is not meant to be found (sign-in, signup steps) and gets none. *@
+    @if (section == "public" && ViewData["Description"] is string description)
+    {
+        var publicUrl = (Cfg["Platform:PublicUrl"] ?? "").TrimEnd('/');
+        var canonical = publicUrl + (Context.Request.Path.Value is "/" or null ? "/" : Context.Request.Path.Value);
+        <meta name="description" content="@description">
+        @if (ViewData["Keywords"] is string keywords) { <meta name="keywords" content="@keywords"> }
+        <link rel="canonical" href="@canonical">
+        <meta property="og:type" content="website">
+        <meta property="og:site_name" content="The Remote Support Program">
+        <meta property="og:title" content="@ViewData["Title"]">
+        <meta property="og:description" content="@description">
+        <meta property="og:url" content="@canonical">
+        <meta property="og:locale" content="en_ZA">
+        <meta property="og:image" content="@(publicUrl)/img/rsp-mark-256.png">
+    }
+    @await RenderSectionAsync("Head", required: false)
+</head>
+<body class="section-@(section)@(appNav ? " has-side" : "")">
+@if (appNav)
+{
+    <script>(function () { try { if (localStorage.getItem('rsp-side') === 'collapsed') document.body.classList.add('side-collapsed'); } catch (e) { } })();</script>
+}
+<header class="top">
+    <div class="wrap nav">
+        @if (appNav)
+        {
+            <button type="button" class="side-toggle" aria-controls="topnav" aria-expanded="true" aria-label="Hide menu" title="Hide menu">
+                <span class="side-toggle-mark" aria-hidden="true">‹</span>
+            </button>
+        }
+        @* The logo (docs/logo, 2026-10-26): dark lettering on light, white on dark — site.css shows the one that fits. *@
+        <a class="brand" href="/">
+            <img class="brand-logo logo-on-light" src="/img/rsp-logo.svg" alt="The Remote Support Program" width="200" height="36">
+            <img class="brand-logo logo-on-dark" src="/img/rsp-logo-white.svg" alt="The Remote Support Program" width="200" height="36">
+        </a>
+        @* On a phone (2026-10-02) the links fold behind this, so the header is one line and the work
+           gets the screen. Hidden on anything wider. The "waiting on you" count rides on it, so
+           folding the links never hides that somebody is waiting. *@
+        <button type="button" class="menu-btn" aria-expanded="false" aria-controls="topnav"
+                onclick="this.setAttribute('aria-expanded', this.closest('.top').classList.toggle('open'))">
+            <span>Menu</span>
+            @if (askedCount > 0) { <span class="menu-badge" title="Waiting on your reply">@askedCount</span> }
+        </button>
+        @* The portal's and the owner's menus are tabs (2026-10-09): rounded buttons, the page you are on filled. *@
+        @if (appNav && companyName.Length > 0) { <a class="app-company" href="@(section == "owner" ? "/owner" : isTechnician && !isTenant ? "/portal/tickets" : isBilling && !isTenant ? "/portal/billing" : "/portal")">@companyName</a> }
+        @* The right of the header is the person: a bell for what is new, and their name. My account,
+           the light switch, mute and sign out open from that name, so the header stays one line. *@
+        @if (appNav && (section == "portal" || section == "owner"))
+        {
+            var goingTo = appearance == "light" ? "dark" : "light";
+            var here = Context.Request.Path + Context.Request.QueryString;
+            <div class="app-tools">
+                @if (section == "portal" && !freeTenant)
+                {
+                    <a class="head-bell" href="/portal/activity" title="Latest activity" aria-label="Latest activity">
+                        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
+                        <span class="head-bell-count" id="headBell" @(activityNew > 0 ? "" : "hidden")>@(activityNew > 0 ? activityNew.ToString() : "")</span>
+                    </a>
+                }
+                <div class="head-user">
+                    <button type="button" class="head-user-btn" aria-expanded="false" aria-haspopup="true" aria-controls="headMenu">
+                        <span class="head-avatar" aria-hidden="true">@whoInitial</span>
+                        <span class="head-user-text">
+                            <span class="head-user-name">@whoName</span>
+                            @if (whoEmail.Length > 0) { <span class="head-user-email">@whoEmail</span> }
+                        </span>
+                        <svg class="head-caret" viewBox="0 0 12 8" width="12" height="8" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1.5 6 6.5 11 1.5"/></svg>
+                    </button>
+                    <div class="head-menu" id="headMenu" hidden>
+                        @if (section == "portal" && !freeTenant)
+                        {
+                            <a href="/portal/account">My account</a>
+                        }
+                        @if (section == "portal")
+                        {
+                            <form method="post" action="/portal/appearance" class="inline">
+                                <input type="hidden" name="theme" value="@goingTo">
+                                <input type="hidden" name="returnUrl" value="@here">
+                                <button type="submit" class="theme-toggle"
+                                        title="Switch this portal and your console to @goingTo. It is your choice, not the company's, and it follows you to any machine.">
+                                    @(goingTo == "dark" ? "☾" : "☀") @(goingTo == "dark" ? "Dark mode" : "Light mode")
+                                </button>
+                                @Html.AntiForgeryToken()
+                            </form>
+                            @if (!freeTenant)
+                            {
+                                <button type="button" id="soundToggle" class="theme-toggle" hidden></button>
+                            }
+                        }
+                        @if (!freeTenant)
+                        {
+                            <form method="post" action="/logout" class="inline"><a href="#" onclick="this.closest('form').submit();return false;">Sign out</a>@Html.AntiForgeryToken()</form>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+        <nav id="topnav" class="@(appNav ? "tabs side" : (section is "portal" or "owner" ? "tabs" : ""))">
+            @if (section == "portal" && freeTenant)
+            {
+                @* This order is what tools/freeportal checks: Computers, Downloads, My account, Billing, Upgrade, Sign out. *@
+                <div class="side-group">
+                    <div class="side-label">Your computers</div>
+                    <a href="/portal/machines">Computers</a>
+                    <a href="/portal/downloads">Downloads</a>
+                    <a href="/portal/account">My account</a>
+                    <a href="/portal/billing">Billing</a>
+                    <a href="/portal/upgrade" id="navUpgrade">Upgrade</a>
+                    @* Missing from this menu since 2026-10-06 (§105) — found walking the Free version's pages, 2026-10-25 (§163). *@
+                    <form method="post" action="/logout" class="inline"><a href="#" onclick="this.closest('form').submit();return false;">Sign out</a>@Html.AntiForgeryToken()</form>
+                </div>
+            }
+            else if (section == "portal" && isTenant)
+            {
+                <div class="side-scroll">
+                <div class="side-group">
+                    <div class="side-label">Work</div>
+                    <a href="/portal">Dashboard</a>
+                    <div class="side-row">
+                        <a href="/portal/tickets">Tickets</a>@if (askedCount > 0) { <a href="/portal/tickets?filter=asked" class="pill pill-warn" title="Somebody asked you something and is waiting for your reply">@askedCount</a> }
+                    </div>
+                    <div class="side-row">
+                        <a href="/portal/activity">Latest activity</a><a href="/portal/activity" id="activityBadge" class="pill pill-warn" title="New on tickets since you last looked" style="@(activityNew > 0 ? "" : "display:none")">@RemoteSupport.Shared.ActivityWords.Count(activityNew)</a>
+                    </div>
+                    <a href="/portal/clients">Clients</a>
+                    <a href="/portal/devices">Devices</a>
+                    <a href="/portal/sessions">Sessions</a>
+                    <a href="/portal/healthchecks">Health checks</a>
+                    <a href="/portal/kb">Knowledge base</a>
+                </div>
+                <div class="side-group">
+                    <div class="side-label">Office</div>
+                    <div class="side-row">
+                        <a href="/portal/tickets?filter=billing">Billing queue</a>@if (billingWaiting != null) { <a href="/portal/tickets?filter=billing" id="billingBadge" class="pill pill-warn" title="Jobs in the billing queue waiting for the office to do something" style="@(billingWaiting > 0 ? "" : "display:none")">@billingWaiting</a> }
+                    </div>
+                    <a href="/portal/billing">Billing</a>
+                    <a href="/portal/items">Items</a>
+                    <a href="/portal/suppliers">Suppliers</a>
+                    <a href="/portal/workload">Who has what</a>
+                    <a href="/portal/jobtypes">Job types</a>
+                </div>
+                <div class="side-group">
+                    <div class="side-label">Setup</div>
+                    <a href="/portal/branding">Branding</a>
+                    <a href="/portal/technicians">People</a>
+                    <a href="/portal/downloads">Downloads</a>
+                    <a href="/portal/websupport">Browser support</a>
+                    <a href="/portal/outsiders">Outside help</a>
+                    <a href="/portal/webchat">Website chat</a>
+                    <a href="/portal/mailintake">Tickets by email</a>
+                    <a href="/portal/export">Export</a>
+                </div>
+                </div>
+            }
+            else if (section == "portal" && isBilling)
+            {
+                <div class="side-scroll">
+                <div class="side-group">
+                    <div class="side-label">Work</div>
+                    <a href="/portal/clients">Clients</a>
+                    <a href="/portal/kb">Knowledge base</a>
+                    <div class="side-row">
+                        <a href="/portal/tickets">Tickets</a>@if (askedCount > 0) { <a href="/portal/tickets?filter=asked" class="pill pill-warn" title="Somebody asked you something and is waiting for your reply">@askedCount</a> }
+                    </div>
+                    <div class="side-row">
+                        <a href="/portal/activity">Latest activity</a><a href="/portal/activity" id="activityBadge" class="pill pill-warn" title="New on tickets since you last looked" style="@(activityNew > 0 ? "" : "display:none")">@RemoteSupport.Shared.ActivityWords.Count(activityNew)</a>
+                    </div>
+                    <a href="/portal/devices">Devices</a>
+                    <a href="/portal/webchat">Website chat</a>
+                </div>
+                <div class="side-group">
+                    <div class="side-label">Office</div>
+                    <div class="side-row">
+                        <a href="/portal/tickets?filter=billing">Billing queue</a>@if (billingWaiting != null) { <a href="/portal/tickets?filter=billing" id="billingBadge" class="pill pill-warn" title="Jobs in the billing queue waiting for the office to do something" style="@(billingWaiting > 0 ? "" : "display:none")">@billingWaiting</a> }
+                    </div>
+                    <a href="/portal/billing">Billing</a>
+                    <a href="/portal/items">Items</a>
+                    <a href="/portal/suppliers">Suppliers</a>
+                    <a href="/portal/jobtypes">Job types</a>
+                    <a href="/portal/workload">Who has what</a>
+                </div>
+                </div>
+            }
+            else if (section == "portal" && isTechnician)
+            {
+                @* A technician's portal is their work and their customers, and nothing about the
+                   company. Billing is absent here AND refused by the page policy — the nav is
+                   convenience, the policy is the rule. *@
+                <div class="side-scroll">
+                <div class="side-group">
+                    <div class="side-label">Work</div>
+                    <div class="side-row">
+                        <a href="/portal/tickets">Tickets</a>@if (askedCount > 0) { <a href="/portal/tickets?filter=asked" class="pill pill-warn" title="Somebody asked you something and is waiting for your reply">@askedCount</a> }
+                    </div>
+                    <div class="side-row">
+                        <a href="/portal/activity">Latest activity</a><a href="/portal/activity" id="activityBadge" class="pill pill-warn" title="New on tickets since you last looked" style="@(activityNew > 0 ? "" : "display:none")">@RemoteSupport.Shared.ActivityWords.Count(activityNew)</a>
+                    </div>
+                    <a href="/portal/clients">Clients</a>
+                    <a href="/portal/kb">Knowledge base</a>
+                    <a href="/portal/devices">Devices</a>
+                    <a href="/portal/webchat">Website chat</a>
+                </div>
+                </div>
+            }
+            else if (section == "owner" && isOwner)
+            {
+                <div class="side-scroll">
+                <div class="side-group">
+                    <div class="side-label">Companies</div>
+                    <a href="/owner">Dashboard</a>
+                    <a href="/owner/approvals">Approvals</a>
+                    <a href="/owner/pilots">Pilots</a>
+                    <a href="/owner/free">Basic version</a>
+                    <a href="/owner/tenants">All companies</a>
+                    <a href="/owner/reviews">Reviews</a>
+                </div>
+                <div class="side-group">
+                    <div class="side-label">Servers</div>
+                    <a href="/owner/servers">Servers</a>
+                    <a href="/owner/updates">Updates</a>
+                </div>
+                <div class="side-group">
+                    <div class="side-label">Settings</div>
+                    <a href="/owner/admins">Admins</a>
+                    <a href="/owner/log">Log</a>
+                    <a href="/owner/mail">Mail</a>
+                    <a href="/owner/payfast">PayFast</a>
+                    <a href="/owner/preview">Preview</a>
+                </div>
+                </div>
+            }
+            else
+            {
+                @* What we do, not "Home / Features" (the website report: menus are a search engine's first clue). *@
+                <a href="/remote-support">Remote support</a>
+                <a href="/ticketing">Job cards</a>
+                <a href="/features">All features</a>
+                <a href="/pricing">Pricing</a>
+                <a href="/about">About</a>
+                @if (isTenant) { <a href="/portal">My portal</a> } else { <a href="/login">Sign in</a> }
+                @if (signupsOn) { <a class="btn btn-accent" href="/signup">Start free trial</a> }
+                else { <a class="btn btn-accent" href="/about#contact">Contact us</a> }
+                @* The same switch as the portal's, last in the menu. Hidden until the script below gives it its words:
+                   without a script there is nothing it could do. *@
+                <button type="button" id="siteTheme" class="theme-toggle" hidden></button>
+                <script>
+                (function () {
+                    var d = document.documentElement, b = document.getElementById('siteTheme');
+                    function words() {
+                        var light = d.getAttribute('data-theme') === 'light';
+                        b.textContent = light ? '☾ Dark mode' : '☀ Light mode';
+                        b.title = 'Show this website ' + (light ? 'dark' : 'light') + '. Remembered in this browser only.';
+                    }
+                    b.addEventListener('click', function () {
+                        var to = d.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+                        d.setAttribute('data-theme', to);
+                        try { localStorage.setItem('rsp-theme', to); } catch (e) { }
+                        words();
+                    });
+                    words(); b.hidden = false;
+                })();
+                </script>
+            }
+
+        </nav>
+        @* Which tab this page is (2026-10-09): the menu link the address starts with, the longest that does —
+           /portal/tickets/7 is Tickets, /portal/tickets?filter=billing is Billing queue. A section's own root
+           (/portal, the Dashboard) only on itself, or every page would be the Dashboard's. One thing named by its
+           number (2026-10-23, HANDOVER §159) is read as its section: /portal/t/7 is Tickets, /portal/c/3 Clients,
+           /portal/a/5 the Knowledge base, /portal/r/2 Recurring. *@
+        <script>
+        (function () {
+            var nav = document.getElementById('topnav');
+            var toggle = document.querySelector('.side-toggle');
+            if (toggle && nav) {
+                var wide = window.matchMedia('(min-width: 701px)');
+                function paint() {
+                    var closed = document.body.classList.contains('side-collapsed') && wide.matches;
+                    toggle.setAttribute('aria-expanded', closed ? 'false' : 'true');
+                    toggle.setAttribute('aria-label', closed ? 'Expand menu' : 'Collapse menu');
+                    toggle.title = closed ? 'Expand menu' : 'Collapse menu';
+                    var mark = toggle.querySelector('.side-toggle-mark');
+                    if (mark) mark.textContent = closed ? '›' : '‹';
+                    nav.removeAttribute('aria-hidden');
+                }
+                toggle.addEventListener('click', function () {
+                    document.body.classList.toggle('side-collapsed');
+                    try { localStorage.setItem('rsp-side', document.body.classList.contains('side-collapsed') ? 'collapsed' : 'open'); } catch (e) { }
+                    paint();
+                });
+                if (wide.addEventListener) wide.addEventListener('change', paint);
+                paint();
+            }
+            var userBtn = document.querySelector('.head-user-btn');
+            var userMenu = document.getElementById('headMenu');
+            if (userBtn && userMenu) {
+                function closeUser() { userMenu.setAttribute('hidden', ''); userBtn.setAttribute('aria-expanded', 'false'); }
+                userBtn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    var open = userMenu.hasAttribute('hidden');
+                    if (open) { userMenu.removeAttribute('hidden'); userBtn.setAttribute('aria-expanded', 'true'); }
+                    else closeUser();
+                });
+                userMenu.addEventListener('click', function (e) { e.stopPropagation(); });
+                document.addEventListener('click', closeUser);
+                document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeUser(); });
+            }
+            if (nav && nav.classList.contains('side')) {
+                var svg = function (body) {
+                    return '<svg class="nav-ico" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + body + '</svg>';
+                };
+                var icons = {
+                    '/portal': svg('<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>'),
+                    '/owner': svg('<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>'),
+                    '/portal/tickets': svg('<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>'),
+                    '/portal/tickets?filter=billing': svg('<path d="M3 13h5l2 3h4l2-3h5"/><path d="M3 13V6h18v7"/>'),
+                    '/portal/activity': svg('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
+                    '/portal/clients': svg('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>'),
+                    '/portal/devices': svg('<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>'),
+                    '/portal/machines': svg('<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>'),
+                    '/portal/sessions': svg('<rect x="3" y="5" width="12" height="14" rx="2"/><path d="M15 10l6-3v10l-6-3z"/>'),
+                    '/portal/healthchecks': svg('<path d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 5.6-7 10-7 10z"/>'),
+                    '/portal/kb': svg('<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>'),
+                    '/portal/billing': svg('<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>'),
+                    '/portal/items': svg('<path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/>'),
+                    '/portal/suppliers': svg('<path d="M3 7h11v10H3z"/><path d="M14 10h4l3 3v4h-7z"/><circle cx="7" cy="18" r="1.5"/><circle cx="17" cy="18" r="1.5"/>'),
+                    '/portal/workload': svg('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>'),
+                    '/portal/jobtypes': svg('<path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="1.5"/><circle cx="14" cy="12" r="1.5"/><circle cx="10" cy="18" r="1.5"/>'),
+                    '/portal/branding': svg('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/><circle cx="16" cy="13" r="1.5"/>'),
+                    '/portal/technicians': svg('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>'),
+                    '/portal/downloads': svg('<path d="M12 3v12M7 11l5 5 5-5M5 21h14"/>'),
+                    '/portal/websupport': svg('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18"/>'),
+                    '/portal/outsiders': svg('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'),
+                    '/portal/webchat': svg('<path d="M21 12a8 8 0 0 1-8 8H7l-4 3V12a8 8 0 1 1 18 0z"/>'),
+                    '/portal/mailintake': svg('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>'),
+                    '/portal/export': svg('<path d="M14 3h7v7M21 3l-9 9M5 5h6M5 5v14h14v-6"/>'),
+                    '/portal/account': svg('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>'),
+                    '/portal/upgrade': svg('<path d="M12 19V5M6 11l6-6 6 6"/>'),
+                    '/owner/approvals': svg('<path d="M20 6L9 17l-5-5"/>'),
+                    '/owner/pilots': svg('<path d="M4 21V4M4 4h12l-2 4 2 4H4"/>'),
+                    '/owner/free': svg('<path d="M12 3l2.2 6.2H21l-5.2 4 2 6.3L12 16.8 6.2 19.5l2-6.3L3 9.2h6.8z"/>'),
+                    '/owner/tenants': svg('<path d="M4 21V5h9v16M13 9h7v12"/><path d="M7 9h2M7 13h2M7 17h2"/>'),
+                    '/owner/reviews': svg('<path d="M12 3l2.2 6.2H21l-5.2 4 2 6.3L12 16.8 6.2 19.5l2-6.3L3 9.2h6.8z"/>'),
+                    '/owner/servers': svg('<rect x="3" y="4" width="18" height="6" rx="1"/><rect x="3" y="14" width="18" height="6" rx="1"/><path d="M7 7h.01M7 17h.01"/>'),
+                    '/owner/updates': svg('<path d="M21 12a9 9 0 0 1-15 6.7L3 16M3 12A9 9 0 0 1 18 5.3L21 8"/><path d="M21 3v5h-5M3 21v-5h5"/>'),
+                    '/owner/admins': svg('<path d="M12 3l7 3v6c0 5-3 7.5-7 9-4-1.5-7-4-7-9V6z"/>'),
+                    '/owner/log': svg('<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>'),
+                    '/owner/mail': svg('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>'),
+                    '/owner/payfast': svg('<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>'),
+                    '/owner/preview': svg('<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>')
+                };
+                nav.querySelectorAll('a:not(.pill)').forEach(function (a) {
+                    if (!a.querySelector('svg')) {
+                        var href = a.getAttribute('href') || '';
+                        var mark = icons[href] || icons[href.split('?')[0]];
+                        if (!mark && (a.textContent || '').trim() === 'Sign out') mark = svg('<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>');
+                        if (mark) a.insertAdjacentHTML('afterbegin', mark);
+                    }
+                    if (!a.querySelector('.nav-label')) {
+                        var loose = [];
+                        for (var i = 0; i < a.childNodes.length; i++) {
+                            var n = a.childNodes[i];
+                            if (n.nodeType === 3 && n.textContent.trim()) loose.push(n);
+                        }
+                        if (loose.length) {
+                            var span = document.createElement('span');
+                            span.className = 'nav-label';
+                            a.insertBefore(span, loose[0]);
+                            loose.forEach(function (n) { span.appendChild(n); });
+                            var name = span.textContent.trim();
+                            if (name && !a.getAttribute('title')) a.setAttribute('title', name);
+                        }
+                    }
+                });
+            }
+            if (!nav || !nav.classList.contains('tabs')) return;
+            var sections = { t: '/portal/tickets', c: '/portal/clients', a: '/portal/kb', r: '/portal/recurring' };
+            var path = location.pathname.replace(/\/$/, '').replace(/^\/portal\/([tcar])(?=\/)/, function (m, k) { return sections[k]; });
+            var here = path + location.search, best = null, len = -1;
+            document.querySelectorAll('#topnav a:not(.pill), .app-tools a:not(.pill)').forEach(function (a) {
+                var h = a.getAttribute('href') || '';
+                if (h === '' || h === '#') return;
+                var root = h.split('?')[0].split('/').filter(Boolean).length <= 1;
+                var ok = here === h || (!root && here.indexOf(h) === 0 && (h.indexOf('?') >= 0 || /[\/?]/.test(here.charAt(h.length))));
+                if (ok && h.length > len) { best = a; len = h.length; }
+            });
+            if (best) best.setAttribute('aria-current', 'page');
+        })();
+        </script>
+    </div>
+</header>
+<main>
+    @if (reviewAsk > 0 && Context.Request.Path != "/portal/review")
+    {
+        <div class="wrap" style="padding-top:18px">
+            <div class="alert alert-ok" id="reviewAsk" data-ask="@reviewAsk">
+                <strong>How are we doing?</strong> A short review — some stars and a few words — helps other businesses find us.
+                <span style="display:inline-flex;gap:8px;flex-wrap:wrap;margin-left:6px">
+                    <a class="btn btn-sm btn-accent" href="/portal/review">Write a review</a>
+                    <form method="post" action="/portal/review?handler=Later" class="inline">@Html.AntiForgeryToken()<button class="btn btn-sm" type="submit">Later</button></form>
+                    @if (reviewAsk == 2)
+                    {
+                        <form method="post" action="/portal/review?handler=Never" class="inline">@Html.AntiForgeryToken()<button class="btn btn-sm" type="submit">Don't ask again</button></form>
+                    }
+                </span>
+            </div>
+        </div>
+    }
+    @if (trialTenant != null)
+    {
+        var daysLeft = trialTenant.TrialDaysLeft ?? 0;
+        var lapsed = daysLeft <= 0;
+        <div class="wrap" style="padding-top:18px">
+            <div class="alert @(lapsed || daysLeft <= 1 ? "alert-bad" : "alert-warn")">
+                @if (lapsed)
+                {
+                    <strong>Your trial ended on @trialTenant.TrialEndsUtc!.Value.Local().ToString("d MMMM yyyy").</strong>
+                    <span>
+                        Your support software has stopped working — every computer you installed it on is
+                        being refused when it tries to connect, and no session can be started. Nothing has
+                        been deleted, and it all starts working again the moment the account is activated.
+                    </span>
+                }
+                else
+                {
+                    <strong>
+                        Your trial ends @(daysLeft == 1 ? "tomorrow" : $"in {daysLeft} days"),
+                        on @trialTenant.TrialEndsUtc!.Value.Local().ToString("d MMMM yyyy").
+                    </strong>
+                    <span>
+                        When it does, every computer you have installed the software on will stop
+                        connecting, all at once, and your technicians will not be able to start a session.
+                        Nothing is deleted, and everything resumes as soon as the account is activated.
+                    </span>
+                }
+                <span>Get in touch to carry on.</span>
+            </div>
+        </div>
+    }
+    @RenderBody()
+</main>
+@* The client picker (2026-10-02): every "which client" box in the portal. *@
+@if (section == "portal")
+{
+    <script src="/clientpick.js?v=@RemoteSupport.Platform.Services.BuildStamp.Value" defer></script>
+    @* The portal on a phone (2026-10-02): labels every table's cells with their column, so a table
+       can be read as cards on a narrow screen instead of swiped sideways. *@
+    <script src="/phone.js?v=@RemoteSupport.Platform.Services.BuildStamp.Value" defer></script>
+    @* Every comment box grows with what is typed, up to 15 lines (2026-10-13). *@
+    <script src="/autogrow.js?v=@RemoteSupport.Platform.Services.BuildStamp.Value" defer></script>
+    @* Typing @ in a ticket's comment box lists the people on it first, then everybody else (2026-10-21). *@
+    <script src="/mentionpick.js?v=@RemoteSupport.Platform.Services.BuildStamp.Value" defer></script>
+}
+@* Office chat (3.8.1): on every portal page, for everybody at the office. *@
+@if (section == "portal" && (isTenant || isBilling || isTechnician) && !freeTenant)
+{
+    <script src="/sounds.js?v=@RemoteSupport.Platform.Services.BuildStamp.Value" defer></script>
+    <script src="/chat.js?v=@RemoteSupport.Platform.Services.BuildStamp.Value" defer></script>
+}
+@if (section == "public")
+{
+    @* Every page of the site from every page (more for a search engine to follow), and the three PayFast checks for:
+       terms, refunds and privacy, linked from the home page. *@
+    <footer class="foot foot-site">
+        <div class="wrap foot-cols">
+            <div>
+                <h2>The product</h2>
+                <a href="/remote-support">Remote support and remote access</a>
+                <a href="/ticketing">Job cards and the workshop</a>
+                <a href="/health-checks">Monthly health checks</a>
+                <a href="/knowledge-base">Knowledge base</a>
+                <a href="/website-chat">Live chat</a>
+                <a href="/security">Security and POPIA</a>
+                <a href="/features">All features</a>
+            </div>
+            <div>
+                <h2>Buying</h2>
+                <a href="/pricing">Pricing</a>
+                <a href="/remote-workers">For remote workers</a>
+                <a href="/terms/ZA">Terms and refunds</a>
+                <a href="/privacy">Privacy policy</a>
+            </div>
+            <div>
+                <h2>The company</h2>
+                <a href="/about">About us</a>
+                <a href="/about#contact">Contact us</a>
+                <a href="/support">Help and questions</a>
+                <a href="/login">Sign in</a>
+            </div>
+        </div>
+        <div class="wrap foot-legal">
+            &copy; @DateTime.UtcNow.Year The Remote Support Program (Pty) Ltd &middot; Reg. 2026/737434/07 &middot;
+            19 Tide Street, Knysna, Western Cape, South Africa &middot; queries@@theremotesupportprogram.com &middot; 078 131 5618
+        </div>
+    </footer>
+    @* A screenshot full size, over the page (2026-10-14): any _Shot picture, the one showing in the page's light or dark.
+       Without a script, or a browser with no <dialog>, the link opens the picture itself. *@
+    <dialog id="shotView" class="shot-view" aria-label="Screenshot, full size">
+        <button type="button" class="shot-close" aria-label="Close">✕</button>
+        <img alt="">
+    </dialog>
+    <script>
+    (function () {
+        var d = document.getElementById('shotView'), im = d.querySelector('img');
+        if (!d.showModal) return;
+        document.addEventListener('click', function (e) {
+            var a = e.target.closest && e.target.closest('a[data-shot]');
+            if (!a) return;
+            var shown = Array.prototype.filter.call(a.querySelectorAll('img'), function (i) { return i.getClientRects().length > 0; })[0];
+            if (!shown) return;
+            e.preventDefault();
+            im.src = shown.currentSrc || shown.src; im.alt = shown.alt;
+            d.showModal();
+        });
+        d.addEventListener('click', function () { d.close(); });
+    })();
+    </script>
+    @* Our own website chat (§70) answers visitors — people, not AI (Clint, 2026-10-13: an AI assistant was a POPIA
+       problem). Whose chat is Platform:SiteChatSlug; unset, no bubble. ?site=1: it says The Remote Support Program in
+       our colour, answered by that company's people (Services/SiteChat.cs). go-live.sh sets the slug with -RealSite. *@
+    @if (RemoteSupport.Platform.Services.SiteChat.Slug(Cfg) is { } chatSlug)
+    {
+        <script src="/webchat/@(Uri.EscapeDataString(chatSlug)).js?site=1" async></script>
+    }
+}
+else
+{
+    <footer class="foot">
+        <div class="wrap">
+            <div>&copy; @DateTime.UtcNow.Year The Remote Support Program &middot; theremotesupportprogram.com</div>
+            <div><a href="/features">Features</a> &middot; <a href="/pricing">Pricing</a> &middot; <a href="/support">Support</a> &middot; <a href="/login">Sign in</a></div>
+        </div>
+    </footer>
+}
+</body>
+</html>

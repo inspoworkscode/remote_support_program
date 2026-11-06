@@ -1,0 +1,21 @@
+@page "/terms/{region?}"
+@model RemoteSupport.Platform.Pages.TermsModel
+@{ ViewData["Title"] = "Terms and refunds — " + Model.Region.Name; ViewData["Description"] = "The terms of The Remote Support Program for " + Model.Region.Name + ": what we provide, paying and refunds, cancelling, and your data."; }
+<section class="section">
+    <div class="wrap" style="max-width:860px">
+        <h1>Terms and refunds</h1>
+        @if (Model.Free) { <p class="muted" id="freeTerms">@RemoteSupport.Shared.FreePlan.FullNameOf(Model.Plan) — <a href="/terms/@Model.Region.Code">the full version's terms</a></p> }
+        <p class="muted">Terms for:
+            @foreach (var r in Pricing.Regions)
+            {
+                if (r.Code == Model.Region.Code) { <strong>@r.Name</strong> } else { <a href="/terms/@r.Code@(Model.Free ? "?plan=" + Model.Plan : "")">@r.Name</a> }
+                @(r == Pricing.Regions[^1] ? "" : " · ")
+            }
+        </p>
+        @if (Model.Text.Draft)
+        {
+            <div class="alert alert-warn"><strong>DRAFT</strong> — these terms have not yet been approved by our lawyers and may change. Version @Model.Text.Version.</div>
+        }
+        <div class="kb-body" id="termsText">@Html.Raw(Model.Text.Html)</div>
+    </div>
+</section>

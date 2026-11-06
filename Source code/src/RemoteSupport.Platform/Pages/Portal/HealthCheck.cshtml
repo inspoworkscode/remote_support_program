@@ -1,0 +1,120 @@
+@page "/portal/healthcheck"
+@model RemoteSupport.Platform.Pages.Portal.HealthCheckModel
+@{ ViewData["Title"] = "Health check"; ViewData["Section"] = "portal"; var t = Model.Tenant; }
+<section class="portal"><div class="wrap">
+    <h1>Monthly health check</h1>
+    <p class="muted">
+        Chosen machines look after themselves once a month: a restore point, a clean-up, a disk optimise
+        and a system file check, then a read-only inspection. The report is emailed to you, not to your
+        customer.
+    </p>
+    <p class="muted">
+        <strong>Which machines:</strong> tick <em>Monthly health check</em> on a client's page and every
+        machine of theirs gets it, including machines added later. A single machine can be set differently
+        from that — right-click it in the console, or use its row on the client's page.
+    </p>
+    @if (!string.IsNullOrEmpty(Model.Message)) { <div class="alert alert-ok">@Model.Message</div> }
+    @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad">@Model.Error</div> }
+
+    @if (t.HealthCheckEnabled && !t.HealthCheckReady)
+    {
+        <div class="alert alert-warn">The health check is on, but it cannot deliver a report yet. Fill in the mail server below.</div>
+    }
+
+    @* novalidate: the browser must never refuse this form by itself. It did, for two report addresses,
+       with nothing posted and the tick still showing, so the setting looked saved and was not. *@
+    <form method="post" class="form card" style="max-width:720px" novalidate>
+        <h3>The check</h3>
+        <label>
+            <input type="checkbox" name="healthCheckEnabled" value="true" checked="@t.HealthCheckEnabled" style="width:auto">
+            Switch the monthly check on for my company
+        </label>
+        @* Clint, 2026-10-21: he left this unticked because "Offer the monthly check to my clients" read as
+           "install it on every client". It installs nothing by itself — the client's own tick does. *@
+        <p class="muted" style="font-size:13px;margin-top:-4px">
+            This alone installs nothing. Only the clients you then tick on their own page get it, under
+            Clients. Off, no machine runs it whatever is ticked, and it is removed from every machine as
+            each one next connects.
+        </p>
+
+        <label>
+            <input type="checkbox" name="healthCheckRunMaintenance" value="true" checked="@t.HealthCheckRunMaintenance" style="width:auto">
+            Do the maintenance as well as the inspection
+        </label>
+        <p class="muted" style="font-size:13px;margin-top:-4px">
+            Unticked, the machine is only inspected and nothing is changed. Maintenance never runs without a
+            restore point first, so it always skips on Windows Server, which has no System Restore.
+        </p>
+
+        <label>Day of the month</label>
+        <input name="healthCheckDayOfMonth" type="number" min="0" max="28" value="@t.HealthCheckDayOfMonth">
+        <p class="muted" style="font-size:13px;margin-top:-4px">
+            Leave at 0 and each machine picks its own day from the weekday it was installed, which spreads
+            your client base over five days instead of every machine reporting on the 1st.
+        </p>
+
+        <h3 style="margin-top:22px">Where the report goes</h3>
+        <label>Send reports to</label>
+        <input name="healthCheckEmailTo" type="text" inputmode="email" autocomplete="off" value="@t.HealthCheckEmailTo" placeholder="reports@@yourcompany.co.za">
+        <p class="muted" style="font-size:13px;margin-top:-4px">
+            Your address, not your customer's. You decide what to pass on. Several addresses: separate them with ; or ,
+        </p>
+        @* Two different addresses do two different jobs here, and nothing on this page said so.
+           Working that out meant reading a config file on a client machine. *@
+        <div class="alert" style="background:#f3f6f9;border:1px solid #dfe6ec;font-size:13px;padding:10px 12px">
+            The report itself is footed with your <strong>support email</strong>,
+            @if (!string.IsNullOrWhiteSpace(t.SupportEmail))
+            {
+                <strong>@t.SupportEmail</strong><text>, </text>
+            }
+            else
+            {
+                <text>which is not set yet, </text>
+            }
+            so a customer who reads it knows where to write. That is set on
+            <a href="/portal/branding">Branding</a> and is not the address above.
+        </div>
+
+        <h3 style="margin-top:22px">Sending mailbox</h3>
+        <p class="muted" style="font-size:13px">
+            Held here once, on the server. It is never written into an installer and never stored on a
+            customer machine, so changing it is one edit here rather than a visit to every PC.
+            Use a dedicated send-only mailbox, and an app password if your provider offers one.
+        </p>
+        <div class="row">
+            <div style="flex:2"><label>Mail server</label><input name="smtpHost" value="@t.SmtpHost" placeholder="smtp.yourprovider.co.za"></div>
+            <div style="flex:1"><label>Port</label><input name="smtpPort" type="number" min="1" max="65535" value="@t.SmtpPort"></div>
+        </div>
+        <div class="row">
+            <div><label>Username</label><input name="smtpUser" value="@t.SmtpUser" autocomplete="off"></div>
+            <div><label>Send from (optional)</label><input name="smtpFrom" value="@t.SmtpFrom" placeholder="same as username"></div>
+        </div>
+
+        <label>Password</label>
+        @* The stored password is never rendered, not even as a masked value - the browser would be
+           holding the real thing. A blank box leaves what is on file untouched. *@
+        <input name="smtpPassword" type="password" autocomplete="new-password"
+               placeholder="@(Model.HasSmtpPassword ? "a password is saved - leave blank to keep it" : "no password saved yet")">
+        @if (Model.HasSmtpPassword)
+        {
+            <label style="margin-top:8px">
+                <input type="checkbox" name="clearSmtpPassword" value="true" style="width:auto"> Remove the saved password
+            </label>
+        }
+
+        <label style="margin-top:8px">
+            <input type="checkbox" name="smtpUseSsl" value="true" checked="@t.SmtpUseSsl" style="width:auto"> Use encryption (leave on)
+        </label>
+
+        <div class="actions"><button class="btn btn-accent" type="submit">Save</button></div>
+    </form>
+
+    <div class="card" style="max-width:720px;margin-top:18px">
+        <h3>What your customer sees</h3>
+        <p class="muted" style="font-size:14px">
+            Nothing, unless you send it to them. The machine does its maintenance quietly and the report
+            comes to you. The report itself is written for a non-technical reader and carries your logo and
+            colours, so it can be forwarded as it is.
+        </p>
+    </div>
+</div></section>

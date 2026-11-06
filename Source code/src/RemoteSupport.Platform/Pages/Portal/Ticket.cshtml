@@ -1,0 +1,361 @@
+@page "/portal/t/{number:int}"
+@model RemoteSupport.Platform.Pages.Portal.TicketModel
+@{ ViewData["Title"] = Model.Ticket == null ? "Ticket" : $"#{Model.Ticket.Number}"; ViewData["Section"] = "portal"; }
+<section class="portal"><div class="wrap">
+    <p><a href="/portal/tickets">← Back to tickets</a></p>
+    @if (Model.Ticket == null)
+    {
+        <div class="card">Ticket not found.</div>
+    }
+    else
+    {
+        var t = Model.Ticket;
+        @* A job with a workflow reads as a story — the stage and its next steps at the top, the
+           timeline beneath (2026-09-27). Every other ticket keeps the page it has always had. *@
+        if (Model.HasWorkflow)
+        {
+            <partial name="_Timeline" model="Model" />
+        }
+        else
+        {
+        <h1>#@t.Number &nbsp;@t.Subject <span class="pill pill-muted">@RemoteSupport.Platform.Services.TicketService.CategoryName(t.Category)</span></h1>
+        @if (t.RequesterEmail.Length > 0) { <p class="muted" style="margin-top:-6px">From <a href="mailto:@t.RequesterEmail">@t.RequesterEmail</a></p> }
+        <partial name="_Sender" model="Model" />
+        <partial name="_Knowledge" model="Model" />
+        <partial name="_Recurring" model="Model" />
+        <div class="grid2">
+            <div>
+                @if (Model.IsWorkshop)
+                {
+                    <div class="card" style="margin-bottom:18px">
+                        <h3>
+                            Photographs
+                            <span class="pill @(Model.Before.Count >= Model.PhotosRequired ? "pill-ok" : "pill-warn")">@Model.Before.Count in</span>
+                            <span class="pill @(Model.After.Count >= Model.PhotosOutEach ? "pill-ok" : "pill-warn")">@Model.After.Count out</span>
+                        </h3>
+
+                        <p style="font-weight:800;font-size:13px;margin-bottom:6px">As it arrived</p>
+                        @if (Model.Before.Count == 0) { <p class="muted" style="font-size:13px">None — this job predates the photo rule.</p> }
+                        else
+                        {
+                            <div style="display:flex;gap:10px;flex-wrap:wrap">
+                                @foreach (var p in Model.Before)
+                                {
+                                    <a href="@(PortalAddresses.Photo(p.Token))" target="_blank"><img src="@(PortalAddresses.Photo(p.Token))" alt="@p.OriginalName"
+                                        style="width:130px;height:98px;object-fit:cover;border-radius:10px;border:1px solid var(--line)"></a>
+                                }
+                            </div>
+                        }
+
+                        <p style="font-weight:800;font-size:13px;margin:16px 0 6px">As it leaves</p>
+                        @if (Model.After.Count == 0) { <p class="muted" style="font-size:13px">None yet.</p> }
+                        else
+                        {
+                            <div style="display:flex;gap:10px;flex-wrap:wrap">
+                                @foreach (var p in Model.After)
+                                {
+                                    <a href="@(PortalAddresses.Photo(p.Token))" target="_blank"><img src="@(PortalAddresses.Photo(p.Token))" alt="@p.OriginalName"
+                                        style="width:130px;height:98px;object-fit:cover;border-radius:10px;border:1px solid var(--line)"></a>
+                                }
+                            </div>
+                        }
+
+                        @if (!Model.ReadyToClose)
+                        {
+                            <p class="muted" style="font-size:13px;margin-top:12px">
+                                @(Model.PhotosOutEach - Model.After.Count) more photo@(Model.PhotosOutEach - Model.After.Count == 1 ? "" : "s")
+                                of the machine as it leaves, @(Model.HasWorkflow ? "before it can be marked collected — ideally in front of the customer" : "before this job can be closed").
+                            </p>
+                        }
+
+                        @if (Model.WorksTickets)
+                        {
+                            <input type="file" id="afterPick" accept="image/*" multiple capture="environment"
+                                   onchange="uploadAfter()" style="padding:10px 0;margin-top:10px">
+                            <p class="muted" id="afterNote" style="font-size:13px"></p>
+                        }
+                    </div>
+                }
+                @* Every session gets its own ticket (3.6.6). This is how a job spread over three
+                   days is still one thing you can read and bill: one parent, its sessions under
+                   it, one total. *@
+                @if (Model.Parent != null || Model.Children.Count > 0 || Model.LinkCandidates.Count > 0)
+                {
+                    <div class="card" style="margin-bottom:18px">
+                        <h3>
+                            @(Model.Children.Count > 0 ? "This job" : "Part of a job")
+                            @if (Model.Children.Count > 0) { <span class="pill pill-muted">@Model.Children.Count session@(Model.Children.Count == 1 ? "" : "s") filed under it</span> }
+                            @if (Model.JobMinutes > 0) { <span class="pill pill-muted">@Model.JobMinutes min in total</span> }
+                        </h3>
+
+                        @if (Model.Parent != null)
+                        {
+                            <p>
+                                Part of <a href="@(PortalAddresses.Ticket(Model.Parent.Number))"><strong>#@Model.Parent.Number</strong> @Model.Parent.Subject</a>.
+                            </p>
+                            @if (Model.WorksTickets)
+                            {
+                                <form method="post" asp-page-handler="Link" class="inline">
+                                    <input type="hidden" name="parentId" value="0">
+                                    <button class="btn btn-sm">Not part of it</button>
+                                </form>
+                            }
+                        }
+                        else if (Model.Children.Count > 0)
+                        {
+                            <p class="muted">The sessions that make up this job. Each keeps its own number and its own time.</p>
+                            <table>
+                                <tr><th>#</th><th>Subject</th><th>Status</th><th>Opened</th></tr>
+                                @foreach (var c in Model.Children)
+                                {
+                                    <tr>
+                                        <td><a href="@(PortalAddresses.Ticket(c.Number))"><strong>#@c.Number</strong></a></td>
+                                        <td>@c.Subject</td>
+                                        <td>@Model.NameOf(c.Status)</td>
+                                        <td class="muted" style="font-size:12px">@c.CreatedUtc.Local().ToString("yyyy-MM-dd HH:mm")</td>
+                                    </tr>
+                                }
+                            </table>
+                        }
+                        else if (Model.MayHaveParent && Model.LinkCandidates.Count > 0 && Model.WorksTickets)
+                        {
+                            <p class="muted">
+                                Carrying on from earlier work? File this under that job and the time adds up in one place.
+                                It keeps its own number either way.
+                            </p>
+                            <form method="post" asp-page-handler="Link" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                                <select name="parentId" style="flex:1 1 320px;padding:10px;border:1px solid var(--line);border-radius:10px">
+                                    <option value="0">— not part of another job —</option>
+                                    @foreach (var c in Model.LinkCandidates)
+                                    {
+                                        <option value="@c.Id">#@c.Number · @c.CreatedUtc.Local().ToString("d MMM") · @c.Subject</option>
+                                    }
+                                </select>
+                                <button class="btn btn-sm btn-accent" type="submit">File it under</button>
+                            </form>
+                        }
+                    </div>
+                }
+                <div class="card">
+                    <h3>History</h3>
+                    @if (!string.IsNullOrWhiteSpace(t.Description))
+                    {
+                        <p><strong>Description</strong><br>@t.Description</p>
+                    }
+                    @if (Model.Notes.Count == 0) { <p class="muted">Nothing recorded yet.</p> }
+                    else
+                    {
+                        @* Grouped under the stage each entry was written in, so a workshop job reads as
+                           a story from booking in to collection (answer 17). Entries from before there
+                           were stages, and tickets with no workflow, carry no heading. *@
+                        <div style="display:grid;gap:10px;margin-top:10px">
+                            @{ string? lastStage = null; }
+                            @foreach (var n in Model.Notes)
+                            {
+                                if (Model.HasWorkflow && n.Stage.Length > 0 && n.Stage != lastStage)
+                                {
+                                    <div style="font-weight:800;font-size:13px;margin-top:8px;padding-bottom:4px;border-bottom:1px solid var(--line)">
+                                        @RemoteSupport.Platform.Services.Workflow.Label(n.Stage)
+                                    </div>
+                                    lastStage = n.Stage;
+                                }
+                                <div id="note-@n.Id" style="padding:10px 12px;border-radius:12px;background:@(n.IsSystem ? "rgba(var(--grape-rgb),.07)" : "var(--card)");border:1px solid var(--line)">
+                                    <div class="muted" style="font-size:12px">
+                                        @n.CreatedUtc.Local().ToString("yyyy-MM-dd HH:mm") · @n.Author@(n.IsSystem ? " (automatic)" : "")
+                                        @if (n.IsWorkDone) { <span class="pill pill-ok">Work done</span> }
+                                    </div>
+                                    <div style="white-space:pre-wrap">@n.Body</div>
+                                    @await Html.PartialAsync("_NoteFiles", Model, new Microsoft.AspNetCore.Mvc.ViewFeatures.ViewDataDictionary(ViewData) { ["note"] = n })
+                                    @await Html.PartialAsync("_NoteEmail", Model, new Microsoft.AspNetCore.Mvc.ViewFeatures.ViewDataDictionary(ViewData) { ["note"] = n })
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+            <div>
+                @foreach (var m in Model.AskedMe)
+                {
+                    <div class="alert alert-warn">@(m.Note.FromCustomer ? $"{m.MentionedBy} replied by email — it is in the history." : $"{m.MentionedBy} asked you something on this ticket. Reply below and the flag clears.")</div>
+                }
+                <div class="card" @(Model.HasWorkflow ? "style=margin-top:18px" : "")>
+                    <h3>@(Model.HasWorkflow ? "Comments and assignment" : "Update this ticket")</h3>
+                    @if (!Model.HasWorkflow)
+                    {
+                        @if (!string.IsNullOrEmpty(Model.Message)) { <div class="alert alert-ok">@Model.Message</div> }
+                        @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad">@Model.Error</div> }
+                    }
+                    @* Somebody who may claim but not assign gets a button, not a dropdown of
+                       everybody's names: the only move they have is taking it themselves. *@
+                    @if (Model.CanClaimThis)
+                    {
+                        <form method="post" asp-page-handler="Claim" style="margin-bottom:14px">
+                            <button class="btn btn-accent" type="submit">Take this ticket</button>
+                            <span class="muted" style="font-size:13px;margin-left:8px">Nobody is on it yet.</span>
+                        </form>
+                    }
+                    <form method="post" asp-page-handler="Update">
+                        @* Several people may be on one ticket (2026-09-28). Every box a person may
+                           not change is posted back as it stands, so saving a note never takes
+                           anybody off as a side effect. *@
+                        <partial name="_People" model="Model.OnThisJob" />
+
+                        @if (Model.CanChangeStatus)
+                        {
+                            <div class="row" style="margin-top:10px">
+                                @if (Model.HasWorkflow)
+                                {
+                                    @* A job with a workflow moves by its stage buttons above; the
+                                       service refuses a status posted from here anyway. *@
+                                    <input type="hidden" name="status" value="@((int)t.Status)">
+                                }
+                                else
+                                {
+                                <div>
+                                    <label style="display:block;font-weight:800;font-size:13px;margin-bottom:6px">Status</label>
+                                    <select name="status" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px">
+                                        @foreach (var s in Enum.GetValues<TicketStatus>())
+                                        { <option value="@((int)s)" selected="@(t.Status == s)">@Model.NameOf(s)</option> }
+                                    </select>
+                                </div>
+                                }
+                                <div>
+                                    <label style="display:block;font-weight:800;font-size:13px;margin-bottom:6px">Priority</label>
+                                    <select name="priority" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px">
+                                        @foreach (var p in Enum.GetValues<TicketPriority>())
+                                        { <option value="@((int)p)" selected="@(t.Priority == p)">@p</option> }
+                                    </select>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            @* The office administrator. They are told WHY rather than shown a
+                               control that does nothing — and the rule is enforced in the service
+                               regardless of what this form posts. *@
+                            <input type="hidden" name="status" value="@((int)t.Status)">
+                            <input type="hidden" name="priority" value="@((int)t.Priority)">
+                            @if (!Model.HasWorkflow) { <p class="muted" style="font-size:13px;margin:12px 0 0">@Model.WhyNotStatus</p> }
+                        }
+
+                        <label style="display:block;font-weight:800;font-size:13px;margin:10px 0 6px">
+                            @(Model.HasWorkflow ? "Comment" : Model.CanChangeStatus ? "Add a note (optional)" : "Ask for an update, or leave a note")
+                        </label>
+                        <textarea name="note" id="noteBox" rows="3" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px"
+                                  data-mention="@Model.MentionData"
+                                  placeholder="Type @@ to ask someone — they are flagged until they reply.">@Model.PostedNote</textarea>
+                        @* Files and photos on the note (2026-10-13), as on a routed ticket. *@
+                        @await Html.PartialAsync("_Attach", Model, new Microsoft.AspNetCore.Mvc.ViewFeatures.ViewDataDictionary(ViewData) { ["for"] = "comment" })
+                        <partial name="_EmailClient" model="Model" />
+                        <div class="actions"><button class="btn btn-accent" type="submit">Save</button></div>
+                    </form>
+                </div>
+                @if (Model.WorksTickets) { <div style="margin-top:18px"><partial name="_EditTicket" model="Model" /></div> }
+                <div class="card" style="margin-top:18px">
+                    <h3>Summary</h3>
+                    <table style="box-shadow:none;border:0">
+                        <tr><th style="background:transparent">Status</th><td><span class="pill @Model.StatusPill">@Model.StatusName</span></td></tr>
+                        <tr><th style="background:transparent">Priority</th><td>@t.Priority</td></tr>
+                        <tr><th style="background:transparent">People on it</th><td>@(string.IsNullOrEmpty(t.AssignedTo) ? "—" : t.AssignedTo)</td></tr>
+                        <tr><th style="background:transparent">Client</th><td>@(Model.Client?.Name ?? "—")@if (Model.Client != null && !string.IsNullOrWhiteSpace(Model.Client.Phone)) { <br><span class="muted">@Model.Client.Phone</span> }</td></tr>
+                        <tr><th style="background:transparent">Contact</th><td>@(string.IsNullOrEmpty(t.ContactName) ? "—" : t.ContactName)</td></tr>
+                        <tr><th style="background:transparent">Machine</th><td>@(string.IsNullOrEmpty(t.MachineName) ? "—" : t.MachineName)</td></tr>
+                        <tr><th style="background:transparent">Opened</th><td>@t.CreatedUtc.Local().ToString("yyyy-MM-dd HH:mm") by @t.OpenedBy (@t.Source)</td></tr>
+                        <tr><th style="background:transparent">Last updated</th><td>@t.UpdatedUtc.Local().ToString("yyyy-MM-dd HH:mm")</td></tr>
+                        @if (t.ClosedUtc.HasValue) { <tr><th style="background:transparent">Closed</th><td>@t.ClosedUtc.Value.Local().ToString("yyyy-MM-dd HH:mm")</td></tr> }
+                    </table>
+                </div>
+                @if (t.Category == TicketCategory.CallOut)
+                {
+                    <div class="card" style="margin-top:18px">
+                        <h3>Call out</h3>
+                        <p><strong>Site address</strong><br>@(string.IsNullOrWhiteSpace(t.SiteAddress) ? "—" : t.SiteAddress)</p>
+                        <p><strong>Appointment</strong><br>@(t.AppointmentUtc.HasValue ? t.AppointmentUtc.Value.Local().ToString("dddd d MMMM yyyy 'at' HH:mm") : "not scheduled")</p>
+                    </div>
+                }
+                @if (t.Category == TicketCategory.Workshop)
+                {
+                    <div class="card" style="margin-top:18px">
+                        <h3>Workshop booking</h3>
+                        <table style="box-shadow:none;border:0">
+                            <tr><th style="background:transparent">Make / model</th><td>@($"{t.AssetMake} {t.AssetModel}".Trim() is { Length: > 0 } mm ? mm : "—")</td></tr>
+                            <tr><th style="background:transparent">Serial</th><td>@(string.IsNullOrWhiteSpace(t.AssetSerial) ? "—" : t.AssetSerial)</td></tr>
+                            <tr><th style="background:transparent">Accessories</th><td>@(string.IsNullOrWhiteSpace(t.Accessories) ? "none recorded" : t.Accessories)</td></tr>
+                            <tr>
+                                <th style="background:transparent">Password</th>
+                                <td>
+                                    @if (!t.DevicePasswordProtected) { <span class="muted">not password protected</span> }
+                                    else
+                                    {
+                                        <span id="pwHidden">••••••••  <button type="button" class="btn btn-sm" onclick="document.getElementById('pwHidden').style.display='none';document.getElementById('pwShown').style.display='inline'">Show</button></span>
+                                        <span id="pwShown" style="display:none"><code>@Model.DevicePassword</code></span>
+                                    }
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                }
+                <div class="card" style="margin-top:18px">
+                    <h3>Billable remote time</h3>
+                    <div class="stat" style="box-shadow:none;border:0;padding:0">
+                        <div class="n">@Model.TotalMinutes<span style="font-size:16px;color:var(--muted)"> min</span></div>
+                        <div class="l">across @Model.Sessions.Count session@(Model.Sessions.Count == 1 ? "" : "s")</div>
+                    </div>
+                    @if (Model.Sessions.Count > 0)
+                    {
+                        <table style="margin-top:12px">
+                            <tr><th>Started</th><th>Technician(s)</th><th>Minutes</th></tr>
+                            @foreach (var s in Model.Sessions)
+                            {
+                                <tr>
+                                    <td>@s.StartedUtc.Local().ToString("yyyy-MM-dd HH:mm")</td>
+                                    <td>@(string.IsNullOrEmpty(s.Technicians) ? s.StartedBy : s.Technicians)</td>
+                                    <td>@(s.EndedUtc.HasValue ? Math.Max(1, (int)(s.EndedUtc.Value - s.StartedUtc).TotalMinutes).ToString() : "in progress")</td>
+                                </tr>
+                            }
+                        </table>
+                    }
+                </div>
+                <partial name="_Recordings" model="Model" />
+            </div>
+        </div>
+        }
+    }
+</div></section>
+
+@* The timeline page has its own uploader; this belongs to the classic page. *@
+@if (Model.IsWorkshop && !Model.HasWorkflow)
+{
+    <script>
+    // The finished-machine photos, uploaded as they are picked. The page reloads afterwards so the
+    // gate, the counts and the status dropdown all redraw from the server rather than from a guess
+    // made here about what the server would now say.
+    async function uploadAfter(){
+      const input = document.getElementById('afterPick');
+      const note = document.getElementById('afterNote');
+      if (!input.files.length) return;
+      const form = new FormData();
+      form.append('kind', 'after');
+      form.append('ticketNumber', '@Model.Ticket!.Number');
+      for (const f of input.files) form.append('files', f);
+      note.textContent = 'Uploading…';
+      try {
+        const res = await fetch('/api/portal/photos', { method: 'POST', body: form });
+        const body = await res.json();
+        const problems = (body.photos || []).filter(function(p){ return p.error; });
+        if (problems.length) { note.textContent = problems.map(function(p){ return p.error; }).join(' '); }
+        else { location.reload(); return; }
+      } catch (e) {
+        note.textContent = 'Those photos did not upload. Try again.';
+      }
+      input.value = '';
+    }
+    </script>
+}
+
+@if (Model.Ticket != null && !Model.HasWorkflow)
+{
+    @* Files and photos on a note (2026-10-13): photos made smaller, then sent one at a time. *@
+    <script src="/photos.js?v=@RemoteSupport.Platform.Services.BuildStamp.Value"></script>
+    <script src="/attach.js?v=@RemoteSupport.Platform.Services.BuildStamp.Value"></script>
+}

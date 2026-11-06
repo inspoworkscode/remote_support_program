@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>importcheck</AssemblyName>
+    <RootNamespace>RemoteSupport.Tools.ImportCheck</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The REAL reader, the REAL rules and the REAL service, on a throwaway SQLite file with the
+         real migrations applied. A harness with its own copy of the rules would pass while the
+         product was broken. -->
+    <ProjectReference Include="..\..\src\RemoteSupport.Platform\RemoteSupport.Platform.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Which database its throwaway platform runs on: SQLite, or PostgreSQL with RSP_TEST_DB=postgres (HANDOVER 118). -->
+    <Compile Include="..\Common\HarnessDb.cs" />
+    <Compile Include="..\Common\TestPostgres.cs" />
+    <Compile Include="..\Common\HarnessDb.Ef.cs" />
+  </ItemGroup>
+</Project>

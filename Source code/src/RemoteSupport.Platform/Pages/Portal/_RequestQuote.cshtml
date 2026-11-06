@@ -1,0 +1,195 @@
+@model RemoteSupport.Platform.Pages.Portal.TicketModel
+@using RemoteSupport.Platform.Services
+@{
+    // Request quote — the office's step. Which mail the person uses is asked ONCE and remembered
+    // (Clint, 2026-09-24): desktop mail gets a draft file with the photos attached; Gmail and Outlook
+    // on the web get their compose window, with the photos to attach by hand. After it is requested,
+    // the same place hands over the email.
+    //
+    // Suppliers are TICKED from the company's list (2026-09-29), as many as wanted. One goes in To;
+    // several all go in BCC so none sees the others, with the company's own address in To.
+    var t = Model.Ticket!;
+    var eml = PortalAddresses.Ticket(t.Number) + "?handler=Eml";
+    var machine = Model.Machine;
+    var own = QuoteService.OwnAddress(Model.Tenant);
+    var delivery = Model.Tenant.QuoteDeliveryAddress;
+}
+@if (Model.QuoteJustRequested)
+{
+    <div class="tk-form-h"><span>Quote requested</span></div>
+    @if (Model.ComposeUrl.Length > 0)
+    {
+        <p>Your quote request is ready in @MailClients.Label(Model.MyMailClient):</p>
+        <a class="btn btn-accent" href="@Model.ComposeUrl" target="_blank" rel="noopener" id="rqOpen">Open the email</a>
+        @if (Model.PasteSignature is { } sig)
+        {
+            // Web mail takes no formatting through a link, so the email stops after "Our reference" and the
+            // signature goes on the clipboard the moment Open the email is pressed — one paste.
+            var abs = $"{Context.Request.Scheme}://{Context.Request.Host}{QuoteSignatures.ImagePath(sig.ImageToken)}";
+            <div class="card" style="margin-top:10px;padding:10px 12px">
+                <p class="tk-sys" id="rqSigSay" style="margin:0 0 8px">Your signature, <strong>@sig.Name</strong>, is copied when you press Open the email. Paste it (Ctrl+V) at the bottom of the email.</p>
+                <div id="rqSig" style="background:#fff;color:#222;padding:8px;border-radius:6px">@Html.Raw(QuoteSignatures.Html(sig, abs))</div>
+                <button type="button" class="btn btn-sm" style="margin-top:8px" onclick="rqCopySig(true)">Copy the signature again</button>
+            </div>
+            <script>
+            function rqCopySig(again){
+              var el = document.getElementById('rqSig'), say = document.getElementById('rqSigSay');
+              var html = el.innerHTML, text = el.innerText;
+              function done(){ say.textContent = 'Signature copied. Paste it (Ctrl+V) at the bottom of the email.'; }
+              function manual(){ say.textContent = 'Your browser would not copy it. Select the signature below, copy it, and paste it at the bottom of the email.'; }
+              // Copying the drawn signature as a selection first: it needs no permission (the clipboard
+              // API's write was refused outright in an embedded browser, click or not) and carries the
+              // fonts, colours and the image as the browser drew them. The API is the second try.
+              var ok = false;
+              try {
+                var r = document.createRange(); r.selectNodeContents(el);
+                var s = getSelection(); s.removeAllRanges(); s.addRange(r);
+                ok = document.execCommand('copy'); s.removeAllRanges();
+              } catch (e) { ok = false; }
+              if (ok) { done(); return; }
+              try {
+                if (navigator.clipboard && window.ClipboardItem) {
+                  navigator.clipboard.write([new ClipboardItem({
+                    'text/html': new Blob([html], { type: 'text/html' }),
+                    'text/plain': new Blob([text], { type: 'text/plain' })
+                  })]).then(done, manual);
+                  return;
+                }
+              } catch (e) { }
+              manual();
+            }
+            document.getElementById('rqOpen').addEventListener('click', function(){ rqCopySig(false); });
+            </script>
+        }
+        @if (Model.Lines.Any(l => l.PhotoIds.Count > 0))
+        {
+            <p class="tk-sys" style="margin-top:8px">Web mail cannot attach photos from a link. Save these and attach them:</p>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+            @for (int i = 0; i < Model.Lines.Count; i++)
+            {
+                var l = Model.Lines[i];
+                for (int k = 0; k < l.PhotoIds.Count; k++)
+                {
+                    var ext = System.IO.Path.GetExtension(Model.PartPhotos.FirstOrDefault(p => p.Id == l.PhotoIds[k])?.FileName ?? ".jpg");
+                    <a class="btn btn-sm" href="@(PortalAddresses.Photo(l.PhotoTokens[k]))" download="@QuoteService.PhotoFileName(i + 1, k + 1, l.PhotoIds.Count, ext)">@(i + 1). @l.ItemName@(l.PhotoIds.Count > 1 ? $" — photo {k + 1}" : "")</a>
+                }
+            }
+            </div>
+        }
+    }
+    else
+    {
+        <p>Your draft email is downloading. Open it — it is addressed, written and has the photos attached, ready to send.</p>
+        <script>window.addEventListener('load', function(){ location.href = '@Html.Raw(eml)'; });</script>
+    }
+    <p><a class="tk-sys" href="@eml">Download the quote request email again</a></p>
+}
+else
+{
+    <p class="tk-sys">@(machine.IsEmpty ? "Not for a particular machine." : "For: " + machine.Describe())</p>
+    <p class="tk-sys">The items asked for:</p>
+    <ul style="margin:4px 0 8px">@foreach (var l in Model.Lines) { <li>@QuoteService.Describe(l)</li> }</ul>
+    <p class="tk-sys">
+        @if (delivery.Length > 0) { <text>The delivery fee, stock and the ETA are asked for, for delivery to @delivery.Replace("\n", ", ").</text> }
+        else { <text>The delivery fee, stock and the ETA are asked for. No delivery address is set</text> @if (Model.CanEditSuppliers) { <text> — </text><a href="/portal/suppliers">set one</a> } <text>.</text> }
+    </p>
+    <form method="post" asp-page-handler="RequestQuote" id="rqForm">
+        <label class="tk-field">Which suppliers? Tick as many as you want quotes from.</label>
+        @if (Model.Suppliers.Count == 0)
+        {
+            <p class="tk-sys">No suppliers on the list yet. Add one below.</p>
+        }
+        @foreach (var s in Model.Suppliers)
+        {
+            <label style="display:block;font-size:14px;margin:4px 0">
+                <input type="checkbox" name="supplierIds" value="@s.Id" onchange="rqCount()" checked="@Model.SupplierTicked(s)">
+                <strong>@s.Name</strong> <span class="tk-sys">@s.Email</span>
+            </label>
+        }
+        <p class="tk-sys" id="rqBcc" style="display:none;margin-top:6px">
+            @if (own.Length > 0) { <text>They all go in BCC, so none sees the others, and @own goes in To.</text> }
+            else { <text>They all go in BCC, so none sees the others. Nothing is set for To</text> @if (Model.CanEditSuppliers) { <text> — </text><a href="/portal/suppliers">set your own address</a> } <text>.</text> }
+        </p>
+        @* Which signature (2026-10-06). Several: asked, the one this person used last ticked. One: used,
+           and said. None: signed with their name, as before. *@
+        @if (Model.Signatures.Count > 1)
+        {
+            <label class="tk-field">Which signature?</label>
+            @foreach (var s in Model.Signatures)
+            {
+                <label style="display:flex;gap:8px;align-items:flex-start;margin:6px 0;cursor:pointer">
+                    <input type="radio" name="signatureId" value="@s.Id" required checked="@(s.Id == Model.SignatureTicked)" style="margin-top:4px">
+                    <span><strong style="font-size:14px">@s.Name</strong>
+                        <span style="display:block;background:#fff;color:#222;padding:6px 8px;border-radius:6px;margin-top:3px;max-width:520px;overflow:hidden">@Html.Raw(QuoteSignatures.Html(s, QuoteSignatures.ImagePath(s.ImageToken)))</span></span>
+                </label>
+            }
+        }
+        else if (Model.Signatures.Count == 1)
+        {
+            <input type="hidden" name="signatureId" value="@Model.Signatures[0].Id">
+            <p class="tk-sys" style="margin-top:8px">Signed with <strong>@Model.Signatures[0].Name</strong>.</p>
+        }
+        else if (Model.CanEditSuppliers)
+        {
+            <p class="tk-sys" style="margin-top:8px">Signed with your name. <a href="/portal/suppliers#signatures">Set up a signature</a></p>
+        }
+        @if (!MailClients.Valid(Model.MyMailClient))
+        {
+            <label class="tk-field">Which email do you use? We'll remember.</label>
+            @foreach (var c in new[] { MailClients.Desktop, MailClients.Gmail, MailClients.OutlookWeb })
+            {
+                <label style="display:block;font-size:14px;margin:4px 0"><input type="radio" name="mail" value="@c" required> @MailClients.Label(c)</label>
+            }
+        }
+        else
+        {
+            <details style="margin-top:8px;font-size:13px">
+                <summary class="tk-sys" style="cursor:pointer">Using @MailClients.Label(Model.MyMailClient) — change</summary>
+                @foreach (var c in new[] { MailClients.Desktop, MailClients.Gmail, MailClients.OutlookWeb })
+                {
+                    <label style="display:block;margin:4px 0"><input type="radio" name="mail" value="@c" checked="@(c == Model.MyMailClient)"> @MailClients.Label(c)</label>
+                }
+            </details>
+        }
+        <button type="submit" class="btn btn-accent" style="margin-top:10px">Submit — request the quote</button>
+    </form>
+
+    if (Model.CanEditSuppliers)
+    {
+        if (Model.SimilarSuppliers.Count > 0)
+        {
+            <div class="alert alert-warn" style="margin-top:10px">
+                <strong>"@Model.PendingSupplier.Name"</strong> looks like a supplier already on the list:
+                <div class="tk-sys" style="margin-top:6px">@foreach (var s in Model.SimilarSuppliers) { <div>@s.Name — @s.Email</div> }</div>
+                <p class="tk-sys" style="margin-top:6px">If it is one of these, just tick it above.</p>
+                <form method="post" asp-page-handler="AddSupplier" style="margin-top:8px">
+                    <input type="hidden" name="confirmNew" value="true">
+                    <input type="hidden" name="supplierName" value="@Model.PendingSupplier.Name"><input type="hidden" name="supplierEmail" value="@Model.PendingSupplier.Email">
+                    <input type="hidden" name="contactPerson" value="@Model.PendingSupplier.ContactPerson"><input type="hidden" name="phone" value="@Model.PendingSupplier.Phone">
+                    <button class="btn btn-sm btn-accent" type="submit">No — it is different. Add "@Model.PendingSupplier.Name"</button>
+                </form>
+            </div>
+        }
+        <details style="margin-top:12px" open="@(Model.Suppliers.Count == 0 || Model.PendingSupplier.Name.Length > 0)">
+            <summary class="tk-sys" style="cursor:pointer">Add a supplier to the list</summary>
+            <form method="post" asp-page-handler="AddSupplier" style="margin-top:6px">
+                <div class="tk-row" style="flex-wrap:wrap">
+                    <input name="supplierName" class="tk-in" style="min-width:160px" required placeholder="Supplier's name" value="@Model.PendingSupplier.Name">
+                    <input name="supplierEmail" type="email" class="tk-in" style="min-width:200px" required placeholder="Their email address" value="@Model.PendingSupplier.Email">
+                </div>
+                <div class="tk-row" style="flex-wrap:wrap;margin-top:6px">
+                    <input name="contactPerson" class="tk-in" style="min-width:160px" placeholder="Contact person (optional)" value="@Model.PendingSupplier.ContactPerson">
+                    <input name="phone" class="tk-in" style="min-width:160px" placeholder="Phone (optional)" value="@Model.PendingSupplier.Phone">
+                    <button class="btn" type="submit">Add</button>
+                </div>
+            </form>
+        </details>
+    }
+    <script>
+    function rqCount(){
+      var n = document.querySelectorAll('#rqForm input[name=supplierIds]:checked').length;
+      document.getElementById('rqBcc').style.display = n > 1 ? 'block' : 'none';
+    }
+    rqCount();
+    </script>
+}

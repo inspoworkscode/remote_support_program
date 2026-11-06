@@ -1,0 +1,230 @@
+@model RemoteSupport.Platform.Pages.Portal.TicketModel
+@{
+    // The quote's items, and — while they may still be changed — the Item box with its Add button
+    // beside it (Clint, 2026-09-27: "There should be the field for the item and next to it an add
+    // button, so that if it does not appear when typing in, you click on an add button"). Typing
+    // offers matching items; picking one quotes that item; pressing Add with a new name adds it to
+    // the company's list, after a "Did you mean" if it looks like one already there.
+    //
+    // Drawn in two places — the Quote needed step in the timeline, and the Quote tab — so every id is
+    // prefixed, and each copy posts back the tab and open step it came from.
+    var t = Model.Ticket!;
+    var px = ViewData["px"] as string ?? "q";
+    var tab = ViewData["tab"] as string ?? "quote";
+    var open = ViewData["open"] as string ?? "";
+    // The machine the quote is for — one per quote, and optional (Clint, 2026-09-29). A workshop job
+    // starts with the machine it was booked in with.
+    var machine = Model.Machine;
+}
+@if (Model.MayEditLines)
+{
+    <form method="post" asp-page-handler="SetMachine" style="margin:0 0 12px">
+        <input type="hidden" name="tab" value="@tab"><input type="hidden" name="open" value="@open">
+        <label class="tk-field">The machine <span class="tk-sys" style="font-weight:400">— optional; leave it empty when the parts are not for one machine</span></label>
+        <div class="tk-row" style="flex-wrap:wrap">
+            <select name="machineType" class="tk-in" style="flex:0 1 150px" title="Type of machine">
+                <option value="">Type</option>
+                @foreach (var k in QuoteService.MachineTypes) { <option value="@k" selected="@(k == machine.Type)">@k</option> }
+            </select>
+            <input name="machineMake" value="@machine.Make" class="tk-in" style="min-width:120px" placeholder="Make — e.g. Asus">
+            <input name="machineModel" value="@machine.Model" class="tk-in" style="min-width:120px" placeholder="Model — e.g. VivoBook 15">
+            <input name="machineSerial" value="@machine.Serial" class="tk-in" style="min-width:120px" placeholder="Serial number">
+            <button class="btn" type="submit">Save</button>
+        </div>
+        @if (!t.QuoteMachineSaved && t.Category == TicketCategory.Workshop && !machine.IsEmpty)
+        {
+            <p class="tk-sys" style="margin-top:4px">Filled in from the booking. Change it, or empty it, and Save.</p>
+        }
+    </form>
+}
+else
+{
+    <p class="tk-sys" style="margin:0 0 8px">@(machine.IsEmpty ? "Not for a particular machine." : "For: " + machine.Describe())</p>
+}
+@if (Model.Lines.Count == 0) { <p class="tk-sys">No items yet.</p> }
+else
+{
+    <table style="margin-top:6px">
+        <tr><th>Item</th><th>Part number</th><th>Serial number</th><th>Qty</th><th>Photos</th>@if (Model.MayEditLines) { <th></th> }</tr>
+        @foreach (var l in Model.Lines)
+        {
+            <tr>
+                <td>@l.ItemName</td>
+                <td>@(l.PartNumber.Length > 0 ? l.PartNumber : "—")</td>
+                <td>@(l.SerialNumber.Length > 0 ? l.SerialNumber : "—")</td>
+                <td>@l.Quantity</td>
+                <td>
+                    @if (l.PhotoIds.Count == 0) { <span class="tk-sys">—</span> }
+                    <span style="display:inline-flex;gap:4px;flex-wrap:wrap;vertical-align:middle">
+                    @foreach (var ptok in l.PhotoTokens)
+                    {
+                        <a href="@(PortalAddresses.Photo(ptok))" target="_blank"><img src="@(PortalAddresses.Photo(ptok))" alt="Photo of @l.ItemName" style="width:54px;height:40px;object-fit:cover;border-radius:6px"></a>
+                    }
+                    </span>
+                </td>
+                @if (Model.MayEditLines)
+                {
+                    <td style="white-space:nowrap">
+                        @* More photos for this item: the same one-at-a-time upload as Add. *@
+                        <form method="post" asp-page-handler="AddLinePhotos" enctype="multipart/form-data" class="inline qphoto-form">
+                            <input type="hidden" name="lineId" value="@l.Id">
+                            <input type="hidden" name="tab" value="@tab"><input type="hidden" name="open" value="@open">
+                            <label class="btn btn-sm" style="margin:0" title="Add photos of this part">Add photos
+                                <input type="file" name="photo" accept="image/*" multiple hidden onchange="quotePhotosChosen(this, true)"></label>
+                        </form>
+                        <form method="post" asp-page-handler="RemoveLine" class="inline">
+                            <input type="hidden" name="lineId" value="@l.Id">
+                            <input type="hidden" name="tab" value="@tab"><input type="hidden" name="open" value="@open">
+                            <button class="btn btn-sm btn-danger" type="submit">Remove</button>
+                        </form>
+                    </td>
+                }
+            </tr>
+        }
+    </table>
+}
+
+@if (Model.Similar.Count > 0 && Model.Tab == tab)
+{
+    <div class="alert alert-warn">
+        <strong>"@Model.PendingItem"</strong> looks like something already on the list. Did you mean:
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+            @foreach (var s in Model.Similar)
+            {
+                <form method="post" asp-page-handler="AddLine" style="margin:0">
+                    <input type="hidden" name="itemId" value="@s.Id">
+                    <input type="hidden" name="partNumber" value="@Model.PendingPart"><input type="hidden" name="serialNumber" value="@Model.PendingSerial"><input type="hidden" name="quantity" value="@Model.PendingQty">
+                    @foreach (var pid in Model.PendingPhotos) { <input type="hidden" name="photoIds" value="@pid"> }
+                    <input type="hidden" name="tab" value="@tab"><input type="hidden" name="open" value="@open">
+                    <button class="btn btn-sm" type="submit">@s.Name</button>
+                </form>
+            }
+            <form method="post" asp-page-handler="AddLine" style="margin:0">
+                <input type="hidden" name="itemId" value="0">
+                <input type="hidden" name="itemName" value="@Model.PendingItem"><input type="hidden" name="confirmNew" value="true">
+                <input type="hidden" name="partNumber" value="@Model.PendingPart"><input type="hidden" name="serialNumber" value="@Model.PendingSerial"><input type="hidden" name="quantity" value="@Model.PendingQty">
+                @foreach (var pid in Model.PendingPhotos) { <input type="hidden" name="photoIds" value="@pid"> }
+                <input type="hidden" name="tab" value="@tab"><input type="hidden" name="open" value="@open">
+                <button class="btn btn-sm btn-accent" type="submit">No — it is different. Add "@Model.PendingItem"</button>
+            </form>
+        </div>
+        @if (Model.PendingPhotos.Count > 0)
+        {
+            <p class="tk-sys" style="margin-top:6px">Your @(Model.PendingPhotos.Count == 1 ? "photo goes" : $"{Model.PendingPhotos.Count} photos go") with whichever you choose.</p>
+        }
+    </div>
+}
+
+@if (Model.MayEditLines)
+{
+    <form method="post" asp-page-handler="AddLine" enctype="multipart/form-data" style="margin-top:10px" class="qphoto-form" onsubmit="return quoteAddSubmit(this)">
+        <input type="hidden" name="itemId" id="@(px)Id" value="0">
+        <input type="hidden" name="tab" value="@tab"><input type="hidden" name="open" value="@open">
+        <label class="tk-field">Item</label>
+        <div class="tk-row">
+            <input name="itemName" id="@(px)Name" class="tk-in" required autocomplete="off" placeholder="Choose from the list, or type — e.g. DDR, SSD, screen"
+                   onfocus="suggestItems('@px', true)" onclick="suggestItems('@px', true)" oninput="suggestItems('@px')" onblur="hideItems('@px')">
+            <button class="btn btn-accent" type="submit">Add</button>
+        </div>
+        <div class="tk-sug" id="@(px)Sug" onmousedown="event.preventDefault()"></div>
+        <div class="tk-row" style="margin-top:6px">
+            <input name="partNumber" id="@(px)Part" class="tk-in" placeholder="Part number (optional)">
+            <input name="serialNumber" class="tk-in" placeholder="Serial number (optional)">
+            <input name="quantity" type="number" min="1" value="1" class="tk-in" style="max-width:90px" title="Quantity">
+        </div>
+        <label class="tk-sys" style="display:block;margin-top:6px">Photos of the part (optional — as many as you like):
+            <input type="file" name="photo" accept="image/*" multiple onchange="quotePhotosChosen(this, false)"></label>
+        <span class="tk-sys qphoto-status" aria-live="polite"></span>
+    </form>
+    <script src="/photos.js?v=@RemoteSupport.Platform.Services.BuildStamp.Value"></script>
+    <script>
+    // Several photos of a part (2026-10-06). Each is made smaller and sent on its own, before the
+    // form — the workshop photos' way (§62): fourteen phone photos in one request were past what the
+    // server takes, and one bad photo must not lose the rest. The form then names their ids. Without
+    // script the files go with the form, and the server stores them itself.
+    var quoteBusy = false;
+    function quotePhotosChosen(input, sendNow){
+      var form = input.form, n = input.files.length;
+      var status = form.querySelector('.qphoto-status');
+      if (status) status.textContent = n > 1 ? n + ' photos chosen.' : '';
+      if (sendNow && n > 0) quoteSend(form);
+    }
+    function quoteAddSubmit(form){
+      var input = form.querySelector('input[type=file][name=photo]');
+      if (!input || !input.files.length || !window.FormData || !window.fetch) return true;
+      if (!quoteBusy) quoteSend(form);
+      return false;
+    }
+    async function quoteSend(form){
+      var input = form.querySelector('input[type=file][name=photo]');
+      var status = form.querySelector('.qphoto-status');
+      var files = Array.prototype.slice.call(input.files);
+      var ticket = '@t.Number';
+      var say = function(t){ if (status) status.textContent = t; else { var b = input.closest('label'); if (b) b.firstChild.textContent = t + ' '; } };
+      var problems = [];
+      quoteBusy = true;
+      form.querySelectorAll('button').forEach(function(b){ b.disabled = true; });
+      for (var i = 0; i < files.length; i++) {
+        say(files.length > 1 ? 'Uploading ' + (i + 1) + ' of ' + files.length + '…' : 'Uploading…');
+        try {
+          var small = window.shrinkPhoto ? await shrinkPhoto(files[i]) : files[i];
+          var fd = new FormData();
+          fd.append('kind', 'part'); fd.append('stage', ''); fd.append('ticketNumber', ticket);
+          fd.append('files', small, small.name || 'photo.jpg');
+          var res = await fetch('/api/portal/photos', { method: 'POST', body: fd, credentials: 'same-origin' });
+          var j = await res.json().catch(function(){ return {}; });
+          var one = (j.photos || [])[0];
+          if (!res.ok || !one || one.error) { problems.push((one && one.error) || (files[i].name + ': the server refused it.')); continue; }
+          var h = document.createElement('input');
+          h.type = 'hidden'; h.name = 'photoIds'; h.value = one.id;
+          form.appendChild(h);
+        } catch (e) { problems.push(files[i].name + ': it could not be sent.'); }
+      }
+      if (problems.length) {
+        alert('Some photos did not upload:\n\n' + problems.join('\n') + '\n\nThe rest are kept.');
+      }
+      input.removeAttribute('name');   // already sent — never twice
+      quoteBusy = false;
+      if (!form.querySelector('input[name=photoIds]')) {
+        say(''); form.querySelectorAll('button').forEach(function(b){ b.disabled = false; });
+        input.setAttribute('name', 'photo'); input.value = '';
+        return;
+      }
+      say('Saving…');
+      HTMLFormElement.prototype.submit.call(form);
+    }
+    // The Item box is a dropdown (2026-09-29): clicking into it, empty, lists every item already on
+    // the company's list; typing narrows it. Picking one quotes that item; a new name is added by Add.
+    var itemTimers = itemTimers || {};
+    function suggestItems(px, now){
+      var box = document.getElementById(px + 'Name');
+      var q = box.value;
+      // Clicking back into a box holding a picked item must not forget the pick.
+      if (!now) document.getElementById(px + 'Id').value = '0';
+      clearTimeout(itemTimers[px]);
+      itemTimers[px] = setTimeout(async function(){
+        var list = document.getElementById(px + 'Sug');
+        var res = await fetch('/api/portal/items/suggest?q=' + encodeURIComponent(q));
+        if (!res.ok || box.value !== q || document.activeElement !== box) return;   // typed on, or moved on, since
+        var items = await res.json();
+        list.innerHTML = '';
+        if (items.length === 0 && q.trim().length === 0)
+          list.innerHTML = '<span class="tk-sys">No items on the list yet. Type one and press Add.</span>';
+        items.forEach(function(i){
+          var b = document.createElement('button');
+          b.type = 'button'; b.className = 'btn btn-sm'; b.style.textAlign = 'left';
+          b.textContent = i.name + (i.part ? '  ·  ' + i.part : '');
+          b.onclick = function(){
+            document.getElementById(px + 'Id').value = i.id;
+            document.getElementById(px + 'Name').value = i.name;
+            var part = document.getElementById(px + 'Part');
+            if (i.part && !part.value) part.value = i.part;
+            list.innerHTML = '';
+          };
+          list.appendChild(b);
+        });
+      }, now ? 0 : 200);
+    }
+    function hideItems(px){ clearTimeout(itemTimers[px]); document.getElementById(px + 'Sug').innerHTML = ''; }
+    </script>
+}

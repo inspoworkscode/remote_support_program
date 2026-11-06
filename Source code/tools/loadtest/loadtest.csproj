@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- net10.0, not -windows: the big run happens on Linux load servers (deploy/loadtest). -->
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>loadtest</AssemblyName>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Shared only: the protocol the real apps speak. Never the platform â€” this runs where the platform is not. -->
+    <ProjectReference Include="..\..\src\RemoteSupport.Shared\RemoteSupport.Shared.csproj" />
+    <!-- "local" with "wal" only: switches the throwaway database to write-ahead logging, to measure what it changes. -->
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.13" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Which database its throwaway platform runs on: SQLite, or PostgreSQL with RSP_TEST_DB=postgres (HANDOVER 118). -->
+    <Compile Include="..\Common\HarnessDb.cs" />
+    <Compile Include="..\Common\TestPostgres.cs" />
+    <PackageReference Include="Npgsql" Version="10.0.3" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,82 @@
+# Terms of Service — {{COUNTRY}}
+
+These terms are an agreement between **The Remote Support Program (Pty) Ltd** (registration number 2026/737434/07, "we", "us") and the company signing up ("you"). The person who ticks the box at signup confirms that they may bind that company to these terms.
+
+# 1. What the service is
+
+The Remote Support Program is software you use to support your own customers: remote control of their computers, file transfer, scripts, a monthly health check, tickets, chat and the other features described on our website. It is provided as a hosted service under your own company's name and branding.
+
+You decide which of your customers' computers it is installed on, who in your company may use it, and what is done with it. We provide the tool; you provide the support.
+
+# 2. Your trial, the price and paying
+
+- A new company gets a free trial of 14 days. Nothing is charged during the trial.
+- After the trial the price is **{{PACKAGE}} a month** for five seats, any mix of roles. One person holding only the owner role is free; everybody else who can sign in takes a seat, and one person takes one seat however many roles they hold. That free owner login sets the company up and oversees it: it sees every ticket, client and computer and may comment on tickets, but it does not work tickets or connect to computers.
+- **A company has five seats; more are on request.** We built the service to make proper IT support software affordable for small IT companies, so every company starts with five. If you need more, an owner may ask us on the Billing page. Whether we agree, and how many seats we allow, is our decision. If we agree, each seat past five is **{{EXTRA}} a month**. It is added only when an owner adds somebody and accepts the new monthly price shown first, and it is charged from your next payment, with no part-month charges. Removing somebody brings the price down again from the payment after. Otherwise, to add somebody when your seats are all in use, remove a person or a role first.
+- Prices are in {{CURRENCY}}. {{TAX}}
+- You pay monthly in advance. If a payment is more than 14 days late we may suspend the service until it is paid, after telling you by email.
+- We may change our prices by telling you at least 30 days before the change takes effect. You may end the agreement before then if you do not accept the new price.
+
+# 3. What you must do
+
+- **Have permission.** You must have the permission of the owner and the user of every computer you install the software on or connect to, as the law where that computer is requires. The customer's own app asks them before each attended session; unattended access is something they switch on themselves. You are responsible for using these as your customers have agreed.
+- **Keep your logins safe.** Every person must use their own login and the two-factor code. You are responsible for anything done with your company's logins, and you must tell us at once if you think one has been misused.
+- **Use it lawfully.** You must not use the service to access a computer without authority, to spy on anyone, to spread malicious software, to break any law, or to harm our systems or anyone else's.
+- **Your customers' data is yours to look after.** You decide what of your customers' information passes through the service, and you are responsible for having a lawful reason to process it.
+
+# 4. Your data and backups — we are not responsible for loss of data
+
+**Remote support changes computers.** Scripts, file transfers, installations, restarts and the work your technicians do can change, damage or delete data on your customers' machines. **You and your customers are responsible for keeping backups** of everything that matters before work is done.
+
+**We are not responsible for any loss of, damage to, or corruption of data** on any computer, whether caused by the use of the service, by a technician's action, by a script, by a fault in the software, by a failure of a computer or network, or by anything else, except where the law does not allow this to be excluded.
+
+We back up our own servers every night and take reasonable care of the information stored on them (your tickets, clients, settings and records). We do not promise that it can never be lost, and **you should keep your own copies** of anything you cannot do without — for example by exporting your client list.
+
+# 5. Privacy and where your data is kept
+
+{{PRIVACY}}
+
+# 6. Security
+
+We protect the service with encryption on every connection, two-factor sign-in for every login, and the other measures described in our security documentation. No system is perfectly secure. If we learn of a breach that affects your data we will tell you without undue delay, and do what the law requires of us.
+
+# 7. Availability and changes
+
+We work to keep the service running at all times but **we do not promise that it will always be available or free of faults**. We may carry out maintenance, and will try to do it outside working hours. We may improve and change the service; if a change takes away something important you rely on, we will tell you in advance.
+
+# 8. The service is provided as it is
+
+Except where the law says otherwise, the service is provided "as is" and "as available", **without any warranty** that it is fit for a particular purpose, will meet your needs, or will be uninterrupted or error-free.
+
+# 9. Limits on our liability
+
+- We are **not liable for indirect or consequential loss**, including loss of profit, revenue, business, goodwill or data, however it arises.
+- Our total liability to you for everything arising from this agreement in any twelve months is limited to **the fees you paid us in those twelve months**.
+- Nothing in these terms limits liability that cannot be limited by law{{LIABILITY_EXTRA}}.
+
+# 10. Your responsibility to us
+
+You will compensate us for claims made against us by your customers or anyone else that arise from how you used the service, from a breach of these terms, or from using it without the permission described in section 3.
+
+# 11. Cancelling, refunds and ending the agreement
+
+- **You may cancel at any time**, by email to queries@theremotesupportprogram.com or by phone on 078 131 5618. Nothing more is charged after you cancel; the service carries on until the end of the month you have already paid for, and then stops.
+- **The free trial costs nothing**, so there is nothing to refund if you cancel during it.
+- **We do not refund part of a month** you have paid for, because you pay monthly in advance and may cancel before the next month starts.
+- **A payment taken in error** — charged twice, charged after you cancelled, or the wrong amount — is refunded in full, to the card or account it came from, within 30 days of you telling us.
+- We may end the agreement by giving you 30 days' notice, or at once if you seriously break these terms or do not pay.
+- When it ends, you can no longer sign in, and the software on your customers' machines stops connecting. **We delete your company's data 60 days after the agreement ends**, except what the law requires us to keep. Ask us before then for an export of your data.
+
+# 12. Changes to these terms
+
+We may change these terms. We will tell you by email at least 30 days before a change that matters takes effect, and you may end the agreement before then if you do not accept it. The version you accepted is kept on your account.
+
+# 13. The law that applies
+
+{{GOVERNING_LAW}}
+
+# 14. Contact
+
+**The Remote Support Program (Pty) Ltd**, registration number 2026/737434/07
+19 Tide Street, Knysna Central, Knysna, Western Cape, 6571, South Africa
+queries@theremotesupportprogram.com · 078 131 5618

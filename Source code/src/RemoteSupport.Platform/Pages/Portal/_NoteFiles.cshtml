@@ -1,0 +1,23 @@
+@model RemoteSupport.Platform.Pages.Portal.TicketModel
+@using RemoteSupport.Platform.Data
+@using RemoteSupport.Platform.Services
+@{
+    // Under one comment or step, in BOTH layouts (2026-10-13): its photos as pictures, its other files by name. Each
+    // opens from /portal/f/{token} (HANDOVER §159) — a picture or a PDF in the browser, anything else as a download.
+    var n = (TicketNote)ViewData["note"]!;
+    var files = Model.Files.TryGetValue(n.Id, out var rows) ? rows : new List<TicketAttachment>();
+}
+@if (files.Count > 0)
+{
+    <div class="att-shown">
+        @foreach (var f in files.Where(f => f.IsImage))
+        {
+            <a href="@(PortalAddresses.Attachment(f.Token))" target="_blank" rel="noopener" title="@f.OriginalName — open full size">
+                <img src="@(PortalAddresses.Attachment(f.Token))" alt="@f.OriginalName" loading="lazy"></a>
+        }
+    </div>
+    @foreach (var f in files.Where(f => !f.IsImage))
+    {
+        <div class="tk-sys" style="margin-top:4px">📎 <a href="@(PortalAddresses.Attachment(f.Token))" target="_blank" rel="noopener">@f.OriginalName</a> (@TicketAttachmentService.Size(f.Bytes))</div>
+    }
+}

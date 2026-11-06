@@ -1,0 +1,18 @@
+@page "/owner/log"
+@model RemoteSupport.Platform.Pages.Owner.LogModel
+@{ ViewData["Title"] = "Admin log"; ViewData["Section"] = "owner"; }
+<section class="portal"><div class="wrap">
+    <h1>What admins did</h1>
+    <p class="muted">The last @Model.Entries.Count things, newest first. Times are UTC.</p>
+    @if (Model.Entries.Count == 0) { <div class="card">Nothing yet.</div> }
+    else
+    {
+        <table id="adminLog">
+            <tr><th>When</th><th>Who</th><th>What</th><th>Company</th><th>Server</th></tr>
+            @foreach (var e in Model.Entries)
+            {
+                <tr><td style="white-space:nowrap">@e.AtUtc.ToString("yyyy-MM-dd HH:mm")</td><td>@e.Who</td><td>@e.What</td><td>@e.Company</td><td class="muted">@e.Server</td></tr>
+            }
+        </table>
+    }
+</div></section>

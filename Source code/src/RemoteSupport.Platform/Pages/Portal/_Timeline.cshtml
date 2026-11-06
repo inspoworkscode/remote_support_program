@@ -1,0 +1,738 @@
+@model RemoteSupport.Platform.Pages.Portal.TicketModel
+@using RemoteSupport.Platform.Services
+@{
+    // A workflow ticket, the way Clint's current system reads (2026-09-27): the stage at the top with
+    // ONLY the next steps under it; a step with a form opens that form at the top of the timeline and
+    // Submit moves the job on; "Post a comment" is always there; and one numbered timeline, newest
+    // first, reads as the story. Photos, Quote and Details are tabs. Every button is
+    // TicketService.ActionsFor — this page decides nothing about the route.
+    var t = Model.Ticket!;
+    var tab = Model.Tab is "photos" or "quote" or "details" ? Model.Tab : "activity";
+    var notes = Model.Notes.OrderBy(n => n.Id).ToList();
+    // Workshop and Call out both have a route (2026-09-27). The machine — photos, collection, the
+    // booking's machine details — is the workshop's; a call out has a site and an appointment.
+    bool workshop = t.Category == TicketCategory.Workshop;
+    // What it STARTED as: a workshop job may have been a call out or a walk in, and the bottom of its
+    // story is how it began. Its "Needs workshop work" / "Needs to be booked in" entry says which.
+    var origin = !workshop ? t.Category
+        : notes.Any(n => n.FormTitle == "Needs workshop work") ? TicketCategory.CallOut
+        : notes.Any(n => n.FormTitle == "Needs to be booked in") ? TicketCategory.WalkIn
+        : TicketCategory.Workshop;
+    bool startedAsCallOut = origin == TicketCategory.CallOut;
+    if (!workshop && tab == "photos") tab = "activity";
+    // Steps with a form open it in the timeline; the rest are pressed straight away.
+    bool HasForm(AvailableAction a) => a.Fields.Length > 0 || a.Key is "quote-needed" or TicketService.CollectedKey or TicketService.DeliverKey;
+    string FieldLabel(AvailableAction a, StageField f) => f switch
+    {
+        StageField.Details => a.Key == "inspection" ? "What did the inspection find?"
+            : a.Key == TicketService.AddMachineKey ? "What is wrong with it?"
+            : a.Key == "delivered" ? "What was done there? (setting up a printer, for example)"
+            : a.Key is "remote-invoice" or "general-invoice" ? "What was done?" : "What was done to the machine?",
+        StageField.ParentTicket => "Which of this client's open tickets is it part of?",
+        StageField.Minutes => "Time spent",
+        StageField.Amount => a.Key == "quote-sent" ? "Quote amount" : a.Key is "paid-cash" or "paid-card" ? "Amount paid"
+            : a.Key == "delivery-invoice" ? "Amount to invoice for the delivery's work"
+            : a.IsDecision ? "Amount to invoice" : "Invoice amount",
+        StageField.Reference => a.Key == "quote-sent" ? "Quote reference, from your invoicing system"
+            : a.Key == "paid-card" ? "Card machine reference number" : "Invoice number, from your accounting package",
+        StageField.AssetMake => "Make",
+        StageField.AssetModel => "Model",
+        StageField.AssetSerial => "Serial number",
+        StageField.Accessories => "Accessories left with it",
+        StageField.DevicePassword => "Password to sign in (leave empty if none)",
+        StageField.Reason => a.Key == TicketService.GoBackKey ? "Why is it going back? (something changed, pressed by mistake…)"
+            : a.Key == "decline-dni" ? "Why it should be invoiced after all" : a.Key == "abandon" ? "Why it is being abandoned" : a.Key == "not-delivered" ? "Why it was not delivered"
+            : a.Key == Workflow.Reschedule ? "Why is it being moved? (the customer asked, nobody free…)" : "Why it should not be invoiced",
+        StageField.Appointment => t.AppointmentUtc.HasValue ? $"New date and time — it is booked for {TicketService.Appointment(t.AppointmentUtc.Value)}" : "New date and time",
+        StageField.SupplierEmail => "Supplier's email address",
+        StageField.Comments => "Comments (optional) — the client gets these with the report if it is emailed",
+        StageField.Files => "The damage report",
+        StageField.EmailClient => "Email it to the client",
+        _ => f.ToString()
+    };
+    string When(DateTime utc) => utc.Local().ToString("d MMM yyyy, HH:mm");
+}
+<style>
+.tk-head{padding:4px 0 14px;border-bottom:1px solid var(--line)}
+.tk-title{font-size:24px;font-weight:800;margin:0}.tk-title span{color:var(--muted);font-weight:700}
+.tk-crumb{display:flex;gap:8px;align-items:center;flex-wrap:wrap;color:var(--muted);font-size:14px;margin:6px 0 2px}
+.tk-stage{background:rgba(22,163,74,.16);color:var(--ok);border-radius:8px;padding:3px 10px;font-weight:800;font-size:13px}
+.tk-meta{color:var(--muted);font-size:13px}
+.tk-acts{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.tk-tabs{display:flex;gap:22px;border-bottom:1px solid var(--line);margin:14px 0 0;flex-wrap:wrap}
+.tk-tab{padding:10px 2px;color:var(--muted);font-weight:700;font-size:14px;cursor:pointer;background:none;border:none;border-bottom:2px solid transparent}
+.tk-tab.on{color:var(--ink);border-bottom-color:var(--fill)}
+.tk-pane{display:none;padding-top:14px}.tk-pane.on{display:block}
+.tk-post{display:flex;gap:10px;align-items:flex-start;margin-bottom:6px}
+.tk-post textarea{flex:1;min-height:44px}
+.tk-line{border-left:2px dashed var(--line);margin-left:14px;padding-left:24px}
+.tk-item{position:relative;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px}
+.tk-num{position:absolute;left:-38px;top:14px;width:26px;height:26px;border-radius:50%;background:var(--fill);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.tk-by{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);margin-bottom:6px}
+.tk-form-h{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:800;border-left:4px solid var(--fill);padding-left:10px;margin-bottom:10px}
+.tk-body{white-space:pre-wrap}
+.tk-sys{font-size:13px;color:var(--muted)}
+.tk-open{border:2px solid var(--fill)}
+.tk-field{display:block;font-weight:800;font-size:13px;margin:10px 0 4px}
+.tk-choice{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border:1px solid var(--line);border-radius:10px;margin:6px 0;cursor:pointer;font-size:14px}
+.tk-choice input{margin-top:3px}
+.tk-in{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
+.tk-row{display:flex;gap:8px}.tk-row .tk-in{flex:1}
+.tk-sug{display:grid;gap:4px;margin-top:4px;max-height:280px;overflow-y:auto}
+.tk-facts td,.tk-facts th{padding:6px 10px;text-align:left;border:0}.tk-facts th{color:var(--muted);font-weight:700;width:180px}
+/* On a phone (2026-10-02): the next steps as full-width buttons a thumb finds, the tabs one swipeable
+   row, the comment box above Post, and the booking's facts as label over value. */
+@@media (max-width:700px){
+.tk-title{font-size:20px}
+.tk-acts{flex-direction:column;align-items:stretch;gap:8px}
+.tk-acts>.btn,.tk-acts>form,.tk-acts>form .btn{width:100%;justify-content:center}
+.tk-tabs{flex-wrap:nowrap;overflow-x:auto;gap:18px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.tk-tab{white-space:nowrap;padding:12px 2px}
+.tk-post{flex-direction:column;align-items:stretch}
+.tk-post textarea{min-height:72px}
+.tk-line{margin-left:10px;padding-left:18px}
+.tk-num{left:-31px;width:24px;height:24px}
+.tk-item{padding:12px 14px}
+.tk-by{flex-wrap:wrap}
+.tk-row{flex-wrap:wrap}
+.tk-facts,.tk-facts tbody,.tk-facts tr{display:block}
+.tk-facts th,.tk-facts td{display:block;width:auto;padding:2px 10px}
+.tk-facts th{padding-top:8px;font-size:13px}
+}
+</style>
+
+<div class="tk-head">
+    <p class="tk-title"><span>#@t.Number –</span> @t.Subject
+        <a class="btn btn-sm" href="?tab=details#edit" onclick="showTab('details'); document.getElementById('edit').scrollIntoView({behavior:'smooth'}); return false;" style="vertical-align:middle;margin-left:6px">✎ Edit</a></p>
+    <div class="tk-crumb">
+        @TicketService.CategoryName(t.Category) ›
+        @if (Model.PreviousStageLabel.Length > 0) { <span>@Model.PreviousStageLabel</span> <span>›</span> }
+        <span class="tk-stage">@(Model.Stage?.Label ?? t.Stage)</span>
+    </div>
+    <div class="tk-meta">
+        Opened by @t.OpenedBy on @t.CreatedUtc.Local().ToString("dd/MM/yyyy")
+        @if (Model.WithWhom.Length > 0) { <text> · @Model.WithWhom</text> }
+        @if (Model.Client != null) { <text> · @Model.Client.Name</text> }
+        @if (t.RequesterEmail.Length > 0) { <text> · from <a href="mailto:@t.RequesterEmail">@t.RequesterEmail</a></text> }
+    </div>
+    <partial name="_Sender" model="Model" />
+    <partial name="_Knowledge" model="Model" />
+    <partial name="_Recurring" model="Model" />
+    @if (Model.BookedWith.Count > 0)
+    {
+        @* Machines the client brought in together (2026-09-30): equals, each on its own route. *@
+        <div class="tk-meta" style="margin-top:4px">Booked in with:
+            @for (int i = 0; i < Model.BookedWith.Count; i++)
+            {
+                var b = Model.BookedWith[i];
+                <a href="@(PortalAddresses.Ticket(b.Number))">#@b.Number @b.Subject</a> <span>(@b.StageLabel)</span>@(i < Model.BookedWith.Count - 1 ? " · " : "")
+            }
+        </div>
+    }
+    @* The job this is part of, and the tickets that are part of this one (3.6.7) — shown here since 2026-10-09, with the
+       way out. Before, a routed ticket said nothing about either, so it could not be taken out of a job, and a job's
+       open parts could not be seen from it. *@
+    @if (Model.Parent != null)
+    {
+        <div class="tk-meta" style="margin-top:4px">Part of:
+            <a href="@(PortalAddresses.Ticket(Model.Parent.Number))">#@Model.Parent.Number @Model.Parent.Subject</a>
+            <span>(@(Model.Parent.Stage.Length > 0 ? Workflow.Label(Model.Parent.Stage) : Model.Parent.Status.ToString()))</span>
+            @if (Model.WorksTickets)
+            {
+                <form method="post" asp-page-handler="Link" class="inline" style="margin-left:6px"
+                      data-confirm="Take #@t.Number out of #@Model.Parent.Number? It stays open as a ticket of its own."
+                      onsubmit="return confirm(this.dataset.confirm)">
+                    <input type="hidden" name="parentId" value="0">
+                    <button class="btn btn-sm" type="submit">Not part of it</button>
+                </form>
+            }
+        </div>
+    }
+    @if (Model.Children.Count > 0)
+    {
+        var openParts = Model.OpenChildren.Count;
+        <div class="tk-meta" style="margin-top:4px">
+            @if (openParts > 0) { <strong>Part of this job — @openParts still open, and this job cannot be closed until @(openParts == 1 ? "it is" : "they are"):</strong> }
+            else { <text>Part of this job:</text> }
+            @for (int i = 0; i < Model.Children.Count; i++)
+            {
+                var c = Model.Children[i];
+                <a href="@(PortalAddresses.Ticket(c.Number))">#@c.Number @c.Subject</a> <span>(@(c.Stage.Length > 0 ? Workflow.Label(c.Stage) : c.Status.ToString()))</span>@(i < Model.Children.Count - 1 ? " · " : "")
+            }
+        </div>
+    }
+    @* Closed: said here, with "Back to …" under it for a supervisor or the owner (2026-10-13). *@
+    @if (Model.Stage?.Lane == WorkLane.Done) { <p class="tk-meta" style="margin-top:10px">This job is closed.</p> }
+    @if (Model.Actions.Count > 0)
+    {
+        <div class="tk-acts">
+            @foreach (var a in Model.Actions)
+            {
+                // A step that would finish this job while parts of it are open: a pop-up saying which, and nothing sent.
+                var refuse = Model.RefusalFor(a.Key);
+                if (a.Key == "quote-requested")
+                {
+                    <button type="button" class="btn btn-accent" onclick="openStep('quote-requested')">☞ Request quote</button>
+                }
+                else if (HasForm(a))
+                {
+                    @* Back is a way out, not the way on: drawn plain beside the steps forward. *@
+                    <button type="button" class="btn @(a.Key == "abandon" ? "btn-danger" : a.Key == TicketService.GoBackKey ? "" : "btn-accent")" data-refuse="@refuse"
+                            onclick="if (this.dataset.refuse) { alert(this.dataset.refuse); return; } openStep('@a.Key')">@(a.Key == TicketService.GoBackKey ? "↶" : "☞") @a.Label</button>
+                }
+                else
+                {
+                    <form method="post" asp-page-handler="Act" class="inline" data-confirm="@(a.Closes ? a.Label + "?" : "")" data-refuse="@refuse"
+                          onsubmit="if (this.dataset.refuse) { alert(this.dataset.refuse); return false; } return !this.dataset.confirm || confirm(this.dataset.confirm)">
+                        <input type="hidden" name="action" value="@a.Key">
+                        <button class="btn btn-accent" type="submit">☞ @a.Label</button>
+                    </form>
+                }
+            }
+        </div>
+    }
+</div>
+
+@if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad">@Model.Error</div> }
+@if (!string.IsNullOrEmpty(Model.Message)) { <div class="alert alert-ok">@Model.Message</div> }
+@foreach (var m in Model.AskedMe)
+{
+    <div class="alert alert-warn">@(m.Note.FromCustomer ? $"{m.MentionedBy} replied by email — it is below." : $"{m.MentionedBy} asked you something on this ticket. Reply below and the flag clears.")</div>
+}
+
+<div class="tk-tabs" role="tablist">
+    <button type="button" class="tk-tab @(tab == "activity" ? "on" : "")" data-tab="activity" onclick="showTab('activity')">Activity</button>
+    @if (workshop)
+    {
+        <button type="button" class="tk-tab @(tab == "photos" ? "on" : "")" data-tab="photos" onclick="showTab('photos')">Photos (@Model.Before.Count in · @Model.After.Count out)</button>
+    }
+    @* Once there is a quote — the Quote needed step has its own item box before that. *@
+    @if (Model.Lines.Count > 0 || t.Outcome == "quote")
+    {
+        <button type="button" class="tk-tab @(tab == "quote" ? "on" : "")" data-tab="quote" onclick="showTab('quote')">Quote@(Model.Lines.Count > 0 ? $" ({Model.Lines.Count})" : "")</button>
+    }
+    <button type="button" class="tk-tab @(tab == "details" ? "on" : "")" data-tab="details" onclick="showTab('details')">Details</button>
+</div>
+
+@* ================================================================ Activity *@
+<div class="tk-pane @(tab == "activity" ? "on" : "")" id="pane-activity">
+    <form method="post" asp-page-handler="Comment">
+        <div class="tk-post">
+            <textarea name="note" id="noteBox" class="tk-in" rows="1" data-mention="@Model.MentionData"
+                      placeholder="Post a comment… type @@ to ask someone — they are flagged until they reply">@Model.PostedNote</textarea>
+            <button class="btn btn-accent" type="submit">Post</button>
+        </div>
+        @* Files and photos on the comment (2026-10-13) — progress photos, a document; with or without words. *@
+        @await Html.PartialAsync("_Attach", Model, new Microsoft.AspNetCore.Mvc.ViewFeatures.ViewDataDictionary(ViewData) { ["for"] = "comment" })
+        <partial name="_EmailClient" model="Model" />
+    </form>
+    <partial name="_Recordings" model="Model" />
+
+    <div class="tk-line">
+        @* ---- the open step: its form, at the top of the story, with Submit ---- *@
+        @foreach (var a in Model.Actions.Where(a => HasForm(a) && a.Key != "quote-requested"))
+        {
+            <div class="tk-item tk-open" id="step-@a.Key" style="display:@(Model.Open == a.Key ? "block" : "none")">
+                <div class="tk-num">@(notes.Count + 1)</div>
+                <div class="tk-form-h"><span>@a.Label</span>
+                    <button type="button" class="btn btn-sm" onclick="closeStep('@a.Key')">Cancel</button></div>
+
+                @if (a.Key == "quote-needed")
+                {
+                    <p class="tk-sys">What parts does the supplier need to quote for? Click the Item box to choose from the list, or type to narrow it. Not on the list? Type it and press Add.</p>
+                    @await Html.PartialAsync("_QuoteLines", Model, new Microsoft.AspNetCore.Mvc.ViewFeatures.ViewDataDictionary(ViewData) { ["px"] = "qs", ["tab"] = "activity", ["open"] = "quote-needed" })
+                    <form method="post" asp-page-handler="Act" style="margin-top:12px">
+                        <input type="hidden" name="action" value="quote-needed">
+                        <button class="btn btn-accent" type="submit">Submit — send to the office for a quote</button>
+                    </form>
+                }
+                else if (a.Key is TicketService.CollectedKey or TicketService.DeliverKey)
+                {
+                    bool deliver = a.Key == TicketService.DeliverKey;
+                    var OfEach = Model.Machines.Count > 0 ? $" ({Model.PhotosOutEach} of each of the {Model.Machines.Count + 1} machines on this job)" : " of the machine";
+                    @* A delivery's photos are taken at the office, before it goes (Clint, 2026-09-30). *@
+                    <p class="tk-sys">@(Model.PhotosOutRequired == 0
+                        // Job types: this job does not ask for them, so they are offered and never required.
+                        ? (deliver ? "A technician takes it to the customer. " : "") + $"Photos {(Model.Machines.Count > 0 ? "of the machines as they leave" : "of it as it leaves")} are not asked for, but you can add some."
+                        : deliver
+                        ? $"A technician takes it to the customer. Take at least {Model.PhotosOutRequired} photos{OfEach} here at the office, before {(Model.Machines.Count > 0 ? "they leave" : "it leaves")}, and as many more as you like."
+                        : $"Take at least {Model.PhotosOutRequired} photos{OfEach} {(Model.Machines.Count > 0 ? "as they leave" : "as it leaves")} — ideally in front of the customer — and as many more as you like.") @Model.After.Count added so far.</p>
+                    <input type="file" accept="image/*" multiple capture="environment" onchange="uploadAfter(this, '@a.Key')" style="padding:8px 0">
+                    <p class="tk-sys"></p>
+                    <form method="post" asp-page-handler="Act">
+                        <input type="hidden" name="action" value="@a.Key">
+                        <button class="btn btn-accent" type="submit">@(deliver ? "Submit — it is going out for delivery" : "Submit — the machine has been collected")</button>
+                    </form>
+                }
+                else
+                {
+                    @if (Workflow.ToWorkshopKeys.Contains(a.Key))
+                    {
+                        // Booking it in to the workshop: the same photos a counter booking needs, first.
+                        <p class="tk-sys">It becomes a workshop job at Booked in, keeping this number and everything below. @(Model.PhotosRequired == 0
+                            ? "Photos of the machine are not asked for, but you can add some."
+                            : $"Take at least {Model.PhotosRequired} photos of the machine as it goes — the lid, the base and the screen — and as many more as the damage needs.") @Model.Before.Count added so far.</p>
+                        <input type="file" accept="image/*" multiple capture="environment" onchange="uploadPhotos(this, 'before', '?open=@a.Key')" style="padding:8px 0">
+                        <p class="tk-sys"></p>
+                    }
+                    @if (a.Key == TicketService.AddMachineKey)
+                    {
+                        // Another machine the client brought in with this one: its own ticket, with its
+                        // own photos — staged as they are picked, attached when it is created.
+                        <p class="tk-sys">@(Model.PhotosRequired == 0 ? "Photos of THAT machine are not asked for, but you can add some."
+                            : $"Take at least {Model.PhotosRequired} photos of THAT machine as it arrived, and as many more as the damage needs.")</p>
+                        <input type="file" accept="image/*" multiple capture="environment" onchange="uploadStaged(this, '@Model.MachineStageId')" style="padding:8px 0">
+                        <p class="tk-sys" id="machinePhotos">@Model.MachinePhotos added so far.</p>
+                    }
+                    @if (a.Warning.Length > 0)
+                    {
+                        // What going back cannot take back (2026-10-13): an email sent, an invoice issued, a machine gone.
+                        <div class="tk-warn">⚠ @a.Warning</div>
+                    }
+                    <form method="post" asp-page-handler="Act">
+                        <input type="hidden" name="action" value="@a.Key">
+                        @if (a.Key == TicketService.AddMachineKey) { <input type="hidden" name="photoStage" value="@Model.MachineStageId"> }
+                        @foreach (var f in a.Fields)
+                        {
+                            @if (f == StageField.SameJob)
+                            {
+                                // Same job or separate (2026-10-02). It decides what the box under it
+                                // asks, so the label there follows the choice.
+                                <label class="tk-field">Is it part of this job?</label>
+                                <label class="tk-choice"><input type="radio" name="sameJob" value="yes" checked="@Model.SameJobChosen" onchange="machineChoice(this)">
+                                    <span><strong>Yes — the same job, on this ticket.</strong> For example a data transfer's old and new machine: one fault, one invoice, and they leave together.</span></label>
+                                <label class="tk-choice"><input type="radio" name="sameJob" value="no" checked="@(!Model.SameJobChosen)" onchange="machineChoice(this)">
+                                    <span><strong>No — a separate job.</strong> It becomes a ticket of its own for @(Model.Client?.Name ?? "the same client"), linked to this one.</span></label>
+                                continue;
+                            }
+                            <label class="tk-field" id="@(a.Key == TicketService.AddMachineKey && f == StageField.Details ? "machineDetailsLabel" : null)">@(a.Key == TicketService.AddMachineKey && f == StageField.Details && Model.SameJobChosen ? "What is this machine on the job? (optional — for example: the new laptop, the data goes onto this one)" : FieldLabel(a, f))</label>
+                            @if (f is StageField.Details or StageField.Reason)
+                            {
+                                // Add another machine checks its own: required for a separate job, optional on the same one.
+                                <textarea class="tk-in" rows="3" name="@(f == StageField.Details ? "details" : "reason")" required="@(a.Key != TicketService.AddMachineKey)">@(Model.Open == a.Key ? Model.PostedValue(f == StageField.Details ? "details" : "reason") : "")</textarea>
+                            }
+                            else if (f == StageField.Appointment)
+                            {
+                                // Starts at the current appointment, so moving it a day is one change.
+                                var at = t.AppointmentUtc?.Local();
+                                <div style="display:flex;gap:10px;flex-wrap:wrap">
+                                    <input class="tk-in" style="flex:1;min-width:150px" type="date" name="appointmentDate" required value="@(Model.RescheduleDate ?? at?.ToString("yyyy-MM-dd"))">
+                                    <input class="tk-in" style="flex:1;min-width:110px" type="time" name="appointmentTime" required value="@(Model.RescheduleTime ?? at?.ToString("HH:mm") ?? "09:00")">
+                                </div>
+                            }
+                            else if (f == StageField.Minutes) { <input class="tk-in" name="minutes" required placeholder="minutes, or 1:30" value="@(Model.Open == a.Key ? Model.PostedValue("minutes") : "")"> }
+                            else if (f == StageField.Amount) { <input class="tk-in" name="amount" required inputmode="decimal" placeholder="e.g. 650.00" value="@(Model.Open == a.Key ? Model.PostedValue("amount") : "")"> }
+                            else if (f == StageField.Reference) { <input class="tk-in" name="reference" required value="@(Model.Open == a.Key ? Model.PostedValue("reference") : "")"> }
+                            else if (f == StageField.AssetMake) { <input class="tk-in" name="assetMake" placeholder="e.g. Dell"> }
+                            else if (f == StageField.AssetModel) { <input class="tk-in" name="assetModel" placeholder="e.g. Latitude 5420"> }
+                            else if (f == StageField.AssetSerial) { <input class="tk-in" name="assetSerial"> }
+                            else if (f == StageField.Accessories) { <input class="tk-in" name="accessories" placeholder="e.g. charger, bag"> }
+                            else if (f == StageField.DevicePassword) { <input class="tk-in" name="devicePassword" autocomplete="off"> }
+                            else if (f == StageField.Comments)
+                            {
+                                <textarea class="tk-in" rows="3" name="comments">@(Model.Open == a.Key ? Model.PostedValue("comments") : "")</textarea>
+                            }
+                            else if (f == StageField.Files)
+                            {
+                                // The damage report itself (2026-10-13): goes up as it is picked, like a comment's files.
+                                @await Html.PartialAsync("_Attach", Model, new Microsoft.AspNetCore.Mvc.ViewFeatures.ViewDataDictionary(ViewData) { ["for"] = a.Key, ["required"] = true, ["label"] = "📎 Attach the damage report" })
+                            }
+                            else if (f == StageField.EmailClient)
+                            {
+                                // "Mailed directly from there to the client" — ticked by default (his answer 2), to the
+                                // ticket's contact, changeable. Not set up: why, and the report can still be recorded.
+                                var o = Model.ClientOffer;
+                                if (!o.Ready) { <p class="tk-sys">@o.WhyNot @if (Permissions.CanManageCompany(Model.MyRole)) { <a href="/portal/mailintake">Set it up</a> } Until then, record it here and send the report to the client yourself.</p> }
+                                else
+                                {
+                                    var ticked = !Model.StepEmailPosted || Model.PostedEmail;
+                                    var chosen = Model.StepEmailPosted ? Model.PostedTo : o.Default;
+                                    <div class="ec">
+                                        <label style="display:inline-flex;gap:8px;align-items:center;font-weight:700;font-size:14px;cursor:pointer">
+                                            <input type="checkbox" name="emailClient" value="true" checked="@ticked" onchange="ecTick(this)"> Email the damage report to the client
+                                        </label>
+                                        <div class="ec-to" style="margin-top:8px;@(ticked ? "" : "display:none")">
+                                            @await Html.PartialAsync("_EmailTo", Model, new Microsoft.AspNetCore.Mvc.ViewFeatures.ViewDataDictionary(ViewData) { ["chosen"] = chosen, ["known"] = o.Choices.Any(c => c.Address.Equals(chosen, StringComparison.OrdinalIgnoreCase)) })
+                                            <p class="tk-sys" style="margin:6px 0 0">They get the report attached, your comments above, and the fault the ticket was opened for, from @o.From — not the time or the amount. Their reply comes back here.</p>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else if (f == StageField.ParentTicket)
+                            {
+                                if (t.ClientId == null) { <p class="tk-sys">This ticket is not linked to a client yet. Link it on the Details tab first — it can only be part of another job for the same client.</p> }
+                                else if (Model.ParentChoices.Count == 0) { <p class="tk-sys">@(Model.Client?.Name ?? "This client") has no other open tickets to file this under.</p> }
+                                else
+                                {
+                                    <select class="tk-in" name="parentTicketId" required>
+                                        <option value="">— choose —</option>
+                                        @foreach (var c in Model.ParentChoices) { <option value="@c.Id">#@c.Number — @c.Subject</option> }
+                                    </select>
+                                }
+                            }
+                        }
+                        <button class="btn @(a.Key == "abandon" ? "btn-danger" : "btn-accent")" type="submit" style="margin-top:12px">@(a.Key == TicketService.GoBackKey ? a.Label : "Submit")</button>
+                    </form>
+                }
+            </div>
+        }
+        @if (Model.Actions.Any(a => a.Key == "quote-requested"))
+        {
+            <div class="tk-item tk-open" id="step-quote-requested" style="display:@(Model.Open == "quote-requested" ? "block" : "none")">
+                <div class="tk-num">@(notes.Count + 1)</div>
+                <div class="tk-form-h"><span>Request quote</span><button type="button" class="btn btn-sm" onclick="closeStep('quote-requested')">Cancel</button></div>
+                @await Html.PartialAsync("_RequestQuote", Model)
+            </div>
+        }
+        @if (Model.QuoteJustRequested)
+        {
+            <div class="tk-item tk-open">@await Html.PartialAsync("_RequestQuote", Model)</div>
+        }
+
+        @* ---- the story, newest first ---- *@
+        @for (int i = notes.Count - 1; i >= 0; i--)
+        {
+            var n = notes[i];
+            var vd = new Microsoft.AspNetCore.Mvc.ViewFeatures.ViewDataDictionary(ViewData) { ["note"] = n };
+            @* A step gone back over (2026-10-13) stays in the story, faded and struck through: it no longer counts. *@
+            @* id: Latest activity opens the ticket AT this entry (HANDOVER §164). *@
+            <div class="tk-item @(n.UndoneUtc != null ? "tk-undone" : "")" id="note-@n.Id">
+                <div class="tk-num">@(i + 1)</div>
+                @if (n.FormTitle.Length > 0)
+                {
+                    <div class="tk-form-h" style="@(n.WentBack ? "border-left-color:var(--warn)" : "")"><span>@(n.WentBack ? "↶ " : "")@n.FormTitle</span>
+                        @if (n.MovedTo.Length > 0 && !n.WentBack) { <span class="tk-sys" style="font-weight:600">→ @Workflow.Label(n.MovedTo)</span> }</div>
+                    @if (n.Body.Length > 0) { <div class="tk-body">@n.Body</div> }
+                    @await Html.PartialAsync("_NoteFiles", Model, vd)
+                    <div class="tk-by" style="margin:8px 0 0"><span>@n.Author</span><span>@When(n.CreatedUtc)</span></div>
+                    @* The damage report goes to the client from its step — and can be sent again, or to somebody else. *@
+                    @if (ClientUpdateService.IsDamageReport(n)) { @await Html.PartialAsync("_NoteEmail", Model, vd) }
+                }
+                else if (n.IsSystem)
+                {
+                    <div class="tk-sys"><strong>@n.Author</strong> — @n.Body <span style="float:right">@When(n.CreatedUtc)</span></div>
+                }
+                else
+                {
+                    <div class="tk-by"><strong style="color:var(--ink)">@n.Author</strong><span>@When(n.CreatedUtc)</span></div>
+                    @if (n.Body.Length > 0) { <div class="tk-body">@n.Body</div> }
+                    @await Html.PartialAsync("_NoteFiles", Model, vd)
+                    @await Html.PartialAsync("_NoteEmail", Model, vd)
+                }
+                @if (n.UndoneUtc is DateTime undone)
+                {
+                    <div class="tk-undone-note">Gone back over by @n.UndoneBy, @When(undone) — what it recorded no longer counts.</div>
+                }
+            </div>
+        }
+
+        @* ---- how it started: the booking, at the bottom, like the created-task card ---- *@
+        <div class="tk-item">
+            <div class="tk-num">0</div>
+            @if (startedAsCallOut)
+            {
+                // A call out — or a workshop job that started as one, whose machine details are in
+                // its "Needs workshop work" entry above.
+                <div class="tk-by"><strong style="color:var(--ink)">@t.OpenedBy booked the call out</strong><span>@When(t.CreatedUtc)</span></div>
+                <table class="tk-facts" style="box-shadow:none;border:0">
+                    <tr><th>Site address</th><td class="tk-body">@(t.SiteAddress.Length > 0 ? t.SiteAddress : "—")</td></tr>
+                    <tr><th>Appointment</th><td>@(t.AppointmentUtc?.Local().ToString("dddd d MMMM yyyy 'at' HH:mm") ?? "not scheduled")</td></tr>
+                    @if (!string.IsNullOrWhiteSpace(t.Description)) { <tr><th>Fault reported</th><td class="tk-body">@t.Description</td></tr> }
+                </table>
+            }
+            else if (origin != TicketCategory.Workshop)
+            {
+                // A walk in, a remote session or a General ticket: who opened it, and what it said.
+                <div class="tk-by"><strong style="color:var(--ink)">@t.OpenedBy @(origin switch
+                    {
+                        TicketCategory.WalkIn => "booked the walk in",
+                        TicketCategory.RemoteSupport => "opened the remote support ticket",
+                        _ => "opened the ticket"
+                    })</strong><span>@When(t.CreatedUtc)</span></div>
+                <table class="tk-facts" style="box-shadow:none;border:0">
+                    @if (t.MachineName.Length > 0) { <tr><th>Machine</th><td>@t.MachineName</td></tr> }
+                    <tr><th>Client</th><td>@(Model.Client?.Name ?? "none")</td></tr>
+                    @if (!string.IsNullOrWhiteSpace(t.Description)) { <tr><th>@(origin == TicketCategory.General ? "Details" : "Fault reported")</th><td class="tk-body">@t.Description</td></tr> }
+                </table>
+            }
+            else
+            {
+                <div class="tk-by"><strong style="color:var(--ink)">@t.OpenedBy booked the machine in</strong><span>@When(t.CreatedUtc)</span></div>
+                <table class="tk-facts" style="box-shadow:none;border:0">
+                    <tr><th>@(Model.Machines.Count > 0 ? "Machine 1" : "Machine")</th><td>@($"{t.AssetMake} {t.AssetModel}".Trim() is { Length: > 0 } mm ? mm : "—") @(t.AssetSerial.Length > 0 ? $"· serial {t.AssetSerial}" : "")</td></tr>
+                    <tr><th>Accessories</th><td>@(t.Accessories.Length > 0 ? t.Accessories : "none recorded")</td></tr>
+                    @if (!string.IsNullOrWhiteSpace(t.Description)) { <tr><th>Fault reported</th><td class="tk-body">@t.Description</td></tr> }
+                    <tr><th>Photos in</th><td>@Model.BeforeOf(null).Count</td></tr>
+                </table>
+            }
+            @* What their screen looked like when they asked for help (2026-10-09), taken before they filled the request
+               in. Each opens full size. *@
+            @if (Model.Screenshots.Count > 0)
+            {
+                <div class="tk-sys" style="margin:10px 0 6px"><strong>Their screen</strong> — when they asked for help</div>
+                <div style="display:flex;flex-wrap:wrap;gap:10px">
+                    @foreach (var s in Model.Screenshots)
+                    {
+                        <a href="@(PortalAddresses.Photo(s.Token))" target="_blank" rel="noopener" title="Taken @When(s.UploadedUtc) — open full size">
+                            <img src="@(PortalAddresses.Photo(s.Token))" alt="A picture of their screen" loading="lazy"
+                                 style="width:280px;max-width:100%;border:1px solid var(--line);border-radius:10px;display:block">
+                        </a>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@* ================================================================ Photos *@
+<div class="tk-pane @(tab == "photos" ? "on" : "")" id="pane-photos">
+    @* As many photos as the damage needs, at BOTH ends (Clint, 2026-09-29: a dropped laptop came in
+       and took fourteen). Three is the least that books a machine in or lets it go, never the most,
+       and more can be added at either end for as long as the job is open. *@
+    <h3 style="margin:0 0 8px">As it arrived <span class="pill pill-muted">@Model.Before.Count</span></h3>
+    @if (Model.Before.Count == 0) { <p class="tk-sys">None — this job predates the photo rule.</p> }
+    @* Several machines on one job (2026-10-02): each one's photos in under its own name. *@
+    @{
+        var groups = new List<(string Title, List<TicketPhoto> Photos)>();
+        if (Model.Machines.Count == 0) groups.Add(("", Model.Before));
+        else
+        {
+            groups.Add(($"Machine 1 — {($"{t.AssetMake} {t.AssetModel}".Trim() is { Length: > 0 } n1 ? n1 : "not recorded")}", Model.BeforeOf(null)));
+            for (int mi = 0; mi < Model.Machines.Count; mi++)
+            {
+                var m = Model.Machines[mi];
+                groups.Add(($"Machine {mi + 2} — {(m.Name.Length > 0 ? m.Name : "not recorded")}{(m.Purpose.Length > 0 ? $" ({m.Purpose.Split('\n')[0].Trim()})" : "")}", Model.BeforeOf(m.Id)));
+            }
+        }
+    }
+    @foreach (var g in groups)
+    {
+        @if (g.Title.Length > 0) { <p class="tk-field" style="margin-top:10px">@g.Title</p> }
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+            @foreach (var p in g.Photos) { <a href="@(PortalAddresses.Photo(p.Token))" target="_blank"><img src="@(PortalAddresses.Photo(p.Token))" alt="@p.OriginalName" style="width:150px;height:112px;object-fit:cover;border-radius:10px;border:1px solid var(--line)"></a> }
+        </div>
+    }
+    @if (Model.Stage?.Lane != WorkLane.Done && Model.WorksTickets)
+    {
+        <div>
+            <p class="tk-field">Add more photos of @(Model.Machines.Count > 0 ? "machine 1" : "the machine") as it arrived — as many as you like</p>
+            <input type="file" accept="image/*" multiple capture="environment" onchange="uploadMore(this, 'before')" style="padding:6px 0">
+            <p class="tk-sys"></p>
+        </div>
+    }
+    <h3 style="margin:20px 0 8px">As it leaves <span class="pill pill-muted">@Model.After.Count</span></h3>
+    @if (Model.After.Count == 0 && Model.PhotosOutRequired == 0) { <p class="tk-sys">None yet. Your company doesn't ask for them on this job, but you can add some.</p> }
+    else if (Model.After.Count == 0) { <p class="tk-sys">None yet. At least @Model.PhotosOutRequired@(Model.Machines.Count > 0 ? $" ({Model.PhotosOutEach} of each machine)" : "") are needed before @(Model.Machines.Count > 0 ? "the machines" : "the machine") can be collected or go out for delivery — ideally taken in front of the customer. Take as many as you like.</p> }
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+        @foreach (var p in Model.After) { <a href="@(PortalAddresses.Photo(p.Token))" target="_blank"><img src="@(PortalAddresses.Photo(p.Token))" alt="@p.OriginalName" style="width:150px;height:112px;object-fit:cover;border-radius:10px;border:1px solid var(--line)"></a> }
+    </div>
+    @if (Model.Stage?.Lane != WorkLane.Done && Model.WorksTickets)
+    {
+        <div>
+            <p class="tk-field">Add photos of the machine as it leaves — as many as you like</p>
+            <input type="file" accept="image/*" multiple capture="environment" onchange="uploadMore(this, 'after')" style="padding:6px 0">
+            <p class="tk-sys" id="afterNote2"></p>
+        </div>
+    }
+</div>
+
+@* ================================================================ Quote *@
+<div class="tk-pane @(tab == "quote" ? "on" : "")" id="pane-quote">
+    @await Html.PartialAsync("_QuoteLines", Model, new Microsoft.AspNetCore.Mvc.ViewFeatures.ViewDataDictionary(ViewData) { ["px"] = "qt", ["tab"] = "quote", ["open"] = "" })
+    @if (t.QuoteSupplierEmail.Length > 0)
+    {
+        <p class="tk-sys" style="margin-top:12px">Asked of @(t.QuoteSupplierNames.Length > 0 ? t.QuoteSupplierNames : t.QuoteSupplierEmail) · <a href="@(PortalAddresses.Ticket(t.Number))?handler=Eml">download the quote request email again</a></p>
+    }
+</div>
+
+@* ================================================================ Details *@
+<div class="tk-pane @(tab == "details" ? "on" : "")" id="pane-details">
+    <div class="grid2">
+        @* Its subject, description, type of job and appointment (2026-10-13) — first, because it is what this tab is opened for. *@
+        @* An owner-only login oversees the job and comments on it; it does not change it (2026-10-15). *@
+        @if (Model.WorksTickets) { <partial name="_EditTicket" model="Model" /> }
+        @* Which client — on every ticket, at any stage (Clint, 2026-09-27). One box, the company's
+           names offered as it is typed; empty unlinks. *@
+        <div class="card">
+            <h3>Client</h3>
+            <p style="margin:0 0 8px">@(Model.Client?.Name ?? "Not linked to a client.")@if (Model.Client != null && t.ContactName.Length > 0) { <text> — @t.ContactName</text> }</p>
+            @if (Model.WorksTickets)
+            {
+                <form method="post" asp-page-handler="SetClient" class="tk-row cpick-form">
+                    @* The client picker (2026-10-02), not a datalist: it narrows the same way the Clients
+                       page does, and the same on a phone, where a datalist is a different control in
+                       every browser. *@
+                    <div class="cpick" data-mode="name">
+                        <input type="hidden" name="clientName" value="@(Model.Client?.Name)">
+                        <input class="cpick-in" value="@(Model.Client?.Name)" placeholder="Start typing a client's name" aria-label="Client">
+                        <div class="cpick-list" role="listbox" hidden></div>
+                    </div>
+                    <button class="btn btn-sm btn-accent" type="submit">@(Model.Client == null ? "Link" : "Change")</button>
+                </form>
+                @if (Model.Client != null) { <p class="tk-sys" style="margin-top:6px">Empty the box and press Change to unlink it.</p> }
+            }
+        </div>
+        @if (startedAsCallOut)
+        {
+            <div class="card">
+                <h3>The call out</h3>
+                <table class="tk-facts" style="box-shadow:none;border:0">
+                    <tr><th>Site address</th><td class="tk-body">@(t.SiteAddress.Length > 0 ? t.SiteAddress : "—")</td></tr>
+                    <tr><th>Appointment</th><td>@(t.AppointmentUtc?.Local().ToString("dddd d MMMM yyyy 'at' HH:mm") ?? "not scheduled")</td></tr>
+                    <tr><th>Client</th><td>@(Model.Client?.Name ?? "—")@if (Model.Client != null && !string.IsNullOrWhiteSpace(Model.Client.Phone)) { <text> · @Model.Client.Phone</text> }</td></tr>
+                    <tr><th>Contact</th><td>@(t.ContactName.Length > 0 ? t.ContactName : "—")</td></tr>
+                </table>
+            </div>
+        }
+        @if (workshop)
+        {
+        <div class="card">
+            <h3>@(Model.Machines.Count > 0 ? "Machine 1" : "The machine")</h3>
+            <table class="tk-facts" style="box-shadow:none;border:0">
+                <tr><th>Make / model</th><td>@($"{t.AssetMake} {t.AssetModel}".Trim() is { Length: > 0 } mm2 ? mm2 : "—")</td></tr>
+                <tr><th>Serial</th><td>@(t.AssetSerial.Length > 0 ? t.AssetSerial : "—")</td></tr>
+                <tr><th>Accessories</th><td>@(t.Accessories.Length > 0 ? t.Accessories : "none recorded")</td></tr>
+                <tr><th>Password</th><td>
+                    @if (!t.DevicePasswordProtected) { <span class="tk-sys">not password protected</span> }
+                    else
+                    {
+                        <span id="pwHidden">•••••••• <button type="button" class="btn btn-sm" onclick="document.getElementById('pwHidden').style.display='none';document.getElementById('pwShown').style.display='inline'">Show</button></span>
+                        <span id="pwShown" style="display:none"><code>@Model.DevicePassword</code></span>
+                    }
+                </td></tr>
+                <tr><th>Client</th><td>@(Model.Client?.Name ?? "—")@if (Model.Client != null && !string.IsNullOrWhiteSpace(Model.Client.Phone)) { <text> · @Model.Client.Phone</text> }</td></tr>
+                <tr><th>Contact</th><td>@(t.ContactName.Length > 0 ? t.ContactName : "—")</td></tr>
+            </table>
+        </div>
+        @* The further machines on this job (2026-10-02): the same booking questions, each its own card. *@
+        @for (int mi = 0; mi < Model.Machines.Count; mi++)
+        {
+            var m = Model.Machines[mi];
+            <div class="card">
+                <h3>Machine @(mi + 2)</h3>
+                <table class="tk-facts" style="box-shadow:none;border:0">
+                    @if (m.Purpose.Length > 0) { <tr><th>On this job</th><td class="tk-body">@m.Purpose</td></tr> }
+                    <tr><th>Make / model</th><td>@(m.Name.Length > 0 ? m.Name : "—")</td></tr>
+                    <tr><th>Serial</th><td>@(m.Serial.Length > 0 ? m.Serial : "—")</td></tr>
+                    <tr><th>Accessories</th><td>@(m.Accessories.Length > 0 ? m.Accessories : "none recorded")</td></tr>
+                    <tr><th>Password</th><td>
+                        @if (!m.PasswordProtected) { <span class="tk-sys">not password protected</span> }
+                        else
+                        {
+                            <span id="pwHidden@(m.Id)">•••••••• <button type="button" class="btn btn-sm" onclick="document.getElementById('pwHidden@(m.Id)').style.display='none';document.getElementById('pwShown@(m.Id)').style.display='inline'">Show</button></span>
+                            <span id="pwShown@(m.Id)" style="display:none"><code>@(Model.MachinePasswords.TryGetValue(m.Id, out var mpw) ? mpw : "")</code></span>
+                        }
+                    </td></tr>
+                    <tr><th>Photos in</th><td>@Model.BeforeOf(m.Id).Count</td></tr>
+                    <tr><th>Added</th><td>@When(m.AddedUtc) by @m.AddedBy</td></tr>
+                </table>
+            </div>
+        }
+        }
+        <div class="card">
+            <h3>The job</h3>
+            <table class="tk-facts" style="box-shadow:none;border:0">
+                @foreach (var f in TicketService.WorkflowFacts(t)) { <tr><th>@f.Label</th><td>@f.Value</td></tr> }
+                <tr><th>Opened</th><td>@When(t.CreatedUtc) by @t.OpenedBy</td></tr>
+            </table>
+            @if (Model.WorkDone.Count > 0)
+            {
+                <button type="button" class="btn btn-sm" onclick="copyWorkDone(this)">Copy the work done for the invoice</button>
+                <textarea id="workDoneAll" style="position:absolute;left:-9999px">@string.Join("\n", Model.WorkDone.Select(n => "- " + TicketService.WorkDoneText(n.Body)))</textarea>
+            }
+            @if (Model.Stage?.Lane != WorkLane.Done && Model.WorksTickets)
+            {
+                <form method="post" asp-page-handler="Update" style="margin-top:14px">
+                    <input type="hidden" name="tab" value="details">
+                    <input type="hidden" name="status" value="@((int)t.Status)">
+                    <partial name="_People" model="Model.OnThisJob" />
+                    <label class="tk-field">Priority</label>
+                    <select name="priority" class="tk-in">
+                        @foreach (var p in Enum.GetValues<TicketPriority>()) { <option value="@((int)p)" selected="@(t.Priority == p)">@p</option> }
+                    </select>
+                    <button class="btn btn-sm btn-accent" type="submit" style="margin-top:10px">Save</button>
+                </form>
+            }
+        </div>
+    </div>
+</div>
+
+<script src="/photos.js?v=@RemoteSupport.Platform.Services.BuildStamp.Value"></script>
+<script src="/attach.js?v=@RemoteSupport.Platform.Services.BuildStamp.Value"></script>
+<script>
+function showTab(k){
+  document.querySelectorAll('.tk-tab').forEach(function(b){ b.classList.toggle('on', b.dataset.tab === k); });
+  document.querySelectorAll('.tk-pane').forEach(function(p){ p.classList.toggle('on', p.id === 'pane-' + k); });
+  document.querySelectorAll('input[name=tab]').forEach(function(i){ i.value = k; });
+}
+// A step's form opens at the top of the story; only one at a time.
+function openStep(k){
+  showTab('activity');
+  document.querySelectorAll('[id^=step-]').forEach(function(d){ d.style.display = d.id === 'step-' + k ? 'block' : 'none'; });
+  var el = document.getElementById('step-' + k);
+  if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); var f = el.querySelector('textarea,input:not([type=hidden])'); if (f) f.focus(); }
+}
+function closeStep(k){ var el = document.getElementById('step-' + k); if (el) el.style.display = 'none'; }
+function copyWorkDone(btn){
+  var box = document.getElementById('workDoneAll'); box.select();
+  try { navigator.clipboard.writeText(box.value); } catch (e) { document.execCommand('copy'); }
+  btn.textContent = 'Copied';
+}
+function uploadAfter(input, step){ return uploadPhotos(input, 'after', '?open=' + step); }
+// Photos go straight onto the ticket, then the page comes back where the person was.
+// ONE PHOTO PER UPLOAD (2026-09-29). They all went up as one request, and fourteen phone photos of
+// a dropped laptop are 60 MB — past what the server took in one, so every one of them was lost and
+// the page said only "did not upload". One at a time, each is a few MB, the count is shown as it
+// goes, and one bad photo cannot take the other thirteen with it.
+function uploadMore(input, kind){ return uploadPhotos(input, kind, '?tab=photos'); }
+// Another machine's photos, staged for a ticket that does not exist yet. The page is NOT reloaded:
+// what has been typed into the form stays, and the count goes up where it is.
+let stagedSoFar = @Model.MachinePhotos;
+// Add another machine (2026-10-02): the box under the choice asks the fault for a separate job, and
+// what the machine is for on the same one, where the job's fault is already written.
+function machineChoice(r){
+    const l = document.getElementById('machineDetailsLabel');
+    if (l) l.textContent = r.value === 'yes'
+        ? 'What is this machine on the job? (optional — for example: the new laptop, the data goes onto this one)'
+        : 'What is wrong with it?';
+}
+async function uploadStaged(input, stage){
+  if (!input.files.length) return;
+  var note = document.getElementById('machinePhotos');
+  var files = Array.from(input.files), problems = [];
+  for (var i = 0; i < files.length; i++) {
+    note.textContent = 'Uploading ' + (i + 1) + ' of ' + files.length + '…';
+    var form = new FormData();
+    form.append('kind', 'before'); form.append('stage', stage);
+    form.append('files', await shrinkPhoto(files[i]));
+    try {
+      var res = await fetch('/api/portal/photos', { method: 'POST', body: form });
+      var body = await res.json();
+      if (!res.ok && body.error) problems.push(files[i].name + ': ' + body.error);
+      (body.photos || []).forEach(function(p){ if (p.error) problems.push(p.error); else stagedSoFar++; });
+    } catch (e) { problems.push(files[i].name + ': did not upload'); }
+  }
+  input.value = '';
+  note.textContent = stagedSoFar + ' added so far.' + (problems.length ? ' ' + problems.join(' ') : '');
+}
+async function uploadPhotos(input, kind, back){
+  if (!input.files.length) return;
+  var note = input.parentElement.querySelector('.tk-sys:last-of-type') || document.getElementById('afterNote');
+  var files = Array.from(input.files), done = 0, problems = [];
+  for (var i = 0; i < files.length; i++) {
+    if (note) note.textContent = 'Uploading ' + (i + 1) + ' of ' + files.length + '…';
+    var form = new FormData();
+    form.append('kind', kind); form.append('ticketNumber', '@t.Number');
+    form.append('files', await shrinkPhoto(files[i]));
+    try {
+      var res = await fetch('/api/portal/photos', { method: 'POST', body: form });
+      var body = await res.json();
+      if (!res.ok && body.error) problems.push(files[i].name + ': ' + body.error);
+      (body.photos || []).forEach(function(p){ if (p.error) problems.push(p.error); else done++; });
+    } catch (e) { problems.push(files[i].name + ': did not upload'); }
+  }
+  input.value = '';
+  if (!problems.length) { location.href = location.pathname + back; return; }
+  if (note) note.textContent = done + ' of ' + files.length + ' added. ' + problems.join(' ') + (done ? ' Reload to see the ones that went up.' : '');
+}
+</script>

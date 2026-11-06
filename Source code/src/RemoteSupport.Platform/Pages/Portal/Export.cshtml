@@ -1,0 +1,62 @@
+@page "/portal/export"
+@model RemoteSupport.Platform.Pages.Portal.ExportModel
+@using RemoteSupport.Platform.Data
+@using RemoteSupport.Platform.Services
+@{ ViewData["Title"] = "Export your data"; ViewData["Section"] = "portal"; }
+@section Head { @if (Model.Busy) { <meta http-equiv="refresh" content="5"> } }
+<section class="portal"><div class="wrap">
+    <h1>Export your data</h1>
+    <p class="muted" style="max-width:760px">
+        Everything your company keeps here, in one zip: your <strong>clients</strong> and their contact people, your
+        <strong>tickets</strong> with their whole story, quote lines, photos and files, and your <strong>knowledge base</strong>
+        with its folders and pictures. The tables are Excel workbooks; <code>clients.xlsx</code> is in exactly the columns
+        <a href="/portal/clients/import">Import clients</a> reads, so it goes straight into another program — or back in here.
+    </p>
+    @if (!string.IsNullOrEmpty(Model.Error)) { <div class="alert alert-bad">@Model.Error</div> }
+    @if (Request.Query["asked"] == "1" && Model.Busy) { <div class="alert alert-ok">It is being made. This page looks again by itself; you will also be emailed when it is ready.</div> }
+
+    <form method="post" asp-page-handler="Start" class="form card" style="max-width:760px;margin-bottom:18px" id="exportForm">
+        <label style="display:flex;gap:10px;align-items:center">
+            <input type="checkbox" name="recordings" value="true" style="width:auto"> Include session recordings
+            <span class="muted">(@(Model.Recordings.count == 0 ? "you have none" : $"{Model.Recordings.count} recording{(Model.Recordings.count == 1 ? "" : "s")}, {CompanyExportService.Size(Model.Recordings.bytes)}"))</span>
+        </label>
+        <p class="muted" style="margin:6px 0 0">Without it, recordings are listed but not copied in — they can be large.
+            A big company's export takes a few minutes; it is kept for @CompanyExportService.KeepDays days, and a new one replaces it.</p>
+        <div class="actions"><button class="btn btn-accent" type="submit" disabled="@(Model.Busy ? "disabled" : null)">@(Model.Busy ? "Being made…" : "Make the export")</button></div>
+    </form>
+
+    @if (Model.Exports.Count > 0)
+    {
+        <div class="card" style="max-width:760px">
+            <h3 style="margin-top:0">Your exports</h3>
+            <div class="table-scroll"><table class="table" style="box-shadow:none" id="exports">
+                <thead><tr><th>Asked for</th><th>By</th><th>Where it is</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var e in Model.Exports)
+                {
+                    <tr data-export="@e.Id" data-state="@e.State">
+                        <td style="white-space:nowrap">@e.CreatedUtc.Local().ToString("d MMM yyyy HH:mm")</td>
+                        <td>@e.RequestedBy@(e.ByUs ? " (The Remote Support Program)" : "")</td>
+                        <td>
+                            @switch (e.State)
+                            {
+                                case ExportState.Waiting: <span class="pill pill-muted">Waiting</span> break;
+                                case ExportState.Making: <span class="pill pill-warn">Being made</span> <span class="muted">@e.Progress</span> break;
+                                case ExportState.Ready:
+                                    <span class="pill pill-ok">Ready</span> <span>@CompanyExportService.Size(e.Bytes)</span>
+                                    <div class="muted" style="font-size:13px">@e.Summary@(e.IncludeRecordings ? ", recordings included" : "") · until @e.ExpiresUtc?.Local().ToString("d MMM HH:mm")</div>
+                                    break;
+                                case ExportState.Failed: <span class="pill pill-bad">Not made</span> <div style="font-size:13px">@e.Error</div> break;
+                                default: <span class="muted">Deleted after @CompanyExportService.KeepDays days, or replaced</span> break;
+                            }
+                        </td>
+                        <td>@if (e.State == ExportState.Ready) { <a class="btn btn-sm btn-accent" href="/portal/export?handler=Download&id=@e.Id">Download</a> }</td>
+                    </tr>
+                }
+                </tbody>
+            </table></div>
+        </div>
+    }
+    <p class="muted" style="margin-top:12px;font-size:13px;max-width:760px">Only the owner and supervisors can make or download one: it is everything your company holds.
+        Device passwords from workshop bookings are never exported.</p>
+</div></section>

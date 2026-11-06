@@ -1,0 +1,38 @@
+@page "/guest"
+@inject RemoteSupport.Platform.Services.PayloadService Payloads
+@{
+    // Outside help, step 3 (3.9, 2026-10-06): the guest console's page. For somebody with NO account
+    // here — a customer's accounting firm — whom the customer has given a code. Public, and the same
+    // for everybody: the console it offers belongs to no company and asks for nothing but the code.
+    ViewData["Title"] = "Connect with a code";
+}
+<section class="section">
+    <div class="wrap" style="max-width:760px">
+        <h1>Connect to a computer with a code</h1>
+        <p class="muted" style="font-size:18px">
+            Somebody has given you a nine-digit code so that you can help them on their computer. Use it here in
+            your browser, or with the guest console. You do not need an account.
+        </p>
+        <div class="card" style="margin-top:20px">
+            <h3 style="margin-top:0">How it works</h3>
+            <ol style="line-height:1.7">
+                <li>Choose <strong>Connect in this browser</strong>, or download the guest console. Nothing is installed either way.</li>
+                <li>Type your name, your company if you have one, and the code. A code lasts ten minutes and works once.</li>
+                <li>Whoever gave you the code is shown your name and lets you in — the person at the computer, or their IT company's technician, who is in the session with you. Their IT company is told, and can watch and end it.</li>
+                <li>You can see their screen and use the mouse and keyboard — files only if they allow it, and no tools. Leave, or close the window, when you are done.</li>
+            </ol>
+            @* Both ways in (Clint, answer 3): this browser, with nothing to download, or the program. *@
+            <div style="display:flex;gap:12px;flex-wrap:wrap">
+                <a class="btn btn-accent" href="/guest/web">Connect in this browser</a>
+                @if (Payloads.TechnicianExeAvailable) { <a class="btn" href="/guest/console.exe">Download the guest console</a> }
+            </div>
+            <p class="muted" style="font-size:13px;margin-top:10px">
+                The browser needs nothing installed. The guest console is for Windows@(Payloads.TechnicianExeAvailable ? "; if Windows asks whether to run it, choose Run" : " and is not available on this server yet").
+            </p>
+        </div>
+        <p class="muted" style="font-size:13px;margin-top:16px">
+            Nobody legitimate will ever phone you and ask you to read out a code from your own screen. A code is for
+            the person who asked you for help to give to you, never the other way round.
+        </p>
+    </div>
+</section>
